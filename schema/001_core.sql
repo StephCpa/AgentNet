@@ -2,8 +2,16 @@
 -- AgentNet core schema  ·  001_core.sql  ·  PostgreSQL 16+
 -- 权威 DDL。文档 docs/detailed-design/02-data-model.md 是本文件的注释性说明。
 -- 约定见 00-scope-and-conventions.md §4：TEXT 标识、TIMESTAMPTZ(UTC)、
--- JSONB、摘要一律 'sha256:<hex>'。
+-- JSONB、摘要一律 'sha256:<hex>'（RFC 8785 JCS 规范化）。
 -- 迁移策略：前向迁移、只增不改（expand-contract）；本文件即迁移 001。
+-- 修订记录：
+--   rev 2026-10-26（评审整改包 A/F，见 docs/detailed-design/15-review-remediation.md）：
+--     1) 账本不变量改为 S+H+D ≤ B（H 仅计 HELD；delegated 计入；账户表变更也触发兜底）
+--     2) 预留独占绑定：部分唯一索引（effect_id / attempt_id 不可重复绑定）
+--     3) effect 状态移除 CONFLICT；冲突尝试改记 effect_conflict_attempts（仅追加）
+--     4) command_inbox 增可信 not_after（命令时效自包含判定，防清理后重放）
+--     5) dp_purposes.window → privacy_window（WINDOW 为 PG 保留字，修复迁移失败）
+--     6) 根账户唯一约束 NULLS NOT DISTINCT；分区表初始化首月分区
 -- ============================================================================
 
 BEGIN;
@@ -139,8 +147,10 @@ CREATE TABLE command_inbox (
   profile        TEXT NOT NULL,                       -- 'agent-network/0.1'
   payload_digest TEXT NOT NULL,
   received_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at     TIMESTAMPTZ NOT NULL,                -- 去重保留期 ≥ 允许重试期（04 §3）
-  PRIMARY KEY (command_id, audience_domain_id)
+  not_after      TIMESTAMPTZ NOT NULL,                -- 命令时效（可信绑定；T1 无条件检查 now()<=not_after）
+  expires_at     TIMESTAMPTZ NOT NULL,                -- 去重记录保留期：必须 >= not_after 与允许重试期（04 §3.2）
+  PRIMARY KEY (command_id, audience_domain_id),
+  CHECK (expires_at >= not_after)                     -- 清理任务据此保证：时效未过的命令不会失去去重记录
 );
 
 -- 网关入站消息去重（传输层，message_id 维度）
@@ -188,11 +198,13 @@ CREATE TABLE budget_accounts (
   parent_account_id TEXT REFERENCES budget_accounts,
   dimension      TEXT NOT NULL CHECK (dimension IN ('money','tokens','calls','messages')),
   budget_limit   NUMERIC(20,6) NOT NULL CHECK (budget_limit >= 0),  -- B
-  settled        NUMERIC(20,6) NOT NULL DEFAULT 0,    -- S
-  delegated      NUMERIC(20,6) NOT NULL DEFAULT 0,    -- 已切给子账本且不可再分配的额度
+  settled        NUMERIC(20,6) NOT NULL DEFAULT 0 CHECK (settled >= 0),     -- S：已确认支出
+  delegated      NUMERIC(20,6) NOT NULL DEFAULT 0 CHECK (delegated >= 0),   -- D：已下放未结清额度
+  -- 账本不变量（05 §1）：S + D <= B；H（HELD 预留之和）由触发器合并检查 S+H+D<=B
   CHECK (settled + delegated <= budget_limit),
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (task_id, dimension, parent_account_id)
+  UNIQUE NULLS NOT DISTINCT (task_id, dimension, parent_account_id)
+  -- 根账户唯一性：NULLS NOT DISTINCT 防止同任务同维度出现两个根账户（评审 §9.3）
 );
 
 CREATE TABLE budget_reservations (
@@ -200,19 +212,42 @@ CREATE TABLE budget_reservations (
   account_id     TEXT NOT NULL REFERENCES budget_accounts,
   holder_task_id TEXT NOT NULL REFERENCES tasks,
   command_id     TEXT,
-  effect_id      TEXT,
+  effect_id      TEXT,                                -- 绑定后不可改写（独占；见下方部分唯一索引）
+  attempt_id     TEXT,                                -- 每次计费尝试的预留按 attempt 绑定（05 §2.3）
   purpose        TEXT NOT NULL CHECK (purpose IN ('model_call','tool_call','subtask','message','delegate_tranche')),
   amount         NUMERIC(20,6) NOT NULL CHECK (amount > 0),
   state          TEXT NOT NULL DEFAULT 'HELD'
                  CHECK (state IN ('HELD','SETTLED','RELEASED')),
+                 -- HELD 计入 H；SETTLED/RELEASED 为历史记录，不计入 H（评审 §2.1 修复）
   soft_expires_at TIMESTAMPTZ,       -- 仅对"结果确定未用"场景提示；UNKNOWN 不得据此释放
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   settled_at     TIMESTAMPTZ,
   released_at    TIMESTAMPTZ,
-  release_reason TEXT
+  release_reason TEXT,
+  CHECK (effect_id IS NULL OR attempt_id IS NULL)     -- 业务操作预留绑 effect；计费尝试预留绑 attempt
 );
 CREATE INDEX ON budget_reservations (account_id, state);
 CREATE INDEX ON budget_reservations (holder_task_id, state);
+-- 预留独占绑定（评审 §三）：一个预留最多绑定一个 effect / 一个 attempt；绑定不可重复使用
+CREATE UNIQUE INDEX uq_reservation_effect
+  ON budget_reservations (effect_id) WHERE effect_id IS NOT NULL;
+CREATE UNIQUE INDEX uq_reservation_attempt
+  ON budget_reservations (attempt_id) WHERE attempt_id IS NOT NULL;
+-- 绑定不可改写：effect/attempt 绑定后禁止再指向其他对象（TCS 事务内校验 + 触发器兜底）
+CREATE OR REPLACE FUNCTION anet_reservation_binding_guard() RETURNS trigger AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF OLD.effect_id IS NOT NULL AND NEW.effect_id IS DISTINCT FROM OLD.effect_id THEN
+      RAISE EXCEPTION 'ANET-BUD-BINDING-IMMUTABLE: reservation % effect binding', OLD.reservation_id;
+    END IF;
+    IF OLD.attempt_id IS NOT NULL AND NEW.attempt_id IS DISTINCT FROM OLD.attempt_id THEN
+      RAISE EXCEPTION 'ANET-BUD-BINDING-IMMUTABLE: reservation % attempt binding', OLD.reservation_id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_reservation_binding_guard BEFORE UPDATE ON budget_reservations
+FOR EACH ROW EXECUTE FUNCTION anet_reservation_binding_guard();
 
 -- ----------------------------------------------------------------------------
 -- 业务操作（effects）与对账（细节见 04）
@@ -228,7 +263,9 @@ CREATE TABLE effects (
   authority_digest TEXT NOT NULL,                     -- 接纳时授权快照摘要
   epoch          BIGINT NOT NULL,                     -- 接纳时的任务 epoch（fencing 依据）
   state          TEXT NOT NULL DEFAULT 'PREPARED'
-                 CHECK (state IN ('PREPARED','ADMITTED','COMMITTED','REJECTED','UNKNOWN','CONFLICT')),
+                 CHECK (state IN ('PREPARED','ADMITTED','COMMITTED','REJECTED','UNKNOWN')),
+                 -- CONFLICT 已移除（评审 §四）：冲突是"本次请求的拒绝结果"，
+                 -- 原操作状态不变；冲突尝试记入 effect_conflict_attempts
   result_ref     TEXT,                                -- 收据/产物引用（COMMITTED 时）
   failure        JSONB,                               -- REJECTED 原因
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -237,6 +274,18 @@ CREATE TABLE effects (
 );
 CREATE INDEX ON effects (task_id, state);
 CREATE INDEX ON effects (command_id);
+
+-- 冲突尝试（评审 §四）：同 effect_id 不同参数摘要的请求在此仅追加记录；
+-- 原 effect 的状态、参数绑定、预算责任与对账资格一律不变。
+CREATE TABLE effect_conflict_attempts (
+  at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+  effect_id      TEXT NOT NULL REFERENCES effects,
+  command_id     TEXT NOT NULL,
+  presented_params_digest TEXT NOT NULL,
+  bound_params_digest      TEXT NOT NULL,             -- 冲突时已绑定的摘要（事实留档）
+  requester_instance_id    TEXT,
+  PRIMARY KEY (at, effect_id, presented_params_digest)
+);
 
 CREATE TABLE reconciliations (
   recon_seq      BIGSERIAL PRIMARY KEY,
@@ -361,7 +410,7 @@ CREATE TABLE dp_purposes (
   purpose        TEXT PRIMARY KEY,
   epsilon_total  NUMERIC(12,6) NOT NULL,
   delta_total    NUMERIC(12,6) NOT NULL DEFAULT 0,
-  window         TEXT NOT NULL,        -- 'rolling_30d' 等
+  privacy_window TEXT NOT NULL,       -- 'rolling_90d' 等（原列名 window 为 PG 保留字，评审 §9.1 修复）
   notes          TEXT
 );
 
@@ -403,30 +452,63 @@ END $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_task_guard BEFORE UPDATE ON tasks
 FOR EACH ROW EXECUTE FUNCTION anet_task_guard();
 
--- I5：S+R ≤ B 的延迟约束兜底（权威执行是 TCS 对 budget_accounts 的行锁，
--- 见 05 §3；本触发器用于捕获实现缺陷，不承担并发正确性）
+-- I5：S + H + D <= B 的延迟约束兜底（评审 §二整改）
+--   S = budget_accounts.settled（已确认支出）
+--   H = SUM(budget_reservations.amount WHERE state='HELD')（本账户直接承担的未结算占用）
+--   D = budget_accounts.delegated（已下放、未结清/未确认归还的额度）
+--   SETTLED/RELEASED 预留是历史记录，不再计入 H（避免与 S 重复计算）。
+-- 权威执行是 TCS 对 budget_accounts 的行锁 + 预留表独占绑定（05 §3）；
+-- 本触发器用于捕获实现缺陷，不承担并发正确性。账户表与预留表变更都触发。
 CREATE OR REPLACE FUNCTION anet_budget_invariant() RETURNS trigger AS $$
-DECLARE acc TEXT; s NUMERIC; d NUMERIC; b NUMERIC; r NUMERIC;
+DECLARE acc TEXT; s NUMERIC; d NUMERIC; h NUMERIC; b NUMERIC;
 BEGIN
-  acc := COALESCE(NEW.account_id, OLD.account_id);
+  acc := CASE WHEN TG_TABLE_NAME = 'budget_accounts'
+              THEN NEW.account_id
+              ELSE COALESCE(NEW.account_id, OLD.account_id) END;
   SELECT settled, delegated, budget_limit INTO s, d, b
     FROM budget_accounts WHERE account_id = acc FOR UPDATE;
-  SELECT COALESCE(SUM(amount),0) INTO r
+  SELECT COALESCE(SUM(amount),0) INTO h
     FROM budget_reservations
-   WHERE account_id = acc AND state IN ('HELD','SETTLED');
-  IF s + r > b THEN
-    RAISE EXCEPTION 'ANET-BUD-INVARIANT: S+R(%) > B(%) on account %', s + r, b, acc;
+   WHERE account_id = acc AND state = 'HELD';
+  IF s + h + d > b THEN
+    RAISE EXCEPTION 'ANET-BUD-INVARIANT: S+H+D(%) > B(%) on account %', s + h + d, b, acc;
   END IF;
   RETURN NULL;
 END $$ LANGUAGE plpgsql;
 
-CREATE CONSTRAINT TRIGGER trg_budget_invariant
+CREATE CONSTRAINT TRIGGER trg_budget_invariant_res
 AFTER INSERT OR UPDATE OF account_id, amount, state ON budget_reservations
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION anet_budget_invariant();
+
+CREATE CONSTRAINT TRIGGER trg_budget_invariant_acc
+AFTER INSERT OR UPDATE OF settled, delegated, budget_limit ON budget_accounts
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE FUNCTION anet_budget_invariant();
 
 -- 前向引用的外键补加
 ALTER TABLE agents
   ADD CONSTRAINT agents_card_fk FOREIGN KEY (card_artifact) REFERENCES artifacts(artifact_id);
+
+-- ----------------------------------------------------------------------------
+-- 分区初始化与维护（评审 §9.3：首次插入即报 no partition found 的修复）
+-- task_events 按 recorded_at、audit_log 按 at，均为月度 RANGE 分区。
+-- anet_ensure_partitions() 幂等创建当月与次月分区；由维护作业每日调用
+-- （12 §5 归档流程：到期分区 detach -> 导出 -> 校验 digest -> 删除）。
+-- ----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION anet_ensure_partitions() RETURNS void AS $$
+DECLARE
+  m DATE := date_trunc('month', now())::date;
+  n DATE := (m + INTERVAL '1 month')::date;
+  p DATE := (n + INTERVAL '1 month')::date;
+BEGIN
+  EXECUTE format('CREATE TABLE IF NOT EXISTS task_events_%s PARTITION OF task_events FOR VALUES FROM (%L) TO (%L)', to_char(m,'YYYY_MM'), m, n);
+  EXECUTE format('CREATE TABLE IF NOT EXISTS task_events_%s PARTITION OF task_events FOR VALUES FROM (%L) TO (%L)', to_char(n,'YYYY_MM'), n, p);
+  EXECUTE format('CREATE TABLE IF NOT EXISTS audit_log_%s PARTITION OF audit_log FOR VALUES FROM (%L) TO (%L)', to_char(m,'YYYY_MM'), m, n);
+  EXECUTE format('CREATE TABLE IF NOT EXISTS audit_log_%s PARTITION OF audit_log FOR VALUES FROM (%L) TO (%L)', to_char(n,'YYYY_MM'), n, p);
+END $$ LANGUAGE plpgsql;
+
+SELECT anet_ensure_partitions();
 
 COMMIT;

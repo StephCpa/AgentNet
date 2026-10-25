@@ -21,6 +21,7 @@
 | 12 | [部署拓扑与容量设计](12-deployment-capacity.md) | 域内拓扑、高可用、环境、保留与归档 | §13 |
 | 13 | [验证与测试设计](13-verification-and-testing.md) | 不变量 I1–I10 落地、TLA+ 模型、故障注入矩阵、基准 | §14 |
 | 14 | [MVP 实施计划](14-mvp-plan.md) | 仓库结构、技术选型、M0–M4 分解与退出条件 | §13.1、§14.5 |
+| 15 | [评审整改记录](15-review-remediation.md) | v0.2：评审发现 → 整改位置 → 验证方式 的复审导航表 | 评审 2026-10-26 |
 | 附录 | [OQ-1 agentgateway 复用度评估](appendix-oq1-agentgateway.md) | 官方事实清单、08 §7 逐项判定、B3 定档依据 | §2.1、08 §7 |
 
 配套工件：

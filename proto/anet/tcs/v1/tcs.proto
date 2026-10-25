@@ -81,11 +81,22 @@ message TaskSnapshot {
   google.protobuf.Timestamp deadline = 13;
 }
 
-message AuthorizationDecision {         // ICS PDP 输出的可校验判定（06 §4）
-  string decision_id = 1;
+message AuthorizationDecision {         // ICS PDP 输出的绑定式判定（06 §4；v0.2 评审 §5.2）
+  string decision_id = 1;               // 可在 ICS 持久查证（防伪造传递）
   bool allow = 2;
   google.protobuf.Timestamp at = 3;     // 新鲜度锚点（authz.sensitive_max_age）
   string policy_version = 4;
+  // —— 绑定字段（与本次操作逐字段一致，T2 校验；见 03 §6.2 CheckAuthzBinding）——
+  string subject_principal_id = 5;      // 最终用户
+  string actor_agent_id = 6;
+  string actor_instance_id = 7;         // 必须等于已认证调用实例
+  string grant_id = 8;                  // 授权链节点（未撤销）
+  string task_id = 9;
+  string action = 10;
+  string resource = 11;
+  string params_digest = 12;            // 决定覆盖的参数摘要
+  string audience_domain_id = 13;
+  string sensitivity = 14;              // sensitive | standard
 }
 
 // ---------------------------------------------------------------------------
@@ -104,15 +115,16 @@ message TaskLimits {                    // 根任务限额快照（05 §6；03 �
 message SubmitCommandRequest {
   string profile = 1;                   // 固定 "agent-network/0.1"
   string command_id = 2;                // cmd_：幂等键
-  string parent_task_id = 3;            // 根任务为空
-  string audience_domain_id = 4;        // dom_
-  ContractRef contract = 5;
-  string contract_body_json = 6;        // 契约体（TCS 校验 digest 与 R2.3 完整性）
-  TaskLimits limits = 7;                // 根任务必填
-  int64 expected_task_version = 8;      // 引用既有任务时的并发检查
-  string payload_digest = 9;            // GW 计算并覆盖（01 §5）
-  PrincipalRef caller = 10;             // GW 覆盖写入，调用方自填无效
-  ActorRef actor = 11;
+  google.protobuf.Timestamp not_after = 3;  // v0.2：命令时效（GW 签名绑定；T1 无条件检查）
+  string parent_task_id = 4;            // 根任务为空
+  string audience_domain_id = 5;        // dom_
+  ContractRef contract = 6;
+  string contract_body_json = 7;        // 契约体（TCS 校验 digest 与 R2.3 完整性）
+  TaskLimits limits = 8;                // 根任务必填
+  int64 expected_task_version = 9;      // 引用既有任务时的并发检查
+  string payload_digest = 10;           // GW 计算并覆盖（01 §5；RFC 8785 JCS）
+  PrincipalRef caller = 11;             // GW 覆盖写入，调用方自填无效
+  ActorRef actor = 12;
 }
 
 message AdmissionResult {
@@ -147,30 +159,39 @@ message CreateSubtaskRequest {
 // 业务操作（04 §4）：T2 接纳 + 结果上报
 // ---------------------------------------------------------------------------
 
+// 按维度组织的预留（v0.2 评审 §三：一次接纳检查全部必需维度，全部通过才放行）
+message DimensionalReservation {
+  string dimension = 1;                 // money | tokens | calls | messages
+  string reservation_ref = 2;           // res_：须 HELD 且未绑定（独占）
+  string upper_bound = 3;               // 该维度可执行上界（字符串 NUMERIC，须 ≤ 预留额）
+}
+
 message EffectProposal {
   string effect_id = 1;                 // eff_
   string task_id = 2;
   string command_id = 3;
   string target_ref = 4;
   string capability = 5;
-  string params_digest = 6;
+  string params_digest = 6;             // RFC 8785 JCS
   string authority_digest = 7;          // grant + 约束快照摘要
-  int64 epoch = 8;                      // 提议时的 epoch；T2 复核
-  string reservation_ref = 9;           // res_（05 §4：接纳必须绑定 HELD 预留）
-  string cost_upper_bound = 10;         // 字符串 NUMERIC；须 ≤ 预留额
-  string sensitivity = 11;              // sensitive | standard
+  int64 epoch = 8;                      // 提议时的 epoch；T2 复核（代次，非执行权）
+  repeated DimensionalReservation reservations = 9;   // v0.2：多维预留集合（替代单一 reservation_ref）
+  string sensitivity = 10;              // sensitive | standard
 }
 
 message AdmitEffectRequest {
   EffectProposal effect = 1;
-  AuthorizationDecision authz = 2;      // 敏感级须新鲜（06 §4）
+  AuthorizationDecision authz = 2;      // 绑定式判定（敏感级须新鲜）
+  string lease_id = 3;                  // v0.2：执行权凭证；已认证实例须为该租约 holder（03 §6.2）
+  int64 expected_task_version = 4;      // v0.2：并发检查；成功后 task_version+1
 }
 
 message EffectAdmission {
   enum Outcome { ADMITTED = 0; EXISTING = 1; FENCED = 2; CONFLICT = 3; DENIED = 4; }
   Outcome outcome = 1;
-  string state = 2;                     // 生效后的 effect 状态
+  string state = 2;                     // 生效后的 effect 状态（冲突时为原状态，未被修改）
   string error_code = 3;                // ANET-EFF-*
+  string error_message = 4;
 }
 
 message ReportEffectResultRequest {
@@ -215,19 +236,23 @@ message ReserveBudgetRequest {
   string purpose = 3;    // model_call | tool_call | subtask | message | delegate_tranche
   string upper_bound = 4;
   int32 soft_ttl_seconds = 5;
+  string attempt_id = 6;               // v0.2：计费尝试预留按 attempt 独占绑定（05 §2）
+  string effect_id = 7;                 // 业务操作预留按 effect 绑定（二选一）
 }
 
 message Reservation {
   string reservation_id = 1;
   string account_id = 2;
-  string state = 3;      // HELD | SETTLED | RELEASED
+  string state = 3;      // HELD | SETTLED | RELEASED（后两者为历史记录，不计入 H）
   string amount = 4;
 }
 
 message SettleReservationRequest {
   string reservation_id = 1;
   string actual_usage = 2;
-  string usage_source = 3;               // provider | metered | self_reported（05 §5.1）
+  string usage_source = 3;               // provider | metered | self_reported
+  // v0.2（05 §5.1）：self_reported 且无provider/metered佐证 ⇒ 服务端按预留额全额
+  // 结算或保持 HELD（conservative 策略），不接受 min(自报, 预留) 释放
 }
 
 message ReleaseReservationRequest {

@@ -1,121 +1,159 @@
 # 05 · 预算与资源控制设计
 
-状态：v0.1 草案 ｜ 上游：总体方案 §十 ｜ 前置：02、03、04
+状态：v0.2（2026-10-26 评审整改，包 A）｜ 上游：总体方案 §十 ｜ 前置：02、03、04 ｜ 整改对照：15 §二/§三
 
-## 1. 目标与反例
+## 1. 账本不变量（v0.2 重写）
 
-签名凭证证明"额度没被篡改"，不能证明"额度没被重复分配"（总体方案 §10.1：根预算 10，两个子 Agent 各持"可花 7"的签名凭证，合计 14）。因此预算的权威执行点是**本域账本**（`budget_accounts/budget_reservations`），签名凭证只作展示与跨域参考，不承担守恒。
+签名凭证证明"额度没被篡改"，不能证明"额度没被重复分配"（总体方案 §10.1）。预算的权威执行点是**本域账本**。
 
-核心不变量（I5）：对任一账户 `S + R ≤ B`，其中 S = 已结算，R = HELD+SETTLED 预留之和，B = 限额。
+对每个账户（每维度各一列账）：
 
-## 2. 账户模型
+> **S + H + D ≤ B**
 
-- **维度**：`money`（微 USD）、`tokens`、`calls`（模型/工具调用次数）、`messages`。四维并行记账、并行约束，任一超限即拒绝。
-- **树结构**：根任务建根账户组；`CreateSubtask` 为子任务建子账户（03 §7）。子账户限额来自父账户的转移，记录在父账户 `delegated` 列，**父账户不得再动用已转移额度**（防"子域内部预留重复计入根账本"）。
-- **跨域 tranche**：给外域子任务的额度是一次性切分（`purpose=delegate_tranche` 的预留 → 对端确认后转 `delegated`）。对端账本或本域出域计量至少其一执行限额（§7）。
+| 量 | 定义 | 数据落点 |
+|---|---|---|
+| S | 已确认并记入本账户的支出 | `budget_accounts.settled` |
+| H | 本账户直接承担、尚未结算的预留 | `SUM(budget_reservations.amount WHERE state='HELD')` |
+| D | 已下放给子账户/子域、未结清或未确认归还的额度 | `budget_accounts.delegated` |
+| B | 限额 | `budget_accounts.budget_limit` |
+
+三条不可违反的记账规则（评审 §2.3 采纳）：
+
+1. **SETTLED/RELEASED 预留是历史记录，不计入 H**。结算 = 先把占用从 H 移除（预留转 SETTLED），再把实际支出加入 S；两者同一事务。
+2. **下放 = 额度从 H 原子转入 D**（`delegate_tranche` 预留转 SETTLED + `delegated += amount`）。父账户不得再动用 D。
+3. **根账本不把整个 D 与子域内部预留再相加**（那是另一种重复计数）。子域结算上报时，把对应金额从 D 转入 S；确认归还的剩余额度才从 D 释放。
+
+v0.1 的错误（已在 SQL 与本文件同步修复）：SETTLED 预留仍计入 R（结算被自家不变量拒绝）；`delegated` 未进准入检查（父账户下放 8 后仍能再预留 3）。
+
+## 2. 账户与预留模型
+
+- **维度**：`money`（微 USD）、`tokens`、`calls`、`messages`，四维并行记账，任一超限即拒绝。
+- **树结构**：根任务建根账户组；子任务账户限额来自父账户转移。根账户唯一性由 `UNIQUE NULLS NOT DISTINCT (task_id, dimension, parent_account_id)` 保证（02 §3.4）。
+- **预留两类**（评审 §三）：
+  - **effect 预留**：绑定一次业务操作（`effect_id`），覆盖该操作的可执行上界；
+  - **attempt 预留**：每次实际计费尝试（模型重试、重调）独立预留（`attempt_id`）——"每次可能计费的尝试独立预留"的落地形态。
+- **独占绑定**：一个预留至多绑定一个 effect 或一个 attempt（SQL 部分唯一索引），且绑定后不可改写（触发器 `anet_reservation_binding_guard`）。T2 接纳必须校验 `effect_id IS NULL` 后再绑定。
 
 ## 3. 预留（Reserve）协议
 
 ```text
-ReserveBudget(account, purpose, upper_bound, holder_task, soft_ttl):
-BEGIN;
-  acc := SELECT * FROM budget_accounts WHERE account_id=account FOR UPDATE;  -- 多账户按字典序
-  r := SELECT COALESCE(SUM(amount),0) FROM budget_reservations
-       WHERE account_id=account AND state IN ('HELD','SETTLED');
-  IF acc.settled + r + upper_bound > acc.budget_limit:
-      ABORT ANET-BUD-EXHAUSTED;                       -- I5，行锁下判定
-  res := INSERT budget_reservations(state='HELD', amount=upper_bound,
-                                    soft_expires_at=now()+soft_ttl);
+ReserveBudget(account, dimension, purpose, upper_bound, holder_task, soft_ttl):
+BEGIN;                                        -- 锁序见 §7 表
+  IF now() > task.deadline: ABORT ANET-TSK-DEADLINE;          -- deadline 守卫（评审 §十二）
+  acc := SELECT * FROM budget_accounts WHERE account_id FOR UPDATE;
+  h := SELECT COALESCE(SUM(amount),0) FROM budget_reservations
+       WHERE account_id=acc AND state='HELD';
+  IF acc.settled + h + acc.delegated + upper_bound > acc.budget_limit:
+      ABORT ANET-BUD-EXHAUSTED;               -- I5：S+H+D+新增 ≤ B
+  res := INSERT budget_reservations(state='HELD', amount=upper_bound, ...);
   INSERT audit_log(budget.reserve, cost=upper_bound);
 COMMIT; RETURN res;
 ```
 
 规则：
 
-- R3.1 **每次可能计费的尝试独立预留**：模型重试、工具重调、子消息都要先 Reserve 再执行；"预计费用"不得冒充硬上界。
-- R3.2 upper_bound 必须可执行（模型调用 ⇒ 请求里设置 `max_tokens` 等硬参数；无法强制上界的目标按全额预留、按全额结算，保守处理）。
-- R3.3 软过期（`soft_expires_at`）**只**允许清理"从未绑定 effect"的预留（`effect_id IS NULL` 且 `purpose≠delegate_tranche`）；一旦绑定业务操作，释放只能走结算或确认未执行（§5.3）。
+- R3.1 upper_bound 必须可执行（模型调用 ⇒ 请求设置 `max_tokens` 等硬参数；无法强制上界的目标按全额预留、按全额结算，保守处理）。
+- R3.2 软过期只允许清理"从未绑定 effect/attempt"的预留；绑定后释放仅走结算或确认未执行（§5.3）。
+- R3.3 attempt 预留在尝试结束（结果上报或确认失败）时即结算/释放；effect 预留覆盖操作全生命周期（含其下多次 attempt 的总额外预留须另行申请）。
 
-## 4. 与接纳的绑定（T2）
+## 4. 与接纳（T2）的绑定
 
-`AdmitEffect` 在接纳事务内校验：`reservation_ref` 存在、`state=HELD`、归属本任务、`amount ≥ cost_upper_bound`，并把 `effect_id` 写回预留行（03 §6.2）。**未绑定有效预留的 effect 不得进入 ADMITTED**——预算检查是接纳守卫的一部分，不是事后记账。
+`AdmitEffect` 在接纳事务内校验**按维度组织的预留集合**（`EffectProposal.reservations[]`）：
+
+```text
+对每个维度 d ∈ {money, tokens, calls, messages}（操作声明需要者）:
+  res_d := SELECT * FROM budget_reservations WHERE reservation_id FOR UPDATE;
+  校验： res_d.state='HELD'
+     AND res_d.effect_id IS NULL AND res_d.attempt_id IS NULL   -- 未绑定（独占）
+     AND res_d.holder_task_id = prop.task_id                    -- 归属任务匹配
+     AND res_d.dimension = d AND res_d.purpose ∈ prop.allowed_purposes
+     AND res_d.amount ≥ prop.upper_bound[d]                     -- 金额覆盖
+  任一维度失败 ⇒ 整体拒绝（ANET-BUD-RESERVATION-INVALID），不部分绑定
+全部通过后：UPDATE 各 res_d SET effect_id=prop.effect_id（绑定不可再改）
+```
+
+**未绑定有效预留集合的 effect 不得进入 ADMITTED。** 绑定不可改写：同一操作的重复接纳请求返回原结果；不同操作复用同一预留必须拒绝。
 
 ## 5. 结算（Settle）与释放（Release）
 
-### 5.1 结算依据（可核验用量优先）
+### 5.1 结算依据（可核验优先；不可核验 ⇒ 保守）
 
-| 来源 | 可信度 | 处理 |
-|---|---|---|
-| 供应商返回的用量/费用字段（token 数、账单行） | 高 | 直接结算 |
-| 本域出域计量（GW 字节/请求计数） | 中 | 结算并标注 `metered` |
-| 运行时自报 | 低 | 仅在前两者缺失时，取 `min(自报, 预留额)` |
+| 来源 | 处理 |
+|---|---|
+| 供应商返回用量/费用 | 直接结算 |
+| 本域出域计量（GW） | 结算并标注 `metered` |
+| 运行时自报（无以上两者） | **按预留额全额结算**（保守），或保持 HELD 等待对账；不得按 min(自报, 预留) 释放——评审 §三：实际消耗 10、自报 0 时该规则无法证明剩余额度可释放 |
 
-### 5.2 结算规则
+### 5.2 结算规则（S+H+D 语义）
 
 ```text
-SettleReservation(res, usage):
-BEGIN;  lock res;
+SettleReservation(res, actual):
+BEGIN;  lock res; lock 所属账户行（锁序 §7）;
   IF res.state ≠ 'HELD': ABORT ANET-BUD-RESERVATION-STATE;
-  actual := min(usage, res.amount);          -- 执行器已强制上界时的正常路径
-  IF usage > res.amount:                     -- 上界被突破（执行器失守）
-      actual := res.amount;
-      记 budget_violation 审计事件 + task_event（不得静默吸收差价）
-  UPDATE res SET state='SETTLED', settled_at=now();
-  UPDATE budget_accounts SET settled = settled + actual WHERE account_id=res.account_id;
+  actual := min(actual, res.amount);          -- 正常路径：执行器已强制上界
+  IF actual > res.amount: 已由 min 吸收，另记 budget_violation 审计（不得静默）
+  UPDATE res SET state='SETTLED', settled_at=now();           -- 退出 H
+  UPDATE budget_accounts SET settled = settled + actual;      -- 进入 S（同事务）
 COMMIT;
 ```
 
-### 5.3 释放规则（与 I5/I7 联动）
+### 5.3 释放规则
 
 | 场景 | 动作 |
 |---|---|
-| effect 确认 `REJECTED`（未执行） | 结算实际发生成本（如有调用费），释放余额 |
-| effect `UNKNOWN` | 预留保持 HELD，转入对账（04 §6）；**超时/租约过期不构成释放理由** |
-| 对账确认 `COMMITTED` | 按用量结算 |
-| 从未绑定 effect 的预留 | 软过期后由清理任务释放 |
-| 断网子域 tranche 未确认归还 | 根账户不回收、不重复分配（对应 FI-12） |
+| effect 确认 REJECTED（未执行） | 结算实际发生成本（如有），预留转 RELEASED（退出 H） |
+| effect UNKNOWN | 预留保持 HELD，转对账（04 §6）；超时/租约过期不构成释放理由 |
+| attempt 结束 | 按用量结算；确认未发起的转 RELEASED |
+| 从未绑定的预留 | 软过期后清理任务释放 |
+| tranche：子域上报结算 | 父账户 `D -= 已结算额; S += 已结算额`（同事务） |
+| tranche：子域确认归还余额 | 父账户 `D -= 归还额`（释放；归还消息带幂等键防重复返还虚增额度） |
+| 断网子域未确认归还 | D 不减、不重复分配（评审 §7.3 的双域模型对应） |
 
-## 6. 根任务限额与并发控制
-
-根任务 `limits` 快照（03 §2）在 T1 固化，执行点如下：
+## 6. 根任务限额
 
 | 限额 | 执行点 |
 |---|---|
 | `max_delegation_depth` | `CreateSubtask` 守卫（03 §7） |
 | `max_concurrent_subtasks` | 同一事务内计数活跃子任务 |
-| `max_model_calls` / `max_messages` / 各维金额 | 对应维度账户的 Reserve 守卫 |
-| `deadline` | T1/T2/Reserve 三处时间守卫 |
+| `max_model_calls` / `max_messages` / 各维金额 | 对应维度账户 Reserve 守卫（§3） |
+| `deadline` | **T1（03 §6.1）、T2（03 §6.2）、Reserve（§3）三处守卫**，任一超期拒绝 |
 
-这些限额用于限制失控委托与 CORBA 式递归消息风暴的影响半径；对正常任务的误伤率进基准报告（13 §5）。
+## 7. 事务锁序表（v0.2 新增；评审 §十二）
 
-## 7. 跨域预算
+所有预算相关事务按**固定全局锁序**加锁，防死锁（`db.lock_timeout=2s` 兜底）：
 
-- **tranche 模式（MVP）**：`CreateSubtask`（跨域）时从父账户切出一次性额度；对端若支持预算扩展（目录声明 `anet.capabilities.budget_ledger`，07 §2），对端账本执行；否则本域 GW 出域计量执行（按消息数/请求数硬停）。
-- **断网继续工作**：预先切分互不重叠的 tranche 给子域，接受额度暂时闲置的代价；恢复连接后对账（子域上报已结算用量 + 释放剩余），根域核实后回收。
-- 对端超支不可能被协议消除，只能被发现：以对端回执/计量为准记录 `budget_violation`，路由器下调该对端评分（07 §4）。
-
-## 8. 拥塞控制与消息优先级
-
-| 类别 | 处理 |
+| 事务 | 锁序 |
 |---|---|
-| 撤销 / 取消 / 预算耗尽通知 | 高优先级通道，独立限流，永不因排队丢弃 |
-| 关键状态与执行收据 | 持久化投递（outbox PENDING 队列头部），可恢复 |
-| 普通推理消息 | 按任务 + 租户配额调度 |
-| 高频进度 | 允许合并为最新状态（latest-wins） |
-| 大型产物 | 仅走 ART 引用，禁止进消息正文 |
+| T1 任务接纳 | `command_inbox` → `tasks` → `grants` → `budget_accounts` |
+| T2 业务操作接纳 | `tasks` → `budget_reservations`（按 reservation_id 字典序）→ `effects` |
+| T3 取消 | `tasks`（单行） |
+| Reserve | `tasks`（deadline 检查，共享读）→ `budget_accounts`（按 account_id 字典序）→ `budget_reservations` |
+| Settle / Release | `budget_reservations`（单行）→ `budget_accounts`（单行） |
+| Delegate tranche | 父 `budget_accounts` → 父预留行 → 子 `budget_accounts` |
+| 子域结算/归还上报 | `tasks` → 父 `budget_accounts` → `budget_reservations`（attempt 行） |
 
-接收侧背压（GW 入口执行）：除字节速率外，按**预计上下文 token**、排队任务数、执行槽位三重准入；超限返回 `ANET-NET-BACKPRESSURE` + 建议重试时间，调用方按任务退避（不做隐式丢弃）。
+违反锁序的实现视为缺陷（code review 门禁 + 并发测试 13 §3 FI-06 扩展）。
 
-## 9. 配置参数（初始值）
+## 8. 跨域预算（tranche）
+
+- 切分：`DelegateTranche` 事务 = 父账户 H→D + 对端通告；对端支持预算扩展（目录 `budget_ledger`，07 §2）则对端账本执行，否则本域 GW 出域计量执行（agentgateway virtual keys/spend limits 为计量载体，附录 OQ-1）。
+- 断网：预先切分互不重叠 tranche；恢复后子域上报"已结算 + 归还"（带幂等键），父域按 §5.3 入账。
+- 对端超支只能被发现不能被消除：记 `budget_violation`，路由器降权（07 §5）。
+
+## 9. 拥塞控制与消息优先级
+
+（v0.1 原文保留：撤销/取消/预算耗尽走高优先级独立限流通道；关键状态与收据持久化；普通推理按任务+租户配额；高频进度 latest-wins；大产物走 ART。接收侧按"预计上下文 token、排队任务数、执行槽位"三重背压，超限回 `ANET-NET-BACKPRESSURE`+建议重试时间。）
+
+## 10. 配置参数（初始值）
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `budget.soft_ttl_default` | 15m | 未绑定预留的软过期 |
-| `budget.model_call_upper_bound` | min(2×预估, 账户余额) | 单次调用预留上界公式 |
-| `budget.violation_policy` | record_and_alert | 记录 + 告警，不自动停机 |
+| `budget.soft_ttl_default` | 15m | 未绑定预留软过期 |
+| `budget.untrusted_usage_policy` | conservative | 自报用量全额结算或保持占用（§5.1） |
+| `budget.violation_policy` | record_and_alert | 记录+告警 |
 | `limits.*` | 见 03 §9 | 根任务默认快照 |
-| `gw.backpressure.*` | 见 12 §7 | 入口配额（域级配置清单项） |
+| `gw.backpressure.*` | 见 12 §7 | 入口配额 |
 
-## 10. 错误码
+## 11. 错误码
 
-`ANET-BUD-EXHAUSTED / RESERVATION-INVALID / RESERVATION-STATE / VIOLATION-RECORDED`（后两者为结果通告而非拒绝）。
+`ANET-BUD-EXHAUSTED / RESERVATION-INVALID / RESERVATION-STATE / BINDING-IMMUTABLE / VIOLATION-RECORDED`。

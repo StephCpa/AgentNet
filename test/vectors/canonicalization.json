@@ -1,0 +1,67 @@
+{
+  "$comment": "RFC 8785 JCS canonicalization vectors (docs 00 §4.2; review §十). CI contract: Python / Go / Node implementations must each produce exactly 'canonical' bytes for 'input', hence the same 'sha256'. Numbers follow ECMAScript Number::toString per RFC 8785 §3.2.2.3.",
+  "vectors": [
+    {
+      "id": "vec-00",
+      "input": {
+        "n": 1.0
+      },
+      "canonical": "{\"n\":1}",
+      "sha256": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
+      "note": "review-case: naive json.dumps in Python gives {\"n\": 1.0}, Node gives {\"n\":1}; JCS mandates the latter"
+    },
+    {
+      "id": "vec-01",
+      "input": {
+        "b": 2,
+        "a": 1
+      },
+      "canonical": "{\"a\":1,\"b\":2}",
+      "sha256": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777",
+      "note": ""
+    },
+    {
+      "id": "vec-02",
+      "input": {
+        "s": "中文/ø\"\\",
+        "x": 0
+      },
+      "canonical": "{\"s\":\"中文/ø\\\"\\\\\",\"x\":0}",
+      "sha256": "58f8e2277de91991c7a74364777c2d4669cad85607d555396a5ceadeea16fd15",
+      "note": ""
+    },
+    {
+      "id": "vec-03",
+      "input": {
+        "arr": [
+          3,
+          1.5,
+          null,
+          true
+        ]
+      },
+      "canonical": "{\"arr\":[3,1.5,null,true]}",
+      "sha256": "78b530edaba462bdf5d1926e236ab9c73de35e904ab2e4a773dfec43fea86e6c",
+      "note": ""
+    },
+    {
+      "id": "vec-04",
+      "input": {
+        "money": "1200",
+        "big": 9007199254740991
+      },
+      "canonical": "{\"big\":9007199254740991,\"money\":\"1200\"}",
+      "sha256": "514fcc6ad012d27435dcc3e232ecbac276aedb9639c92a7ac173bdd6714ef180",
+      "note": ""
+    },
+    {
+      "id": "vec-05",
+      "input": {
+        "esc": "line\nbreak"
+      },
+      "canonical": "{\"esc\":\"line\\nbreak\"}",
+      "sha256": "74fb072887593ee461ef625f8ecfa920d051e2711b2390e008b6f513417a495c",
+      "note": ""
+    }
+  ]
+}

@@ -49,9 +49,21 @@ message DecideRequest {
 message Decision {
   string decision_id = 1;
   bool allow = 2;
-  google.protobuf.Timestamp at = 3;      // TCS 校验 now()-at ≤ sensitive_max_age
+  google.protobuf.Timestamp at = 3;      // TCS 校验 now()-at <= sensitive_max_age
   string policy_version = 4;
   google.protobuf.Timestamp cacheable_until = 5;  // standard 级可缓存窗口
+  // v0.2 评审 §5.2：绑定字段集——决定与被授权操作不可分离（与 tcs.v1.AuthorizationDecision 对齐）
+  string subject_principal_id = 6;
+  string actor_agent_id = 7;
+  string actor_instance_id = 8;
+  string grant_id = 9;
+  string task_id = 10;
+  string action = 11;
+  string resource = 12;
+  string params_digest = 13;
+  string audience_domain_id = 14;
+  string sensitivity = 15;
+  string decision_handle = 16;           // 签名句柄（ICS 私钥签名，TCS 可独立验真；或走 ICS->TCS mTLS 通道）
 }
 
 // 单调收缩复核（06 §3 checkShrink；CreateSubtask 事务内调用）

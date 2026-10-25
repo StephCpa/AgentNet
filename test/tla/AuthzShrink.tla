@@ -1,55 +1,47 @@
 --------------------------- MODULE AuthzShrink ---------------------------
 (***************************************************************************)
-(* AgentNet · AuthzShrink —— M0 初稿（详细设计 13 §2；语义 06 §3）          *)
-(* 权限建模为动作集合的子集链；验证 I6：子授权永不扩大有效权限，            *)
-(* 即使"模型提议"了扩大的子权限（恶意/误生成场景，FI-11）。                *)
-(* 界：Acts={read,compute,write,delegate}；depth <= 2。                      *)
+(* AgentNet · AuthzShrink —— v0.2 真实父链（13 §2；评审 §7.2 整改）         *)
+(*                                                                         *)
+(* v0.1 缺陷：childRights 始终与 rootRights=Acts 比较，Inv6 沦为值域恒真；  *)
+(* 且"全权->空权->再获 read"的链上回升未被排除。                            *)
+(* v0.2：currentRights 表示当前授权链节点（连续委托），                     *)
+(*   独立步性质 ChainMonotone == [][currentRights' \subseteq currentRights] *)
+(*   —— 沿链只减不增，与 Delegate 守卫不同源；删除守卫即可被检出。          *)
+(* 界：Acts={read,compute,write,delegate}；depth <= 2。                     *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 
 CONSTANT Acts          \* {read, compute, write, delegate}
 
-Rights == SUBSET Acts  \* rights 值域：动作子集
+Rights == SUBSET Acts
 
-VARIABLES rootRights,   \* 根授权（任务接纳时固定）
-          childRights,  \* 当前子授权（委托后）
-          depthLeft     \* 剩余可委托深度（06 §2）
+VARIABLES currentRights,   \* 当前链节点授权（Init = 根授权）
+          depthLeft
 
-TypeOK ==
-  /\ rootRights \subseteq Acts /\ childRights \subseteq Acts /\ depthLeft \in Nat
+TypeOK == currentRights \subseteq Acts /\ depthLeft \in Nat
 
-Init == rootRights = Acts /\ childRights = Acts /\ depthLeft = 2
+Init == currentRights = Acts /\ depthLeft = 2
 
-\* 合法委托（06 §3）：child \subseteq parent \intersect recipient，深度 -1
 Delegate(child, recipient) ==
   /\ depthLeft > 0
-  /\ child \subseteq (rootRights \intersect recipient)      \* 收缩判定（父=root 的两层简化）
-  /\ childRights' = child
+  /\ child \subseteq (currentRights \intersect recipient)   \* 收缩判定（06 §3）
+  /\ currentRights' = child
   /\ depthLeft' = depthLeft - 1
-  /\ rootRights' = rootRights
 
-\* 撤销（06 §5）：根撤销 => 子授权失效建模为清空
-Revoke ==
-  /\ childRights' = {} /\ depthLeft' = 0
-  /\ rootRights' = rootRights
+Revoke ==                            \* 撤销（06 §5）：链节点清空
+  /\ currentRights' = {}
+  /\ depthLeft' = 0
 
 Next ==
-  \/ \E child, recipient \in Rights :
-       Delegate(child, recipient)
+  \/ \E child, recipient \in Rights : Delegate(child, recipient)
   \/ Revoke
 
-Spec == Init /\ [][Next]_<<rootRights, childRights, depthLeft>>
+Spec == Init /\ [][Next]_<<currentRights, depthLeft>>
 
-\* I6 状态不变量：子授权始终 \subseteq 根授权
-Inv6 == childRights \subseteq rootRights
+Inv6 == currentRights \subseteq Acts    \* 类型级（保留）；实质检查见下
 
-(*************************************************************************)
-(* I6 的"扩大委托不可达"为 guard-encoded：Delegate 收缩守卫使坏步骤与     *)
-(* Next 矛盾。TLC 1.7.4 不支持裸动作性质（2026-10-25 实证），故以 Inv6    *)
-(* 检查其可观测结果，坏步骤形状记录于下，M0 后续以守卫变异测试复核。      *)
-(*************************************************************************)
-BadExpandedDelegate ==
-  \E child, recipient \in Rights :
-    /\ ~(child \subseteq rootRights)
-    /\ Delegate(child, recipient)
+ChainMonotone ==
+  [][currentRights' \subseteq currentRights]_<<currentRights, depthLeft>>
+  \* 沿父链单调收缩。v0.1 的反例（全权->空权->read 回升）在此性质下失败：
+  \* currentRights={} 时任何非空 child 都使 currentRights' ⊄ currentRights。
 =============================================================================

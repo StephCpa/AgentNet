@@ -70,6 +70,7 @@ RequestFetch(requester, task, artifact_ref | evidence_kind, purpose):
 ## 7. 验收与 VERIFIED
 
 - 验证器接口：`(contract, output, evidence_manifest) → {pass|fail, report_artifact}`；MVP 内置检查项枚举（03 §2 `acceptance_policy.checks`）：`sample_range / units / code_reproducible / stat_consistency / schema / source_binding`。
+- **`VERIFIED` 回执绑定四元组（v0.2，评审 §十二）**：契约 ID+版本、输出产物摘要、证据清单 ID+版本、验证器 ID+版本——回执与被验收对象不可分离，状态迁移守卫（03 §5）核对四元组匹配，"存在某张回执"不足以触发 `SUCCEEDED`。
 - `VERIFIED` 回执记录：验证器标识、策略版本、证据清单引用（02 表结构）。
 - **证据 ≠ 正确**：内容摘要只证版本/完整性；来源签名只证签发者。更强验证（引用可定位、单位一致、独立测试通过、可复算、关键结论第二来源/人工审阅）由契约逐项声明。
 - **多 Agent 对同一错误来源的重复转述不构成多个独立证据**：`source` 去重是验收检查的一部分（`source_binding`）。

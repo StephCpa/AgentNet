@@ -16,16 +16,16 @@
 | PRT-A2A-ST-04 | WAITING（等外部/子任务） | 映射 | `working` + 扩展状态注记 `anet.waiting_on` |
 | PRT-A2A-ST-05 | SUCCEEDED | 映射 | `completed`；随后任何对端旧消息不得使状态回退（I4；对照 FI-08） |
 | PRT-A2A-ST-06 | FAILED / CANCELLED | 映射 | `failed` / `canceled`；**禁止**重映射为运行中掩盖本地验收失败（I10） |
-| PRT-A2A-ST-07 | 对端送来 `working` 但本地已 CANCELLED | 入站映射 | 本地保持 CANCELLED；事件 `peer_progress_after_cancel`；在途操作照常对账（04 §7） |
+| PRT-A2A-ST-07 | 对端送来 `TASK_STATE_WORKING` 但本地已 CANCELLED | 入站映射 | 本地保持 CANCELLED；事件 `peer_progress_after_cancel`；在途操作照常对账（04 §7） |
 
 ### A2 命令接纳与可靠接纳扩展（08 §4.3）
 
 | 用例 | 场景 | 期望 |
 |---|---|---|
-| PRT-A2A-RA-01 | 对端声明 `reliable_admission=true`，`message/send` 携带 `anet` 元数据 | 接收方持久接纳后回 `ACCEPTED`（issuer=接收域）；`command_id→task_id` 落库 |
-| PRT-A2A-RA-02 | 同 command_id 重复 `message/send` | 幂等返回既有 task 与原回执；无第二个任务（I1；同 FI-01） |
+| PRT-A2A-RA-01 | 对端声明 `reliable_admission=true`，`SendMessage` 携带 `x-anet-ra/0.1` 元数据 | 接收方持久接纳后回 `ACCEPTED`（issuer=接收域）；`command_id→task_id` 落库 |
+| PRT-A2A-RA-02 | 同 command_id 重复 `SendMessage` | 幂等返回既有 task 与原回执；无第二个任务（I1；同 FI-01） |
 | PRT-A2A-RA-03 | 同 command_id 不同 `payload_digest` | 显式冲突（I3；同 FI-07） |
-| PRT-A2A-RA-04 | `tasks/get?by_command=` 查询 | 返回既有映射（支持 FI-02 句柄丢失恢复） |
+| PRT-A2A-RA-04 | `GetTask?by_command=` 查询 | 返回既有映射（支持 FI-02 句柄丢失恢复） |
 | PRT-A2A-RA-05 | 对端未声明扩展（纯 A2A 对端） | 副作用任务不自动路由：路由器加人工确认门（07 §4 G2）；适配器标记 `admission_risk=high` |
 | PRT-A2A-RA-06 | 对端声明扩展但实测不去重（恶意对端仿真） | 探测请求识别重复创建 → 目录 `quality_alert` + 07 §5 降权（13 §4） |
 
@@ -33,9 +33,9 @@
 
 | 用例 | 场景 | 期望 |
 |---|---|---|
-| PRT-A2A-STR-01 | `message/stream` 中断后 `tasks/resubscribe` | 轮询回退（5s 起退避至 60s）；中间消息缺失不判失败 |
+| PRT-A2A-STR-01 | `SendStreamingMessage` 中断后 `SubscribeToTask` | 轮询回退（5s 起退避至 60s）；中间消息缺失不判失败 |
 | PRT-A2A-STR-02 | 流上文本 vs artifacts | `PRODUCED` 仅认 artifacts/终态；流文本不产生回执 |
-| PRT-A2A-CXL-01 | `tasks/cancel` 得对端确认 | 记 `CANCEL_CONFIRMED(peer cancel_version)` |
+| PRT-A2A-CXL-01 | `CancelTask` 得对端确认 | 记 `CANCEL_CONFIRMED(peer cancel_version)` |
 | PRT-A2A-CXL-02 | 分区中取消 | 本地 `CANCELLED(local), peer=Unknown`；表述不得声称全网停止 |
 | PRT-A2A-CXL-03 | 对端 canceled 回执 | 不解释为外部副作用已撤回；effects 继续独立对账（04 §7） |
 
@@ -55,7 +55,18 @@
 |---|---|---|
 | PRT-MCP-TSK-01 | 长任务 create → 句柄 | 句柄持久化进 `peer_task_ref`；崩溃后可查询恢复（FI-02） |
 | PRT-MCP-TSK-02 | 补充输入 | 不产生新 effect；同任务继续 |
-| PRT-MCP-TSK-03 | 终态 completed / failed / cancelled | COMMITTED(附产物) / REJECTED / REJECTED(cause=cancelled) |
+| PRT-MCP-TSK-03 | 终态 completed / failed / cancelled | **三对象分离（08 §5.2 v0.2）**：按 effect 判定表处理；completed+isError 不自动 COMMITTED；failed/cancelled 默认 UNKNOWN 待业务证据 |
+
+### B2b effect 终态判定（v0.2 新增组；08 §5.2，评审 §8.2）
+
+| 用例 | 场景 | 期望 |
+|---|---|---|
+| PRT-MCP-EFF-01 | 付款成功 → 后续报告生成失败 → task `failed` | effect 保持/进入 UNKNOWN 待业务证据；**不得**因 task failed 记 REJECTED |
+| PRT-MCP-EFF-02 | task `completed` 但工具结果 `isError: true` | 按业务语义分流；不自动 COMMITTED 也不自动 REJECTED |
+| PRT-MCP-EFF-03 | 部分批处理成功（10 项中 7 成功） | 按子项分别判定；整体不直接判终态 |
+| PRT-MCP-EFF-04 | 取消后晚到已执行收据 | effect=COMMITTED 且对账结论标 `after_cancel=true` |
+| PRT-MCP-EFF-05 | task `cancelled` 且目标提供终局未执行证明 | REJECTED；仅 NOT_EXECUTED_FINAL 语义允许重做（04 §6.2） |
+| PRT-MCP-TSK-06 | 首个 CreateTaskResult 丢失（v0.2 新增；04 §3.5） | 按 `anet.command_id` 列表检索恢复；不可检索 ⇒ UNKNOWN + 恢复升级，禁止重发创建 |
 | PRT-MCP-TSK-04 | 超时未到终态 | UNKNOWN + 对账队列；预留保持 HELD（I7） |
 | PRT-MCP-TSK-05 | MCP 取消（协作式） | 不等于外部效果撤回；对账结论标 `after_cancel` 视到达时间 |
 
@@ -81,4 +92,5 @@
 - 运行环境：devnet（12 §2），mockbiz 三型目标（幂等键/可查询/不透明）+ 恶意对端仿真器（13 §3）。
 - 断言层次：① 线上可观测（响应/状态）② TCS 账本副作用（tasks/effects/receipts）③ 审计事件 ④ I10 字段保全。
 - 结果记录：每次回归输出 `test/prt/results/<date>-<adapter-version>.md`（通过率、失败用例、修复关联）。
-- **[核对项]**（08 标注）：PRT-A2A-STR-01 的 `tasks/resubscribe` 行为、PRT-MCP-TSK-03 的状态词表，须在 M0 拿规范原文核对后修订期望列。
+- **[核对项]**（08 标注）：A2A 1.0 的 JSON-RPC 方法字符串与 HTTP 路径以官方规范 tag 固定（`adapters/a2a/wire-format.md`）；MCP Tasks 状态词表与任务元数据字段名，须在 M0 拿规范原文核对后修订期望列。
+- **外部参照纪律（评审 §十三）**：协议测试必须包含官方规范样例/独立参考实现作为对照；**禁止 adapter 与 mock 同源生成即判定通过**。

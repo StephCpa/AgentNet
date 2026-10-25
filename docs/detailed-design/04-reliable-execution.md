@@ -37,10 +37,11 @@
 3. 未命中则创建任务（含契约、初始授权、预算账户）；
 4. 写入 `command_id → task_id` 映射； COMMIT 后返回 `ACCEPTED`。
 
-### 3.2 重试窗口与去重保留期
+### 3.2 重试窗口与去重保留期（v0.2：命令时效自包含）
 
-- 调用方重试窗口 ≤ `tcs.command_retry_window_max`（24h）；`command_inbox` 保留期 ≥ `tcs.dedup_retention`（168h）。**保留期短于重试窗口视为配置错误，TCS 启动时校验拒绝。**
-- 超过保留期的重放：拒绝（`ANET-CMD-EXPIRED`）并产出恢复事件（走 3.3 的句柄查询路径），绝不静默重执行。
+- 命令封装携带可信 `not_after`（GW 签名绑定）；T1 **无条件**检查 `now() ≤ not_after`——该检查不依赖去重记录是否存在。
+- `command_inbox.expires_at = max(tcs.dedup_retention, not_after)`；清理任务只删 `expires_at < now()` 的行。因此**时效未过的命令不可能失去去重记录**（评审 §6.1 修复：清理后重放会被 not_after 检查拒绝，无法创建第二个任务）。
+- 超窗重放：`ANET-CMD-EXPIRED` 拒绝 + 恢复事件；任务 deadline ≠ 命令时效，二者独立判定。
 
 ### 3.3 危险窗口：对端已创建任务、句柄丢失
 
@@ -62,6 +63,23 @@ OnRetry(command_id):
 - 本域接入的所有对端在目录中声明 `anet.capabilities.reliable_admission: true|false`（07 §2）。
 - 对不支持可靠接纳的对端：接纳风险等级上调，路由器对**副作用任务**默认加人工确认门（07 §5）。
 
+### 3.5 危险窗口：MCP 首个 task 句柄丢失（v0.2 新增；评审 §6.3）
+
+窗口：MCP Tasks 服务端**先持久创建任务再返回句柄**；首份 CreateTaskResult 丢失 ⇒ 客户端根本不知道 taskId。已保存句柄后的重连恢复（08 §5.2）覆盖不了这个窗口。
+
+```text
+MCP 长任务创建流程（adapters/mcp）：
+  1) 创建请求的任务元数据嵌入 anet.command_id（客户端可识别标记）[核对项：元数据字段名]
+  2) 提交创建 -> 若响应丢失：
+     a) 列表查询（tasks/list 或等价）按 anet.command_id 检索既有任务
+        -> 命中：写 peer_task_ref，继续跟踪（不重复创建）
+        b) 不可检索 / 未命中且无法区分"未创建"与"已创建未索引"：
+           effect 置 UNKNOWN + 恢复升级（WAITING(RecoveryEscalation)），保留不确定性，
+           禁止盲目重发创建（同 3.3 的纯 A2A 对端路径）
+  3) 目录声明：anet.capabilities.task_creation_dedup = queryable | none（07 §2）
+     none 的服务端：副作用类长任务默认人工确认门（G2 扩展）
+```
+
 ## 4. 业务操作（Effect）执行模型
 
 ### 4.1 幂等能力类（总体方案 §8.3 的执行化）
@@ -73,12 +91,14 @@ OnRetry(command_id):
 | `queryable` | 支持按业务标识查询 | 先查后做；超时先查询再决定 | 仅当查询证明未执行才重试 |
 | `opaque` | 既不幂等也不可查询 | 单次尝试；超时 ⇒ `UNKNOWN`，停止重试 | 禁止自动重试 |
 
-### 4.2 绑定与冲突
+### 4.2 绑定与冲突（v0.2：冲突是拒绝响应，不是 effect 状态）
 
-`effects` 接纳时固化三要素：`params_digest`（关键参数）、`authority_digest`（授权+约束快照）、`epoch`。此后同 `effect_id` 再现：
+`effects` 接纳时固化三要素：`params_digest`、`authority_digest`、`epoch`。此后同 `effect_id` 再现：
 
 - 摘要全一致 ⇒ 幂等返回既有接纳（不产生新尝试）；
-- 任一不一致 ⇒ 登记 `CONFLICT` 并拒绝（I3）。模型重试时换了数据集/参数 ⇒ 必须走新提议、新 `effect_id`、重新过授权与预算。
+- 任一不一致 ⇒ **拒绝本次请求**（`ANET-EFF-PARAMS-CONFLICT`），并在 `effect_conflict_attempts` 追加一条记录（含冲突时已绑定摘要）；**原 effect 的状态、参数绑定、预算责任、对账资格一律不变**（评审 §四：UNKNOWN 不得被覆盖失去对账资格；COMMITTED 业务事实不得被抹掉）。模型重试换参数 ⇒ 走新提议、新 `effect_id`、重新过授权与预算。
+
+effect 状态集：`PREPARED / ADMITTED / COMMITTED / REJECTED / UNKNOWN`（CONFLICT 已移除出状态机）。
 
 ### 4.3 T2 提交后的执行流
 
@@ -137,12 +157,26 @@ AdmitEffect(e) ⇒ e.epoch = CurrentEpoch(e.task)。检查发生在真正接纳�
 - 调度：立即一次；随后退避 1m → 5m → 15m → 1h → 4h；持续 `recovery_policy.on_unknown_effect` 指定窗口（默认 72h）。
 - 每次对账写 `reconciliations` 行（attempt_no、method、outcome），全程可审计。
 
-### 6.2 方法按能力类选择
+### 6.2 方法按能力类选择与查询语义（v0.2：五分类；评审 §6.2）
+
+对账/重试前，目标查询结果必须区分五类语义：
+
+| 查询结果 | 安全含义 | 允许的动作 |
+|---|---|---|
+| `COMMITTED` | 有明确已执行证据 | 结算入 S，补 PRODUCED |
+| `PENDING` | 原尝试仍可能生效 | 等待，不得重做 |
+| `ABSENT` | 当前未查到——**不能证明原请求以后不会生效** | 不得据此重做非幂等操作 |
+| `NOT_EXECUTED_FINAL` | 已证明原尝试不会再生效（目标提供终局保证） | 才允许重新发起 |
+| `UNKNOWN` | 无法确定 | 继续对账 / 升级人工 |
+
+**只有 `NOT_EXECUTED_FINAL`，或目标自身提供唯一业务键/幂等机制，才允许非幂等重做。** 强一致查询的"此刻 ABSENT"不构成重做依据（反例：请求 A 已被接收未提交 → 调用方超时 → 查询 ABSENT → 发送 B → A、B 都提交）。
+
+方法选择：
 
 | capability | 首选方法 | 兜底 |
 |---|---|---|
-| `queryable` | `query`（按业务标识） | `manual` |
-| `idempotent-key` | `reconcile_api`（目标提供按幂等键查询时） | `manual` |
+| `queryable` | `query`（按业务标识，结果映射到五分类） | `manual` |
+| `idempotent-key` | `reconcile_api`（按幂等键查询） | `manual` |
 | 跨域 Agent 操作 | `peer_receipt`（按 command_id 查对端任务，08 §4.3） | `manual` |
 | `opaque` | `manual`（唯一路径） | — |
 

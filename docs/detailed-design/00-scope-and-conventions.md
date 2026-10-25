@@ -80,13 +80,17 @@
 | 项 | 约定 |
 |---|---|
 | ID 格式 | `{kind}_{UUIDv7}`，kind ∈ `dom usr org agt ins con task cmd eff att res grt rct msg evm acc`；例如 `task_0192f0a1b2c3d4e5` |
-| 摘要 | `sha256:` + 小写 hex；对规范化 JSON（UTF-8、键排序、无空白）计算 |
+| 摘要 | `sha256:` + 小写 hex；输入为 **RFC 8785 JCS（JSON Canonicalization Scheme）** 规范化字节流（v0.2 评审 §十：原"UTF-8、键排序、无空白"不足以跨语言一致——`1.0` 在 Python 与 Node 序列化不同） |
 | 时间 | RFC 3339，一律 UTC；`deadline` 一律绝对时间戳 |
 | JSON Schema | 2020-12 方言 |
 | 内部服务间协议 | gRPC（`anet.<svc>.v1`），见各服务文档 |
 | SDK 边缘 | HTTPS + JSON；错误码见 4.4 |
 | 跨域线协议 | 标准 A2A 1.0 / MCP 2026-07-28 + 协商扩展（08） |
 | 内部命令封装 profile | `agent-network/0.1`（总体方案 §6.4 原样沿用） |
+
+**JCS 输入约束（所有进入摘要计算的字段必须满足）**：数字不得使用 Infinity/NaN；浮点须可由 IEEE 754 double 精确往返；金额一律使用规范十进制字符串（无前导零、无多余小数位）；整数绝对值 < 2^53；字符串须为合法 UTF-8（无未配对代理项）；对象无重复键。违反约束的数据在摘要计算前被拒绝（`ANET-CMD-CANON-INVALID`）。
+
+**跨语言测试向量**：[`test/vectors/canonicalization.json`](../../test/vectors/canonicalization.json)；Python（RFC 8785 库或等价实现）、Go（RFC 8785 库）、Node（原生对照）三方 CI 断言同一 digest（M1 门禁）。effect 的 `params_digest` 绑定范围 = 目标 + 操作类型 + 关键参数 + 授权约束摘要（由 proto 字段明确定义，防"关键参数"解释分歧）。
 
 ### 4.3 可信边界重申（总体方案 §4.2 的工程化表述）
 

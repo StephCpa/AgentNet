@@ -61,20 +61,21 @@ erDiagram
 - `peer_task_ref`：跨域任务保存对端句柄（对端域、对端 task_id、发起 command_id），是"远端已创建任务但句柄丢失"窗口的恢复锚点（04 §3.3）。
 - `limits`：根任务写入全局限额快照，子任务继承只读副本（05 §6），保证限额在恢复重放后语义一致。
 
-### 3.2 `command_inbox`：去重键与保留期
+### 3.2 `command_inbox`：去重键、时效与保留期（v0.2）
 
 - 主键 `(command_id, audience_domain_id)`：同一逻辑命令发往不同域是不同接纳。
-- `expires_at`（去重保留期）**必须 ≥ 允许的重试窗口**（04 §3.2），默认 168h，重试窗口默认 ≤ 24h。
-- 过期命令的重放被拒绝（`ANET-CMD-EXPIRED`），进入显式恢复流程，不做静默重执行。
+- `not_after`（可信绑定）：T1 **无条件**检查 `now() ≤ not_after`（自包含，不依赖去重记录存在）；`expires_at = max(保留期, not_after)` 且 `CHECK (expires_at >= not_after)`——时效未过的命令不可能失去去重记录，清理后重放被时效检查拒绝（评审 §6.1 / FI-13）。
+- 默认保留 168h；超窗重放进入显式恢复流程，不静默重执行。
 
-### 3.3 `effects`：I3 的绑定三要素
+### 3.3 `effects`：I3 绑定与冲突（v0.2）
 
-同一 `effect_id` 再次出现时，`params_digest` 与 `authority_digest` 必须与首次接纳一致，否则登记 `CONFLICT` 并拒绝。数据库层以主键保证唯一，绑定检查在 T2 接纳事务内完成（04 §4.2）。
+同一 `effect_id` 再次出现时，`params_digest` 与 `authority_digest` 必须与首次接纳一致；不一致 ⇒ **拒绝响应**并在 `effect_conflict_attempts` 追加记录，原 effect 状态/绑定/预算/对账资格不变（评审 §四）。状态集不含 CONFLICT；绑定检查在 T2 事务内完成（04 §4.2）。
 
-### 3.4 `budget_accounts` / `budget_reservations`：S+R≤B
+### 3.4 `budget_accounts` / `budget_reservations`：S+H+D（v0.2）
 
-- `settled`（S）+ `HELD/SETTLED` 预留之和（R）≤ `budget_limit`（B）。权威执行方式：TCS 对账户行 `SELECT ... FOR UPDATE` 后原子检查（05 §3）；延迟约束触发器 `trg_budget_invariant` 作为实现缺陷的兜底。
-- `delegated`：切给子域独立账本的不可再分配额度，防止"子域内部预留重复计入根账本"（总体方案 §10.1 末条）。
+- 不变量：`settled(S) + SUM(HELD 预留)(H) + delegated(D) ≤ budget_limit(B)`。SETTLED/RELEASED 预留是历史记录不计入 H（结算先退出 H 再进入 S，同事务）。
+- 权威执行：TCS 行锁 + **预留独占绑定**（部分唯一索引 `uq_reservation_effect/attempt` + 绑定不可改写触发器）；延迟约束触发器 `trg_budget_invariant_res/_acc`（预留表与账户表变更都触发）兜底实现缺陷。
+- 根账户唯一性：`UNIQUE NULLS NOT DISTINCT`（防同任务同维度双根账户，评审 §9.3）。
 
 ### 3.5 `task_events` / `audit_log`：分区与仅追加
 
@@ -86,8 +87,8 @@ erDiagram
 | 规则 | 内容 |
 |---|---|
 | 隔离级别 | 默认 READ COMMITTED；正确性不依赖 SERIALIZABLE，靠显式行锁 |
-| 锁序 | 任一事务内按固定顺序加锁：`tasks` 行 → `budget_accounts` 行（按 `account_id` 字典序）→ 其余表。禁止反序，杜绝死锁 |
-| 三个提交时点 | T1 任务接纳 / T2 业务操作接纳 / T3 取消（03 §6）；全部为单库短事务 |
+| 锁序 | **逐事务锁序表见 05 §7**（T1/T2/T3/Reserve/Settle/Delegate/子域上报各有固定顺序，按 account/reservation 字典序）；禁止反序 |
+| 三个提交时点 | T1 任务接纳（先 `tasks` 后 `command_inbox`，即时 FK 约束下顺序不可倒——评审 §9.2）/ T2 业务操作接纳 / T3 取消；全部单库短事务 |
 | 外部调用 | 一律在提交后由适配器执行（outbox 模式） |
 | 失败重试 | 乐观并发冲突（版本不变）由调用方带退避重试；行锁等待超时 `db.lock_timeout = 2s` |
 
@@ -97,13 +98,13 @@ erDiagram
 
 | 表 | 写入速率估算 | 行大小（含索引） | 日增量 | 热保留策略 |
 |---|---|---|---|---|
-| `task_events` | ≈ 控制消息数的 50%（≈100/s） | ~1.5 KiB | ≈ 860 万行 / ~13 GiB | 180 天热，之后 detach 归档（12 §5） |
-| `audit_log` | ≈ 每接纳/决策 1 行（≈150/s） | ~0.6 KiB | ≈ 1,300 万行 / ~8 GiB | 365 天热 |
+| `task_events` | ≈ 控制消息数的 50%（≈100/s） | ~1.5 KiB | ≈ 860 万行 / **13 GiB**（含索引） | 180 天热（≈3.5 TiB），之后 detach 归档（12 §5） |
+| `audit_log` | ≈ 每接纳/决策 1 行（≈150/s） | ~0.6 KiB | ≈ 1,300 万行 / **12 GiB**（含索引） | 365 天热（≈4.4 TiB） |
 | `outbox`（终态行） | ≈ 消息数 | ~1 KiB | ≈ 1,700 万行 / ~17 GiB | DONE 行保留 7 天后清理 |
-| `command_inbox` | ≈ 命令数 | ~0.2 KiB | 按 `expires_at` 滚动清理 | ≤168h |
+| `command_inbox` | ≈ 命令数 | ~0.2 KiB | 按 `expires_at` 滚动清理 | ≤168h 且 ≥ not_after |
 | `receipts` / `effects` | 命令/操作数 | ~0.5 KiB | 与任务量线性 | 随任务归档 |
 
-结论（与总体方案一致）：**带宽不是第一瓶颈，长期记录积累才是**。因此：① 事件与产物分离（产物入对象存储，事件只存引用与摘要）；② 分区 + 定期归档是 M1 必须项而非 M4 优化项；③ 大载荷一律走 ART 引用，禁止整包进事件。
+热存合计 ≈ 8 TiB，与 12 §6 主库配置（16 TiB，含 2× 安全系数）自洽（评审 §十二修复了 v0.1 的 4 TiB 矛盾）。**带宽不是第一瓶颈，长期记录积累才是**：事件与产物分离、分区+归档是 M1 必须项、大载荷一律走 ART 引用。
 
 ## 6. 数据库角色与访问控制
 

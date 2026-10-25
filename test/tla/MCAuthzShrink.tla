@@ -1,17 +1,19 @@
 --------------------------- MODULE MCAuthzShrink ---------------------------
 (***************************************************************************)
-(* MC 包装：Acts={read,compute,write,delegate}，depth <= 2（13 §2 界）。     *)
+(* MC 包装 v0.2：Acts={read,compute,write,delegate}，depth <= 2。           *)
 (***************************************************************************)
+EXTENDS Naturals
+
 ASet == {"read", "compute", "write", "delegate"}
 
-VARIABLES rootRights, childRights, depthLeft
+VARIABLES currentRights, depthLeft
 
 AS == INSTANCE AuthzShrink WITH
         Acts <- ASet,
-        rootRights <- rootRights,
-        childRights <- childRights,
+        currentRights <- currentRights,
         depthLeft <- depthLeft
 
-Spec == AS!Spec
-Inv   == AS!Inv6
+Spec          == AS!Spec
+Inv           == AS!TypeOK /\ AS!Inv6
+ChainMonotone == AS!ChainMonotone
 =============================================================================

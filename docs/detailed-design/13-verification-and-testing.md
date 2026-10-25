@@ -7,39 +7,36 @@
 | 不变量 | 机制（设计落点） | 主要验证 |
 |---|---|---|
 | I1 接纳回执只能在持久提交后返回 | T1 提交序（03 §6.1）；`receipts.issuer` 必填 | TLA+ Inv1；FI-01 |
-| I2 只有当前 epoch 可接纳新操作 | T2 守卫 + 出域 epoch 校验（04 §5） | TLA+ Inv2；FI-04 |
-| I3 同一操作标识不能绑定不同参数 | 去重摘要比对（03 §6.1/§6.2、04 §4.2） | TLA+ Inv3；FI-07 |
-| I4 已终结任务不能被旧消息重启 | 终态守卫触发器 + 状态机（02 §3.1、03 §5） | TLA+ Inv4；FI-08 |
-| I5 S+R ≤ B | 行锁 Reserve + 延迟约束触发器（05 §3、02 §3.4） | TLA+ BudgetLedger；FI-06、FI-12 |
-| I6 子授权不能扩大有效权限 | checkShrink（06 §3） | TLA+ AuthzShrink；FI-11 |
-| I7 UNKNOWN 不得伪装成失败后自动重做 | UNKNOWN 持久 + 禁自动重试（04 §4.3、§6.3） | TLA+ Inv7；FI-03 |
-| I8 完成状态满足验收条件 | SUCCEEDED 守卫需 VERIFIED（03 §5） | BM 主断言；验收器单测 |
-| I9 取消后不再接纳新操作、既有操作继续对账 | T3 + T2 守卫 + 对账不中断（03 §6.3、04 §7） | TLA+ Inv9；FI-05 |
+| I2 只有当前 epoch **且为有效租约持有者**可接纳新操作 | T2 守卫（epoch + lease holder 实例绑定）+ 出域 epoch 校验（04 §5） | TLA+ 动作性质；FI-04（含旧 worker 伪装新 epoch 变体） |
+| I3 同一操作标识不能绑定不同参数 | 去重摘要比对；冲突=拒绝响应不改写原绑定（03 §6.1/§6.2、04 §4.2） | TLA+ BindingImmutable；FI-07 |
+| I4 已终结任务不能被旧消息重启 | 终态守卫触发器 + 状态机（02 §3.1、03 §5） | TLA+ TerminalStable；FI-08 |
+| I5 S+H+D ≤ B（v0.2） | 行锁 Reserve + 双表延迟约束触发器（05 §3、02 §3.4） | TLA+ BudgetLedger（双域）；FI-06、FI-12 |
+| I5b 预留独占绑定（v0.2 新增） | 部分唯一索引 + 绑定不可改写触发器（05 §2/§4） | SQL 探针；TLA+ 预留独占性质 |
+| I6 子授权不能扩大有效权限（沿真实父链） | checkShrink（06 §3） | TLA+ AuthzShrink 步性质；FI-11 |
+| I7 UNKNOWN 不得被伪装成失败后自动重做，**也不得被任何请求覆盖** | UNKNOWN 持久 + 禁自动重试 + 冲突不改状态（04 §4.2/§4.3、§6.3） | TLA+ UnknownPreserved/CommittedPreserved；FI-03 |
+| I8 完成状态满足验收条件（VERIFIED 四元组绑定） | SUCCEEDED 守卫需 VERIFIED（03 §5、09 §7） | BM 主断言；验收器单测 |
+| I9 取消后不再接纳新操作、既有操作继续对账 | T3 + T2 守卫 + 对账不中断（03 §6.3、04 §7） | TLA+；FI-05 |
 | I10 安全约束不得在协议适配中静默丢失 | 适配映射核对表 + 出站再校验（08 §6、09 §8） | PRT 套件；FI-10 |
+| I11 命令时效（v0.2 新增） | not_after 无条件检查 + inbox 保留 ≥ not_after（03 §6.1） | SQL 探针；FI-13 |
 
 ## 2. TLA+ / 状态模型（M0 交付）
 
-**2026-10-25 首轮运行已通过**（TLC2 2.19 / tla2tools 1.7.4，界内全枚举；工具链与结果见 `test/tla/README.md`）：TaskMachine 98,896 distinct 状态（含 `NoRevival` 时序性质）、BudgetLedger 3,438、AuthzShrink 33。首轮验证发现并修正一处建模缺陷（冲突响应曾覆写去重绑定，破坏 I1），佐证了模型检查的价值。
+**2026-10-26 v0.2（评审整改后）全部通过**（工具链、逐项结果、变异记录见 `test/tla/README.md`）：
 
-模块划分与小界模型：
+| 模块 | 通过项 | 规模 |
+|---|---|---|
+| TaskMachine | Inv + 5 条**独立动作性质**（UnknownPreserved 等，`[][~(坏条件)]_Vars` 形式） | 81,386 states |
+| CmdExpiry（新增） | I11：清理后重放不建第二个任务 | 10 states |
+| BudgetLedger（重建为**双域模型**） | I5 + InvLedger（父账 D = 子域权利+在途守恒） | 8,008 states |
+| AuthzShrink（重建为**真实父链**） | ChainMonotone（沿链单调收缩） | 33 states |
 
-```
-TaskMachine.tla      常量: Workers={w1,w2}, Cmds={c1,c2}, Effects={e1,e2}
-  变量: task_state, task_version, epoch, cancel_version,
-        inbox[command ∈ Cmds] ∈ {none,accepted,conflict},
-        eff[Effect] ∈ {none, prepared, admitted, committed, rejected, unknown, conflict},
-        effParams[Effect], receipts
-  动作: Submit, Retry(changedParams?), Admit, ExtComplete, Crash(phase),
-        Recover, Takeover, Cancel, ReplayOldMessage
-BudgetLedger.tla     变量: settled, reserved[Subtask], delegated; 动作: Reserve, Settle, Release, TrancheReturn(未确认)
-AuthzShrink.tla      变量: rights链; 动作: Delegate(收缩), Revoke, AdmitWith(stale?)
-性质: Inv1..Inv10（逐条对应 §1 表）+ "effect 终态前不得 SUCCEEDED" 辅助不变量
-```
+**守卫变异测试（8 项）**：7 项删除守卫被检出（含评审点名的预算守卫、tranche 确认、收缩守卫）；1 项（代次检查）为**预期冗余**——租约持有者绑定独立覆盖该攻击面，符合纵深防御设计。变异清单与结论见 `test/tla/mutations.py`。
 
-- LLM 抽象为**能提出任意行动的非确定性组件**（Retry(changedParams?) 即"模型重试时换参数"）；验证对象是控制边界，不是模型业务理解。
-- Crash(phase) 覆盖提交边界两侧：`pre_commit / post_commit_pre_ack / pre_ext_send / post_ext_send_pre_record`——对应 04 §9 的危险窗口。
-- 界：≤2 worker、≤2 子任务、≤2 effects，全状态枚举；预算值 ≤10。AgentRFC 的协议组合检查方法作参考。
-- **TLC 1.7.4 能力边界（实证）**：cfg 不接受裸动作性质（`~A`/`[]~A` 均报错）；支持状态不变量与状态谓词嵌套 `[]` 时序性质。故 I2/I9/I7-重做/I4-复活/I8 的坏步骤以**守卫编码**保证（形状记录于各模块 `Bad*` 定义），并新增**守卫变异测试**（M1 内执行）：逐一删除 Admit/Submit/Finish/Reclaim 的关键守卫合取项，TLC 必须能对相应不变量产出反例——验证守卫的非空转性。
+界：Workers={w1,w2}, Cmds={c1,c2}, Effects={e1,e2,e3}, BudgetMax=2（使预算与重做变异互不掩蔽）。
+
+- LLM 抽象为**能提出任意行动的非确定性组件**（含"重试换参数""伪装代次"——Admit 的 `ce` 参数即可查询的提案代次）。
+- Crash 相位覆盖（04 §9 四窗口）仍为 TODO（v0.3 计划）；子任务树展开待 BudgetLedger 扩展。
+- AgentRFC 的协议组合检查方法作参考。
 
 ## 3. 故障注入测试矩阵（FI）
 
@@ -53,8 +50,9 @@ AuthzShrink.tla      变量: rights链; 动作: Delegate(收缩), Revoke, AdmitW
 | FI-04 | 旧 worker 接管后复活 | 租约过期触发接管后唤醒旧 worker | 旧 epoch 的 AdmitEffect 被拒 `ANET-EFF-FENCED`；出域请求被 GW epoch 校验拦截 | I2 |
 | FI-05 | 取消与提交并发 | 并发调用 Cancel 与 AdmitEffect | 行锁串行化；两种顺序都有明确解释（取消先 ⇒ 接纳拒绝；接纳先 ⇒ 操作继续对账） | I9 |
 | FI-06 | 多子任务并发申请超额预算 | 并发 Reserve 冲击根账户 | 合计不超 B；超额者收 `ANET-BUD-EXHAUSTED` | I5 |
-| FI-07 | 重试时参数改变 | 恶意 SDK 同 effect_id 换参数 | `ANET-EFF-PARAMS-CONFLICT`，effect 置 CONFLICT | I3 |
+| FI-07 | 重试时参数改变 | 恶意 SDK 同 effect_id 换参数 | `ANET-EFF-PARAMS-CONFLICT` 拒绝响应 + conflict 行留档；**原 effect 状态/绑定/预算/对账资格不变**（v0.2） | I3/I7 |
 | FI-08 | 消息过期后重放 | 超过 dedup_retention 后重发旧命令 | `ANET-CMD-EXPIRED` + 恢复流程；旧消息不能复活终态任务 | I4 |
+| FI-13 | 去重记录清理后重放（v0.2 新增，评审 §6.1） | 手工删除 inbox 行 + 重放命令 | `not_after` 检查拒绝；**不得创建第二个任务** | I11 |
 | FI-09 | 证据引用失效/摘要遗漏限制 | 篡改产物或删引用 | 补取或验收失败"证据不足"，不得残缺通过 | I8 |
 | FI-10 | 协议桥丢失授权约束 | 适配器缺陷注入（剥离扩展字段） | 出站再校验失败，接纳前拦截 | I10 |
 | FI-11 | 恶意内容自称管理员授权 | 伪造正文身份字段 | 权限不变（身份只认可信接入层绑定） | I6 |
@@ -79,12 +77,31 @@ AuthzShrink.tla      变量: rights链; 动作: Delegate(收缩), Revoke, AdmitW
 - 统计：任务配对 bootstrap 置信区间；B4 相对 B2/B3 的增益须"可解释"（能归因到具体机制）方计为成立——否则按总体方案 §14.3 调整研究主张。
 - **诚实性条款**：模拟大规模逻辑 Agent 的实验单列，不与真实复杂 Agent 协作能力混报。
 
-## 6. 里程碑退出条件（对应 14 §2）
+## 6. 里程碑退出条件（对应 14 §2；v0.2 按评审 §十三重写）
+
+### M0 退出条件（五条，取代"三个模型通过"的旧口径）
+
+1. **每个关键不变量都有准确的观察对象**：预算不变量覆盖实际支出责任（S+H+D 与双域守恒），授权不变量覆盖真实父子链（ChainMonotone），UNKNOWN 保护覆盖"不被任何请求覆盖"（UnknownPreserved）。✅ 2026-10-26 达成（`test/tla/`）。
+2. **每个关键保证有一条失败反例**：守卫变异测试证明"修正前能触发、修正后被阻断、合法路径仍可执行"（7/7 非冗余变异检出 + 1 预期冗余说明）。✅ 2026-10-26 达成（`mutations.py`）。
+3. **模型与可执行规格有明确映射**：TLA 状态/动作 ↔ SQL 行/事务的对照表（`test/tla/README.md` §模型-规格映射）。✅
+4. **协议测试包含外部规范作为独立参照**：A2A 1.0 官方 tag 固定 + MCP 官方样例；禁止 adapter 与 mock 同源生成即通过（PRT 执行说明）。◐ 待 M0 评审时固定 tag（[核对项]）。
+5. **"已验证"声明限定到实际证据范围**：验证矩阵四层分级（下表）。✅
+
+### 验证声明四层分级矩阵
+
+| 层 | 含义 | 当前条目 |
+|---|---|---|
+| L1 已建模且被独立性质检查 | TLC 动作性质/不变量 + 变异佐证 | I1/I3/I4/I5/I6/I7/I11 + 租约绑定 + 双域守恒 |
+| L2 仅由迁移规则限制，尚未独立检验 | 守卫编码且变异为冗余 | 代次检查（被持有者绑定覆盖）；I9 取消-接纳互斥（v0.3 补性质） |
+| L3 尚未建模 | 崩溃相位四窗口、子任务树、验收回执链、预留独占（多预留竞争） | v0.3 计划 |
+| L4 需要实现级验证 | SQL 事务探针（含并发）、PRT、FI、BM | M1 起（本机无 PG 环境，迁移执行验证列入 M1 首项） |
+
+### M1–M4（不变）
 
 | 里程碑 | 退出条件（测试口径） |
 |---|---|
-| M0 | 本设计评审通过；TLA+ 三模块全部通过界内枚举；PRT 用例成文；OQ-1 评估完成 |
-| M1 | 单域：FI-01/03/04/05/06/07/08 全绿；归档作业运行；BM 微基准（B2 vs B4 单域）出首份报告 |
+| M1 | 单域：**PG16 全量迁移执行通过**（评审 §九的阻断项回归）+ SQL 探针（结算成功/下放拒再分配/预留独占/时效）+ FI-01/03/04/05/06/07/08/13 全绿；归档作业运行；BM 微基准首份报告 |
 | M2 | 三域：FI-02/10/11/12 全绿；跨域授权/预算交接性质在 PRT+FI 双覆盖；OQ-5 映射表发布 |
-| M3 | 真实 LLM 任务 BM 全量；B4 对 B2/B3 有可解释收益或完成主张调整；证据恢复（FI-09）全绿 |
+| M3 | 真实 LLM 任务 BM 全量；B4 对 B2 有可解释**机制增益**（同底座对比，B3 补充生态价值）；证据恢复（FI-09）全绿 |
 | M4 | 负载目标（12 §6）下服务目标达成；备份恢复演练；DP 前两项用途发布走查（11 §8） |
+

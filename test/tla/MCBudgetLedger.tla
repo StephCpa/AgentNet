@@ -1,21 +1,20 @@
 --------------------------- MODULE MCBudgetLedger ---------------------------
 (***************************************************************************)
-(* MC 包装：Subtasks={s1,s2}, Amounts={2,3,7}, BudgetMax=10（13 §2 界）。    *)
+(* MC 包装 v0.2 双域模型：Subtasks={s1}, Amounts={1,2,3}, BudgetMax=10。     *)
 (***************************************************************************)
-SSet == {"s1", "s2"}
-ASet == {2, 3, 7}
+EXTENDS Naturals
 
-VARIABLES settled, held, tranche, confirmed
+SSet == {"s1"}
+ASet == {1, 2, 3}
+
+VARIABLES pS, pH, pD, cAvail, cSpent, inSpend, inRet
 
 BL == INSTANCE BudgetLedger WITH
-        Subtasks <- SSet,
-        Amounts <- ASet,
-        BudgetMax <- 10,
-        settled <- settled,
-        held <- held,
-        tranche <- tranche,
-        confirmed <- confirmed
+        Subtasks <- SSet, Amounts <- ASet, BudgetMax <- 10,
+        pS <- pS, pH <- pH, pD <- pD,
+        cAvail <- cAvail, cSpent <- cSpent,
+        inSpend <- inSpend, inRet <- inRet
 
 Spec    == BL!Spec
-Inv     == BL!TypeOK /\ BL!BudgetOK
+Inv     == BL!TypeOK /\ BL!InvI5 /\ BL!InvLedger
 =============================================================================
