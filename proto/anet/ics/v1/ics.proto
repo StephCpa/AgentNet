@@ -1,0 +1,89 @@
+// ============================================================================
+// anet.ics.v1 —— 身份与策略服务接口（详细设计 01 §3–§5、06）
+// ============================================================================
+syntax = "proto3";
+package anet.ics.v1;
+option go_package = "github.com/agentnet/agentnet/proto/gen/anet/ics/v1;icsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// 实例注册（01 §3.1）：认证主体登记
+message RegisterInstanceRequest {
+  string agent_id = 1;
+  string cred_hash = 2;                  // 证书指纹/公钥哈希
+  string spiffe_id = 3;
+}
+message InstanceRecord {
+  string instance_id = 1;
+  string agent_id = 2;
+  google.protobuf.Timestamp started_at = 3;
+}
+
+// RFC 8693 令牌交换画像（01 §4；06 §4：act 链仅展示，不作判定依据）
+message ExchangeDelegationTokenRequest {
+  string subject_principal_id = 1;       // 最终用户
+  string actor_agent_id = 2;
+  string actor_instance_id = 3;
+  string task_id = 4;                    // 任务作用域
+  string grant_id = 5;                   // 权威授权记录锚点
+  string audience_domain_id = 6;
+  int32 ttl_seconds = 7;                 // ≤ 60（04 §5.2 出域窄化）
+  int64 epoch = 8;                       // 嵌入 anet.epoch 声明
+}
+message DelegatedToken {
+  string jwt = 1;
+  string jti = 2;                        // 每次传输尝试更换（01 §4.1）
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+// PDP 判定（06 §4：敏感级新鲜度要求）
+message DecideRequest {
+  string grant_id = 1;
+  string action = 2;                     // 受控词表（06 §2）
+  string resource = 3;
+  string task_id = 4;
+  string data_class = 5;
+  string sensitivity = 6;                // sensitive | standard
+  string audience_domain_id = 7;
+}
+message Decision {
+  string decision_id = 1;
+  bool allow = 2;
+  google.protobuf.Timestamp at = 3;      // TCS 校验 now()-at ≤ sensitive_max_age
+  string policy_version = 4;
+  google.protobuf.Timestamp cacheable_until = 5;  // standard 级可缓存窗口
+}
+
+// 单调收缩复核（06 §3 checkShrink；CreateSubtask 事务内调用）
+message CheckShrinkRequest {
+  string parent_rights_json = 1;
+  string child_rights_json = 2;
+  string recipient_policy_json = 3;
+  string action_vocab_version = 4;       // 词表/映射表版本（06 §7）
+}
+message CheckShrinkResult {
+  bool ok = 1;
+  repeated string violations = 2;        // 命名各维：resources/actions/data_classes/...
+}
+
+// 撤销（01 §7、06 §5）
+message RevokeRequest {
+  oneof target {
+    string grant_id = 1;
+    string root_grant_id = 2;            // 级联标记授权存疑
+    string instance_id = 3;
+    string principal_id = 4;
+  }
+  string reason = 5;
+}
+message RevokeResult {
+  google.protobuf.Timestamp effective_at = 1;
+}
+
+service IdentityPolicy {
+  rpc RegisterInstance(RegisterInstanceRequest) returns (InstanceRecord);
+  rpc ExchangeDelegationToken(ExchangeDelegationTokenRequest) returns (DelegatedToken);
+  rpc Decide(DecideRequest) returns (Decision);
+  rpc CheckShrink(CheckShrinkRequest) returns (CheckShrinkResult);
+  rpc Revoke(RevokeRequest) returns (RevokeResult);
+}

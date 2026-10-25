@@ -1,0 +1,4 @@
+test/tla/states/
+*.tmp
+Thumbs.db
+.DS_Store

@@ -1,0 +1,291 @@
+// ============================================================================
+// anet.tcs.v1 —— 任务控制服务接口（详细设计 03 §4；语义：03 §5–§7、04、05）
+// 错误码 ANET-*（03 §10、04 §10、05 §10）经 gRPC status details 传递；
+// 金额/额度一律用字符串承载 NUMERIC，避免浮点误差。
+// ============================================================================
+syntax = "proto3";
+package anet.tcs.v1;
+option go_package = "github.com/agentnet/agentnet/proto/gen/anet/tcs/v1;tcsv1";
+
+import "google/protobuf/timestamp.proto";
+
+// ---------------------------------------------------------------------------
+// 公共类型
+// ---------------------------------------------------------------------------
+
+message PrincipalRef {
+  string principal_id = 1;   // usr_/org_/svc_（01 §1）
+  string domain_id = 2;
+}
+
+message ActorRef {
+  string agent_id = 1;       // agt_
+  string instance_id = 2;    // ins_（可空：仅逻辑 Agent 签约时）
+}
+
+message ContractRef {
+  string contract_id = 1;    // con_
+  int32 version = 2;
+  string digest = 3;         // sha256:...
+}
+
+message Receipt {                       // 04 §2：ACCEPTED/PRODUCED/VERIFIED
+  string receipt_id = 1;                // rct_
+  string kind = 2;                      // ACCEPTED | PRODUCED | VERIFIED
+  string issuer_domain_id = 3;          // ACCEPTED 必填（I1）
+  string task_id = 4;
+  string command_id = 5;
+  string effect_id = 6;
+  string verifier = 7;                  // VERIFIED 专用
+  string policy_version = 8;            // VERIFIED 专用
+  string evidence_manifest_ref = 9;     // VERIFIED 专用
+  string result_ref = 10;               // PRODUCED/VERIFIED 产物引用
+  google.protobuf.Timestamp issued_at = 11;
+}
+
+message EffectState {                   // 04 §4
+  string effect_id = 1;
+  string task_id = 2;
+  string command_id = 3;
+  string target_ref = 4;
+  string capability = 5;                // local-tx | idempotent-key | queryable | opaque
+  string state = 6;   // PREPARED | ADMITTED | COMMITTED | REJECTED | UNKNOWN | CONFLICT
+  string params_digest = 7;             // I3 绑定
+  string authority_digest = 8;
+  int64 epoch = 9;                      // I2 fencing
+  string result_ref = 10;
+}
+
+message BudgetAccountView {             // 05 §2
+  string account_id = 1;
+  string dimension = 2;                 // money | tokens | calls | messages
+  string budget_limit = 3;              // B
+  string settled = 4;                   // S
+  string held = 5;                      // R 中 HELD 部分
+  string delegated = 6;
+}
+
+message TaskSnapshot {
+  string task_id = 1;
+  string root_task_id = 2;
+  string parent_task_id = 3;
+  string status = 4;   // ACCEPTED | RUNNING | WAITING | SUCCEEDED | FAILED | CANCELLED
+  int64 task_version = 5;
+  int64 current_epoch = 6;
+  int64 cancel_version = 7;             // 0 = 未取消
+  string assignee_agent_id = 8;
+  string assignee_domain_id = 9;
+  repeated EffectState effects = 10;
+  repeated Receipt receipts = 11;
+  repeated BudgetAccountView budget = 12;
+  google.protobuf.Timestamp deadline = 13;
+}
+
+message AuthorizationDecision {         // ICS PDP 输出的可校验判定（06 §4）
+  string decision_id = 1;
+  bool allow = 2;
+  google.protobuf.Timestamp at = 3;     // 新鲜度锚点（authz.sensitive_max_age）
+  string policy_version = 4;
+}
+
+// ---------------------------------------------------------------------------
+// T1 任务接纳（03 §6.1）
+// ---------------------------------------------------------------------------
+
+message TaskLimits {                    // 根任务限额快照（05 §6；03 §9 默认值）
+  int32 max_delegation_depth = 1;
+  int32 max_concurrent_subtasks = 2;
+  int64 max_model_calls = 3;
+  int64 max_messages = 4;
+  string max_money = 5;                 // 微 USD
+  int64 max_tokens = 6;
+}
+
+message SubmitCommandRequest {
+  string profile = 1;                   // 固定 "agent-network/0.1"
+  string command_id = 2;                // cmd_：幂等键
+  string parent_task_id = 3;            // 根任务为空
+  string audience_domain_id = 4;        // dom_
+  ContractRef contract = 5;
+  string contract_body_json = 6;        // 契约体（TCS 校验 digest 与 R2.3 完整性）
+  TaskLimits limits = 7;                // 根任务必填
+  int64 expected_task_version = 8;      // 引用既有任务时的并发检查
+  string payload_digest = 9;            // GW 计算并覆盖（01 §5）
+  PrincipalRef caller = 10;             // GW 覆盖写入，调用方自填无效
+  ActorRef actor = 11;
+}
+
+message AdmissionResult {
+  enum Outcome { NEW = 0; EXISTING = 1; CONFLICT = 2; }
+  Outcome outcome = 1;
+  string task_id = 2;
+  Receipt accepted_receipt = 3;         // EXISTING 时返回原回执
+  string error_code = 4;                // ANET-CMD-*
+  string error_message = 5;
+}
+
+// ---------------------------------------------------------------------------
+// 子任务委托（03 §7）
+// ---------------------------------------------------------------------------
+
+message CreateSubtaskRequest {
+  string parent_task_id = 1;
+  string command_id = 2;
+  string audience_domain_id = 3;        // 跨域时为对端域
+  string contract_body_json = 4;
+  string contract_digest = 5;
+  string child_rights_json = 6;         // 提议的收缩权限；ICS CheckShrink 复核
+  message BudgetAllocation {
+    string dimension = 1;
+    string amount = 2;                  // 从父账户切分
+  }
+  repeated BudgetAllocation allocations = 7;
+  int64 expected_task_version = 8;
+}
+
+// ---------------------------------------------------------------------------
+// 业务操作（04 §4）：T2 接纳 + 结果上报
+// ---------------------------------------------------------------------------
+
+message EffectProposal {
+  string effect_id = 1;                 // eff_
+  string task_id = 2;
+  string command_id = 3;
+  string target_ref = 4;
+  string capability = 5;
+  string params_digest = 6;
+  string authority_digest = 7;          // grant + 约束快照摘要
+  int64 epoch = 8;                      // 提议时的 epoch；T2 复核
+  string reservation_ref = 9;           // res_（05 §4：接纳必须绑定 HELD 预留）
+  string cost_upper_bound = 10;         // 字符串 NUMERIC；须 ≤ 预留额
+  string sensitivity = 11;              // sensitive | standard
+}
+
+message AdmitEffectRequest {
+  EffectProposal effect = 1;
+  AuthorizationDecision authz = 2;      // 敏感级须新鲜（06 §4）
+}
+
+message EffectAdmission {
+  enum Outcome { ADMITTED = 0; EXISTING = 1; FENCED = 2; CONFLICT = 3; DENIED = 4; }
+  Outcome outcome = 1;
+  string state = 2;                     // 生效后的 effect 状态
+  string error_code = 3;                // ANET-EFF-*
+}
+
+message ReportEffectResultRequest {
+  string effect_id = 1;
+  string attempt_id = 2;                // att_
+  string outcome = 3;                   // COMMITTED | REJECTED | UNKNOWN（04 §4.3）
+  string usage_json = 4;                // {money, tokens, calls} + 来源标注
+  string result_ref = 5;                // COMMITTED：产物/收据引用
+  string failure_json = 6;              // REJECTED：原因
+}
+
+// ---------------------------------------------------------------------------
+// 状态迁移与取消（03 §5、§6.3）
+// ---------------------------------------------------------------------------
+
+message UpdateTaskStatusRequest {
+  string task_id = 1;
+  string from_status = 2;
+  string to_status = 3;                 // 守卫见 03 §5 表
+  int64 expected_task_version = 4;
+  string verified_receipt_id = 5;       // → SUCCEEDED 必填（I8）
+  string evidence_manifest_ref = 6;     // → FAILED 必填失败证据
+}
+
+message CancelTaskRequest {
+  string task_id = 1;
+  string cause = 2;
+}
+
+message CancelResult {
+  int64 cancel_version = 1;
+  bool already_cancelled = 2;
+}
+
+// ---------------------------------------------------------------------------
+// 预算（05 §3–§5）
+// ---------------------------------------------------------------------------
+
+message ReserveBudgetRequest {
+  string task_id = 1;
+  string dimension = 2;
+  string purpose = 3;    // model_call | tool_call | subtask | message | delegate_tranche
+  string upper_bound = 4;
+  int32 soft_ttl_seconds = 5;
+}
+
+message Reservation {
+  string reservation_id = 1;
+  string account_id = 2;
+  string state = 3;      // HELD | SETTLED | RELEASED
+  string amount = 4;
+}
+
+message SettleReservationRequest {
+  string reservation_id = 1;
+  string actual_usage = 2;
+  string usage_source = 3;               // provider | metered | self_reported（05 §5.1）
+}
+
+message ReleaseReservationRequest {
+  string reservation_id = 1;
+  string reason = 2;                     // 仅限 05 §5.3 允许的场景
+}
+
+// ---------------------------------------------------------------------------
+// 租约（04 §5）
+// ---------------------------------------------------------------------------
+
+message AcquireLeaseRequest {
+  string task_id = 1;
+  string worker_instance_id = 2;
+}
+
+message Lease {
+  string lease_id = 1;
+  int64 epoch = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message RenewLeaseRequest {
+  string lease_id = 1;
+  string worker_instance_id = 2;
+}
+
+message ListUnknownEffectsRequest {
+  int32 limit = 1;                       // 对账工作队列（04 §6）
+}
+
+// ---------------------------------------------------------------------------
+// 服务定义
+// ---------------------------------------------------------------------------
+
+service TaskControl {
+  // T1（幂等）
+  rpc SubmitCommand(SubmitCommandRequest) returns (AdmissionResult);
+  rpc GetTask(GetTaskRequest) returns (TaskSnapshot);
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (TaskSnapshot);
+  rpc CreateSubtask(CreateSubtaskRequest) returns (AdmissionResult);
+
+  // T2 + 结果（04）
+  rpc AdmitEffect(AdmitEffectRequest) returns (EffectAdmission);
+  rpc ReportEffectResult(ReportEffectResultRequest) returns (EffectState);
+  rpc ListUnknownEffects(ListUnknownEffectsRequest) returns (stream EffectState);
+
+  // T3
+  rpc CancelTask(CancelTaskRequest) returns (CancelResult);
+
+  // 预算
+  rpc ReserveBudget(ReserveBudgetRequest) returns (Reservation);
+  rpc SettleReservation(SettleReservationRequest) returns (Reservation);
+  rpc ReleaseReservation(ReleaseReservationRequest) returns (Reservation);
+
+  // 租约
+  rpc AcquireLease(AcquireLeaseRequest) returns (Lease);
+  rpc RenewLease(RenewLeaseRequest) returns (Lease);
+}
+
+message GetTaskRequest { string task_id = 1; }

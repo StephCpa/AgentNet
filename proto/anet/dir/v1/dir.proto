@@ -1,0 +1,73 @@
+// ============================================================================
+// anet.dir.v1 —— 能力目录服务接口（详细设计 07）
+// ============================================================================
+syntax = "proto3";
+package anet.dir.v1;
+option go_package = "github.com/agentnet/agentnet/proto/gen/anet/dir/v1;dirv1";
+
+import "google/protobuf/timestamp.proto";
+
+// 卡片记录：A2A Agent Card / OASF 标准字段以原规范为准；
+// anet 扩展段（reliable_admission / effect_capability 等）见 07 §1。
+message CardRecord {
+  string agent_id = 1;
+  string handle = 2;                     // search@lab-b
+  string domain_id = 3;
+  string card_json = 4;                  // 完整卡片（标准字段 + anet 扩展）
+  string card_digest = 5;
+  string signature_ref = 6;              // 脱离式签名产物引用
+  string signed_by = 7;                  // 签发主体
+  int32 card_version = 8;
+  google.protobuf.Timestamp published_at = 9;
+  google.protobuf.Timestamp valid_until = 10;
+  string status = 11;                    // active | revoked | expired | suspect
+}
+
+message PublishCardRequest {
+  string card_json = 1;
+  string card_digest = 2;
+  string signature_ref = 3;
+  string signed_by = 4;
+  int32 card_version = 5;
+  google.protobuf.Timestamp valid_until = 6;
+}
+
+// 查询（07 §2：默认 coarse 模式，不含任务内容）
+message QueryRequest {
+  message CapabilityShape {
+    string category = 1;
+    string input_schema_digest = 2;      // 可空
+    string output_schema_digest = 3;     // 可空
+  }
+  message Constraints {
+    string protocol = 1;                 // a2a | mcp
+    repeated string accepts_data_classes = 2;
+    string data_residency = 3;
+    bool requires_reliable_admission = 4;
+    string cost_hint_ceiling = 5;        // 过滤 cost_hint 上界
+  }
+  CapabilityShape capability = 1;
+  Constraints constraints = 2;
+  string disclosure_mode = 3;            // coarse（默认）| precise
+  repeated string capability_tokens = 4; // 敏感能力词哈希令牌
+}
+
+message QueryResponse {
+  repeated CardRecord candidates = 1;    // 确定性过滤 F(τ) 后的集合（07 §3.1）
+  string tracer_id = 2;                  // 查询审计追踪
+}
+
+message GetCardRequest { string agent_id = 1; }
+
+message ReportQualityRequest {           // 运行证据/告警回流（07 §5 漂移检测）
+  string agent_id = 1;
+  string quality_ref = 2;                // 测评工件或回执统计引用
+  bool alert = 3;                        // true ⇒ 标记 suspect / quality_alert
+}
+
+service Directory {
+  rpc PublishCard(PublishCardRequest) returns (CardRecord);
+  rpc Query(QueryRequest) returns (QueryResponse);
+  rpc GetCard(GetCardRequest) returns (CardRecord);
+  rpc ReportQuality(ReportQualityRequest) returns (CardRecord);
+}
