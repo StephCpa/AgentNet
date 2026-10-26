@@ -1,0 +1,1 @@
+GOOS=linux CGO_ENABLED=0: instancerenew and credentialclient test binary compiled; not executed.

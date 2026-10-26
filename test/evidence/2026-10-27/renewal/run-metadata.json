@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "7094494",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "commands": [
+    "go vet ./...",
+    "python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/renewal-final --kernel-tests",
+    "GOOS=linux CGO_ENABLED=0 go build -o .local/instancerenew-linux ./cmd/instancerenew",
+    "GOOS=linux CGO_ENABLED=0 go test -c -o .local/credentialclient-linux.test ./internal/credentialclient"
+  ],
+  "environment": {
+    "GOFLAGS": "-p=1"
+  },
+  "runner_checks": 33,
+  "database_integration_tests_excluding_process_helpers": {
+    "TestKernel": 25,
+    "TestDelivery": 8,
+    "TestExecution": 17,
+    "TestRPC": 38,
+    "TestIdentity": 15
+  },
+  "database_test_total": 103,
+  "canonical_unit_tests": 2,
+  "parameter_store_unit_tests": 1,
+  "pki_unit_tests": 3,
+  "credential_file_unit_tests": 1,
+  "go_vet_exit_code": 0,
+  "generated_binding_files_verified": 11,
+  "isolated_postgres_stopped": true,
+  "linux_status": "CLI and file-lock test binary cross-compiled only; not executed on Linux",
+  "actual_process_proof": "anetd loads renewal CA and signs/activates a managed instance; actual instancerenew is killed before activation, fails local publication after remote activation, resumes the same key on restart, and triggers a due renewal in watch mode",
+  "security_proof": "Pending certificate restricted to exact activation RPC; current-key/version binding; fresh key and cross-table claims; revocation/rotation and expiry fences; transaction audit rollback; post-key-lock expiry; abandonment cannot discard an activated key",
+  "scope": "Local managed-instance renewal; workload clients must reload and reconnect. No CA rotation, Workload API/node attestation, cross-domain revocation, hardware power-loss guarantee or full M1 exit.",
+  "development_note": "An intermediate build failed after source imports changed during the run; final source was frozen before the retained run, which passed without retrying failed assertions."
+}

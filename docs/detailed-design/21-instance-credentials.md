@@ -62,3 +62,5 @@ go run ./cmd/instancekey -out <new-workload-key-directory>
 下一步继续 GW 入站签名封装和拒绝审计，并补无人值守轮换接口、client-credentials + DPoP、委托令牌交换。当前登记和轮换通过用户控制面执行；自动续签、节点证明、CA/信任根轮换及跨域撤销仍未完成。完整 M1 还需真实协议/FI、local-tx、归档和微基准。
 
 后续进展见 [22](22-gateway-ingress-and-audit.md)：已实现单域 SDK 网关签名与请求失败审计，并在指纹复核之外补上锁等待后的证书自然到期检查。
+
+[23](23-unattended-credential-renewal.md) 进一步实现受管实例的两步无人值守续签与本地恢复客户端；首次登记和用户撤销仍由本控制面负责。

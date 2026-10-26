@@ -7,7 +7,7 @@ the registered certificate fingerprint, exact URI, live principal/agent/instance
 and any required role in PostgreSQL. CN, metadata and request body identity are
 not authentication inputs. Existing TLS channels do not bypass revocation checks.
 
-Apply migrations 001–009 and provision the domain, identities, certificate
+Apply migrations 001–010 and provision the domain, identities, certificate
 registrations and standing `root_consents` through a trusted control plane. These
 administrative operations are not exposed to workers. Consent limits are **per
 task**, not aggregate user quotas. A consent update must increase its version.
@@ -55,6 +55,7 @@ require `target_ttl` (a Go duration such as `24h`). There is no plaintext listen
 | RPC | Accepted input and behavior |
 |---|---|
 | GW SubmitCommand (optional) | Unsigned strict intent; durable server signature/expiry, ICS authorization, TCS acceptance and exact receipt recovery |
+| InstanceCredentials (optional) | Managed-instance status, two-phase renewal/activation and confirmed abandonment; pending keys can only activate |
 | ICS IssueRootPermit | Signed GW command; exact consent subset and per-task ceilings; short-lived signed permit |
 | TCS SubmitCommand | Only signed command + signed root permit; root grant, task, accounts, receipt and notification commit in T1 |
 | TCS GetTask | Owner-checked consistent task/effects/receipts/four-dimension budget snapshot |
@@ -79,8 +80,9 @@ design 21; fingerprints and certificate expiry are rechecked inside GW/ICS/TCS
 after lock waits. Design 22 adds durable command signing and intercepted RPC
 failure audit, distinguishing definite denials from unknown outcomes. See
 [`services/gateway`](../gateway/README.md) for configuration and coverage limits.
-DPoP, unattended renewal, general revocation/push, production target transport
-and ART classification remain unfinished.
+Design 23 adds unattended renewal and the local `instancerenew` client; workloads
+must reload the resulting bundle and reconnect. DPoP, CA rotation, general
+revocation/push, production target transport and ART classification remain unfinished.
 
 ## Verification
 

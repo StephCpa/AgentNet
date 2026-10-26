@@ -33,3 +33,9 @@ The separately configured `anet.gw.v1.Gateway/SubmitCommand` accepts unsigned
 and invokes ICS/TCS internally. It returns the same `AdmissionResult` as TCS.
 See [`services/gateway/README.md`](../services/gateway/README.md) for exact fields,
 retry rules and scope. This internal SDK RPC is not an A2A/MCP wire mapping.
+
+`anet.credentials.v1.InstanceCredentials` is separately enabled with an explicit
+signing CA. Its GetStatus/PrepareRenewal/ActivateRenewal/AbandonRenewal methods
+support two-phase managed-instance renewal. Pending certificates authenticate only
+the exact activation method. Owner enrollment remains the identity control plane;
+the old ICS RegisterInstance RPC is still unimplemented. See design 23.

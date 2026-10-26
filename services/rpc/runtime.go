@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/pki"
+	credentialservice "github.com/agentnet/agentnet/services/credentials"
 	"github.com/agentnet/agentnet/services/gateway"
 	"github.com/agentnet/agentnet/services/ics"
 	"github.com/agentnet/agentnet/services/tcs"
@@ -47,6 +49,9 @@ type FileConfig struct {
 	GWKeyID             string                       `json:"gw_key_id,omitempty"`
 	GWSigningKeyFile    string                       `json:"gw_signing_key_file,omitempty"`
 	GWCommandTTL        string                       `json:"gw_command_ttl,omitempty"`
+	CredentialCAFile    string                       `json:"credential_ca_file,omitempty"`
+	CredentialCAKeyFile string                       `json:"credential_ca_key_file,omitempty"`
+	CredentialTTL       string                       `json:"credential_ttl,omitempty"`
 }
 
 // OpenRuntime loads explicit configuration. It never enrolls identities, creates
@@ -185,7 +190,50 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.
 			return fail(e)
 		}
 	}
-	server, err := New(db, store, policy, Config{Domain: c.Domain, TrustDomain: c.TrustDomain, Certificate: cert, ClientCAs: roots, Operations: ops, Gateway: ingress})
+	var renewal *credentialservice.Service
+	if c.CredentialCAFile != "" || c.CredentialCAKeyFile != "" || c.CredentialTTL != "" {
+		if c.CredentialCAFile == "" || c.CredentialCAKeyFile == "" {
+			return fail(fmt.Errorf("renewal CA and key are required together"))
+		}
+		ca, e := tls.LoadX509KeyPair(resolve(c.CredentialCAFile), resolve(c.CredentialCAKeyFile))
+		if e != nil {
+			return fail(fmt.Errorf("cannot load renewal CA"))
+		}
+		ttl := 12 * time.Hour
+		if c.CredentialTTL != "" {
+			ttl, e = time.ParseDuration(c.CredentialTTL)
+			if e != nil {
+				return fail(fmt.Errorf("invalid credential TTL"))
+			}
+		}
+		issuer, e := pki.New(ca, c.TrustDomain, ttl)
+		if e != nil {
+			return fail(e)
+		}
+		issuingCA, e := x509.ParseCertificate(ca.Certificate[0])
+		if e != nil {
+			return fail(e)
+		}
+		chain := x509.NewCertPool()
+		for _, der := range ca.Certificate[1:] {
+			cert, e := x509.ParseCertificate(der)
+			if e != nil {
+				return fail(e)
+			}
+			chain.AddCert(cert)
+		}
+		if _, e = issuingCA.Verify(x509.VerifyOptions{Roots: roots, Intermediates: chain, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}); e != nil {
+			return fail(fmt.Errorf("renewal CA is not trusted by client_ca_file"))
+		}
+		if _, e = db.Exec(ctx, `SELECT request_id FROM credential_renewals LIMIT 0`); e != nil {
+			return fail(fmt.Errorf("renewal migration incomplete"))
+		}
+		renewal, e = credentialservice.New(db, c.Domain, issuer)
+		if e != nil {
+			return fail(e)
+		}
+	}
+	server, err := New(db, store, policy, Config{Domain: c.Domain, TrustDomain: c.TrustDomain, Certificate: cert, ClientCAs: roots, Operations: ops, Gateway: ingress, Credentials: renewal})
 	if err != nil {
 		return fail(err)
 	}

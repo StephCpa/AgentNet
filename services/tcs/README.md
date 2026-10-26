@@ -67,7 +67,7 @@ the mTLS transport always supplies it. See design 21 for credential lifecycle sc
 
 ## Transactions and setup
 
-Apply migrations 001–009 in order to a new database; 002 also upgrades a d6b219c schema.
+Apply migrations 001–010 in order to a new database; 002 also upgrades a d6b219c schema.
 003 leaves legacy task ownership NULL, so the new kernel denies access until an
 operator performs an evidence-based ownership backfill. Do not guess owners.
 

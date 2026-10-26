@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 
+	credentialsv1 "github.com/agentnet/agentnet/proto/gen/anet/credentials/v1"
 	gwv1 "github.com/agentnet/agentnet/proto/gen/anet/gw/v1"
+	credentialservice "github.com/agentnet/agentnet/services/credentials"
 	"github.com/agentnet/agentnet/services/gateway"
 
 	commonv1 "github.com/agentnet/agentnet/proto/gen/anet/common/v1"
@@ -33,6 +35,7 @@ type Config struct {
 	ClientCAs           *x509.CertPool
 	Operations          map[string]tcs.Operation
 	Gateway             *gateway.Service
+	Credentials         *credentialservice.Service
 }
 type control struct {
 	tcsv1.UnimplementedTaskControlServer
@@ -57,13 +60,16 @@ func New(db *pgxpool.Pool, store *tcs.Store, icsService *ics.Service, c Config) 
 		}
 		ops[target] = op
 	}
-	auth := Authenticator{db, c.Domain, c.TrustDomain}
+	auth := Authenticator{DB: db, Domain: c.Domain, TrustDomain: c.TrustDomain, RenewalEnabled: c.Credentials != nil}
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{c.Certificate}, ClientCAs: c.ClientCAs, ClientAuth: tls.RequireAndVerifyClientCert}
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.ChainUnaryInterceptor(auth.Unary), grpc.ChainStreamInterceptor(auth.Stream), grpc.MaxRecvMsgSize(2<<20), grpc.MaxSendMsgSize(4<<20))
 	tcsv1.RegisterTaskControlServer(server, &control{store: store, domain: c.Domain, ops: ops})
 	icsv1.RegisterIdentityPolicyServer(server, &policy{service: icsService, ops: ops})
 	if c.Gateway != nil {
 		gwv1.RegisterGatewayServer(server, &ingress{service: c.Gateway, control: &control{store: store, domain: c.Domain, ops: ops}})
+	}
+	if c.Credentials != nil {
+		credentialsv1.RegisterInstanceCredentialsServer(server, &renewals{service: c.Credentials})
 	}
 	return server, nil
 }

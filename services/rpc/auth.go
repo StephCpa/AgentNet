@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"errors"
+	credentialsv1 "github.com/agentnet/agentnet/proto/gen/anet/credentials/v1"
 	"strings"
 	"time"
 
@@ -29,13 +30,14 @@ type identity struct {
 type Authenticator struct {
 	DB                  *pgxpool.Pool
 	Domain, TrustDomain string
+	RenewalEnabled      bool
 }
 
 func Fingerprint(cert *x509.Certificate) string {
 	sum := sha256.Sum256(cert.Raw)
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
-func (a Authenticator) authenticate(ctx context.Context) (identity, error) {
+func (a Authenticator) authenticate(ctx context.Context, allowPending bool) (identity, error) {
 	var id identity
 	p, ok := peer.FromContext(ctx)
 	if !ok {
@@ -54,6 +56,9 @@ func (a Authenticator) authenticate(ctx context.Context) (identity, error) {
 	err := a.DB.QueryRow(ctx, `SELECT p.principal_id,a.agent_id,i.instance_id,ARRAY(SELECT role FROM instance_roles r WHERE r.instance_id=i.instance_id),COALESCE(i.spiffe_id,'')
  FROM agent_instances i JOIN agents a ON a.agent_id=i.agent_id JOIN principals p ON p.principal_id=a.owner_principal_id
  WHERE i.cred_hash=$1 AND a.domain_id=$2 AND p.domain_id=$2 AND i.revoked_at IS NULL AND p.revoked_at IS NULL AND a.status='active'`, Fingerprint(leaf), a.Domain).Scan(&id.caller.Principal, &id.caller.Agent, &id.caller.Instance, &id.roles, &registered)
+	if errors.Is(err, pgx.ErrNoRows) && allowPending && a.RenewalEnabled {
+		err = a.DB.QueryRow(ctx, `SELECT p.principal_id,a.agent_id,i.instance_id,ARRAY[]::text[],COALESCE(i.spiffe_id,'') FROM credential_renewals r JOIN agent_instances i ON i.instance_id=r.instance_id JOIN agents a ON a.agent_id=i.agent_id JOIN principals p ON p.principal_id=a.owner_principal_id WHERE r.fingerprint=$1 AND r.status='pending' AND r.prepare_expires_at>clock_timestamp() AND r.certificate_expires_at>clock_timestamp() AND r.base_version=i.credential_version AND r.base_fingerprint=i.cred_hash AND a.domain_id=$2 AND p.domain_id=$2 AND i.revoked_at IS NULL AND p.revoked_at IS NULL AND a.status='active'`, Fingerprint(leaf), a.Domain).Scan(&id.caller.Principal, &id.caller.Agent, &id.caller.Instance, &id.roles, &registered)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return id, status.Error(codes.Unauthenticated, "unregistered or revoked instance")
 	}
@@ -84,7 +89,7 @@ func restrict(id identity, method string) error {
 	return nil
 }
 func (a Authenticator) Unary(ctx context.Context, request any, info *grpc.UnaryServerInfo, next grpc.UnaryHandler) (any, error) {
-	id, err := a.authenticate(ctx)
+	id, err := a.authenticate(ctx, info.FullMethod == credentialsv1.InstanceCredentials_ActivateRenewal_FullMethodName)
 	if err != nil {
 		return nil, a.auditFailure(ctx, identity{}, info.FullMethod, err)
 	}
@@ -105,7 +110,7 @@ type authenticatedStream struct {
 
 func (s *authenticatedStream) Context() context.Context { return s.ctx }
 func (a Authenticator) Stream(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, next grpc.StreamHandler) error {
-	id, err := a.authenticate(stream.Context())
+	id, err := a.authenticate(stream.Context(), false)
 	if err != nil {
 		return a.auditFailure(stream.Context(), identity{}, info.FullMethod, err)
 	}

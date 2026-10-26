@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–009 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials and gateway bindings) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–010 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings and renewals) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -90,3 +90,10 @@ persistence, concurrent submission, original receipt recovery, interrupted permi
 flow, atomic signing/acceptance audits, failure audit, three certificate-expiry
 lock waits and anetd kill/restart recovery. External protocol/agentgateway hooks,
 OAuth/DPoP, quotas and complete M1 exit remain pending.
+
+Unattended-renewal increment (design 23): migration 010, 33 runner checks, 103
+database tests (25 TCS, 8 delivery, 17 execution, 38 RPC, 15 identity), and 7 unit
+tests. Evidence: `test/evidence/2026-10-27/renewal/`. Real anetd/instancerenew processes
+exercise CA loading, two-phase activation, OS kill, post-commit publication failure,
+same-key restart recovery and automatic watch triggering. Linux CLI/file tests
+cross-compile only; the runtime evidence is Windows. No full M1 exit is claimed.

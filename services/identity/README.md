@@ -1,5 +1,9 @@
 # OIDC login and user consent
 
+Owner enrollment and manual rotation remain here. Managed instances can also use
+the separate two-phase renewal service and local `instancerenew` client (design 23);
+that path does not create users/Agents, grant roles or replace owner revocation.
+
 `cmd/identityd` runs the HTTPS user control page. It performs authorization-code
 login with discovery/JWKS, S256 PKCE, state bound to a browser cookie, and a nonce
 bound to the ID token. It verifies signature, exact issuer, client audience, azp
@@ -100,7 +104,7 @@ versions, and browser approval/withdrawal feeding ICS/T1. Retained evidence:
 `test/evidence/2026-10-27/identity/` and design 20.
 
 No particular production IdP has been provisioned or tested. Refresh tokens,
-IdP back-channel/global logout, user/Agent administration, unattended credential
+IdP back-channel/global logout, user/Agent administration, CA/trust-root
 rotation, client-credentials + DPoP, token exchange and the full GW
 pipeline remain separate work. Expired sessions require a new login. Legacy
 manually provisioned consent remains readable/revocable by its owner.
@@ -158,5 +162,6 @@ history; an `ins_` instance can be migrated by owner-authorized fresh-key rotati
 
 Revocation here is enforced by AgentNet's live registry, not a published CRL/OCSP
 service. Other services that check only the CA chain do not inherit this immediate
-revocation behavior. Automatic renewal, node attestation, CA rollover and cross-domain
-revocation remain pending. Evidence: `test/evidence/2026-10-27/credentials/`.
+revocation behavior. Automatic renewal is provided separately by design 23;
+node attestation, CA rollover and cross-domain revocation remain pending.
+Owner-control evidence: `test/evidence/2026-10-27/credentials/`.
