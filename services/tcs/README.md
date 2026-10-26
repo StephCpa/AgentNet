@@ -103,3 +103,7 @@ UNKNOWN preservation, cancellation races, late signed results and conservative c
 Reopening a pool is not a process kill; signed test receipts are not live external
 payment evidence. Full FI, outbox dispatch/recovery, ICS/GW transport authentication,
 delegation/tranche/attempt billing, VERIFIED completion and protocol interop remain.
+
+Follow-up: `services/delivery` and design 17 now implement local outbox/inbox
+delivery and actual process-kill tests. The numbers and limits above describe the
+initial kernel checkpoint; remote transport and external business recovery remain.

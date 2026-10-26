@@ -37,11 +37,17 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migration 003 and runs `go test ./... -count=1 -v` against the isolated
-database. A skipped test or nonzero exit fails the gate. The 22 runner checks
-include one aggregate Go gate; they are not the Go test count.
+applies migrations 003–004 (including legacy IN_FLIGHT recovery) and runs `go test ./... -count=1 -v` against the isolated
+database, then builds and runs the actual local outboxd executable. A skipped test
+or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
+gates; they are not the Go test count.
 
 2026-10-27: 22 top-level Go kernel integration tests, 10 decision-binding subcases
 and two canonicalization unit tests passed. See `services/tcs/README.md` for scope
 and `test/evidence/2026-10-27/kernel/` for retained output. Full process-failure and
 external-peer testing remains pending.
+
+The delivery increment adds eight delivery tests and two kernel tests (notification
+flow and T1 process kill), with four real child-process crash windows in total.
+The current isolated runner has 26 checks. Latest evidence is in
+`test/evidence/2026-10-27/delivery/`; older kernel evidence remains an immutable snapshot.

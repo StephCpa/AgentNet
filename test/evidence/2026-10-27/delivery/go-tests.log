@@ -1,0 +1,108 @@
+?   	github.com/agentnet/agentnet/cmd/jcscheck	[no test files]
+?   	github.com/agentnet/agentnet/cmd/outboxd	[no test files]
+=== RUN   TestRejectMalformedUTF8AndDuplicateKeys
+--- PASS: TestRejectMalformedUTF8AndDuplicateKeys (0.00s)
+=== RUN   TestUTF16OrderAndNumbers
+--- PASS: TestUTF16OrderAndNumbers (0.00s)
+PASS
+ok  	github.com/agentnet/agentnet/internal/canonical	1.372s
+=== RUN   TestDeliveryConcurrentClaims
+--- PASS: TestDeliveryConcurrentClaims (0.36s)
+=== RUN   TestDeliveryStaleAcknowledgement
+--- PASS: TestDeliveryStaleAcknowledgement (0.15s)
+=== RUN   TestDeliveryInboxDuplicateAndConflict
+--- PASS: TestDeliveryInboxDuplicateAndConflict (0.42s)
+=== RUN   TestDeliveryBackoffAndDeadLetter
+--- PASS: TestDeliveryBackoffAndDeadLetter (0.15s)
+=== RUN   TestDeliveryExpiredFinalAttempt
+--- PASS: TestDeliveryExpiredFinalAttempt (0.11s)
+=== RUN   TestDeliveryDomainAndDestinationIsolation
+--- PASS: TestDeliveryDomainAndDestinationIsolation (0.09s)
+=== RUN   TestDeliveryRunAndCancellation
+--- PASS: TestDeliveryRunAndCancellation (0.19s)
+=== RUN   TestDeliveryProcessHelper
+--- PASS: TestDeliveryProcessHelper (0.00s)
+=== RUN   TestDeliveryProcessCrashRecovery
+=== RUN   TestDeliveryProcessCrashRecovery/claimed
+=== RUN   TestDeliveryProcessCrashRecovery/accepted
+--- PASS: TestDeliveryProcessCrashRecovery (3.23s)
+    --- PASS: TestDeliveryProcessCrashRecovery/claimed (2.01s)
+    --- PASS: TestDeliveryProcessCrashRecovery/accepted (1.21s)
+PASS
+ok  	github.com/agentnet/agentnet/services/delivery	7.550s
+=== RUN   TestKernelDurableNotificationFlow
+--- PASS: TestKernelDurableNotificationFlow (0.51s)
+=== RUN   TestKernelSubmitConcurrentAndRecovery
+--- PASS: TestKernelSubmitConcurrentAndRecovery (0.91s)
+=== RUN   TestKernelSubmitAtomicRollback
+--- PASS: TestKernelSubmitAtomicRollback (0.15s)
+=== RUN   TestKernelExpiryAfterLockWait
+--- PASS: TestKernelExpiryAfterLockWait (1.14s)
+=== RUN   TestKernelExpiryAfterInboxCleanup
+--- PASS: TestKernelExpiryAfterInboxCleanup (2.12s)
+=== RUN   TestKernelBudgetConcurrentReserve
+--- PASS: TestKernelBudgetConcurrentReserve (0.22s)
+=== RUN   TestKernelAdmitIdempotenceAndConflict
+--- PASS: TestKernelAdmitIdempotenceAndConflict (0.20s)
+=== RUN   TestKernelReservationAtomicityAndExclusiveBinding
+--- PASS: TestKernelReservationAtomicityAndExclusiveBinding (0.19s)
+=== RUN   TestKernelRequiresAllServerDimensions
+--- PASS: TestKernelRequiresAllServerDimensions (0.17s)
+=== RUN   TestKernelLeaseTakeoverAndStaleProposal
+--- PASS: TestKernelLeaseTakeoverAndStaleProposal (0.19s)
+=== RUN   TestKernelSignedDecisionBinding
+=== RUN   TestKernelSignedDecisionBinding/actor
+=== RUN   TestKernelSignedDecisionBinding/task
+=== RUN   TestKernelSignedDecisionBinding/params
+=== RUN   TestKernelSignedDecisionBinding/resource
+=== RUN   TestKernelSignedDecisionBinding/future
+=== RUN   TestKernelSignedDecisionBinding/expired
+=== RUN   TestKernelSignedDecisionBinding/subject
+=== RUN   TestKernelSignedDecisionBinding/action
+=== RUN   TestKernelSignedDecisionBinding/sensitivity
+=== RUN   TestKernelSignedDecisionBinding/stale
+--- PASS: TestKernelSignedDecisionBinding (0.23s)
+    --- PASS: TestKernelSignedDecisionBinding/actor (0.01s)
+    --- PASS: TestKernelSignedDecisionBinding/task (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/params (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/resource (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/future (0.01s)
+    --- PASS: TestKernelSignedDecisionBinding/expired (0.01s)
+    --- PASS: TestKernelSignedDecisionBinding/subject (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/action (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/sensitivity (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/stale (0.01s)
+=== RUN   TestKernelRevokedInstanceAndTaskOwnership
+--- PASS: TestKernelRevokedInstanceAndTaskOwnership (0.18s)
+=== RUN   TestKernelCancelAdmissionRace
+--- PASS: TestKernelCancelAdmissionRace (0.37s)
+=== RUN   TestKernelUnknownConflictAndLateSettlement
+--- PASS: TestKernelUnknownConflictAndLateSettlement (0.23s)
+=== RUN   TestKernelConservativeSelfReport
+--- PASS: TestKernelConservativeSelfReport (0.21s)
+=== RUN   TestKernelOverrunPreservesEvidenceAndFreezes
+--- PASS: TestKernelOverrunPreservesEvidenceAndFreezes (0.22s)
+=== RUN   TestKernelForgedResultCannotReleaseUnknown
+--- PASS: TestKernelForgedResultCannotReleaseUnknown (0.19s)
+=== RUN   TestKernelLeaseRenewalAndGrace
+--- PASS: TestKernelLeaseRenewalAndGrace (0.16s)
+=== RUN   TestKernelReleaseUnboundOnly
+--- PASS: TestKernelReleaseUnboundOnly (0.18s)
+=== RUN   TestKernelGrantScopeAndResultBinding
+--- PASS: TestKernelGrantScopeAndResultBinding (0.21s)
+=== RUN   TestKernelCommandSignatureProtectsExpiry
+--- PASS: TestKernelCommandSignatureProtectsExpiry (0.08s)
+=== RUN   TestKernelLeaseExpiryAfterAccountLockWait
+--- PASS: TestKernelLeaseExpiryAfterAccountLockWait (1.30s)
+=== RUN   TestKernelInstanceRevocationAfterAccountWait
+--- PASS: TestKernelInstanceRevocationAfterAccountWait (0.32s)
+=== RUN   TestKernelProcessHelper
+--- PASS: TestKernelProcessHelper (0.00s)
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit/before_commit
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit/after_commit
+--- PASS: TestKernelProcessKillBeforeAndAfterCommit (1.32s)
+    --- PASS: TestKernelProcessKillBeforeAndAfterCommit/before_commit (0.98s)
+    --- PASS: TestKernelProcessKillBeforeAndAfterCommit/after_commit (0.34s)
+PASS
+ok  	github.com/agentnet/agentnet/services/tcs	13.730s

@@ -280,6 +280,8 @@ RETURN {t.cancel_version};
 - 事务内只写 `outbox` 行；投递器进程轮询 `status='PENDING' AND next_attempt_at<=now()`，按 `dedup_key`（`peer+message_id`）幂等投递，指数退避（`tcs.outbox_max_attempts=16`，超限转 `DEAD` 并告警）。
 - MVP 投递器为进程内后台协程；M2 起可替换为 NATS JetStream 唤醒（权威事实仍在库，02 §1）。
 
+实现进展（2026-10-27，17）：领取增加令牌和期限，过期后可回收；旧令牌不能写回新尝试。接收侧对源域/目标/dedup_key 及消息内容持久去重；DEAD 与死信告警源记录原子写入。当前为本域通知投递，收件成功不等于业务执行成功。
+
 ## 10. 配置参数（初始值）
 
 | 参数 | 默认 | 说明 |

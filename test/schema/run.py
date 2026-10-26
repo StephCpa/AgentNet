@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -21,7 +22,7 @@ def main():
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--schema", type=Path, default=ROOT / "schema/001_core.sql")
     parser.add_argument("--upgrade", type=Path, help="Apply a forward migration after --schema")
-    parser.add_argument("--kernel-tests", action="store_true", help="Apply 003 and test the Go transaction kernel against this cluster")
+    parser.add_argument("--kernel-tests", action="store_true", help="Apply implementation migrations and test the Go kernels against this cluster")
     args = parser.parse_args()
     args.pg_bin = args.pg_bin.resolve()
     work = args.work_dir.resolve()
@@ -175,6 +176,13 @@ DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LI
 """)
         if args.kernel_tests:
             probe("migration-003", (ROOT / "schema/003_tcs_kernel.sql").read_text(encoding="utf-8"))
+            probe("legacy-in-flight", "INSERT INTO outbox(task_id,event_type,payload,dedup_key,status,attempts) VALUES('t','TASK_ACCEPTED','{}','legacy-flight','IN_FLIGHT',1);")
+            probe("migration-004", (ROOT / "schema/004_delivery.sql").read_text(encoding="utf-8"))
+            probe("legacy-in-flight-recoverable", """
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
+ AND status='PENDING' AND attempts=1 AND lease_token IS NULL AND lease_until IS NULL)
+ THEN RAISE EXCEPTION 'legacy flight not recoverable'; END IF; END $$;
+""")
             test_env = env.copy()
             test_env["ANET_TEST_DSN"] = f"postgresql://postgres@127.0.0.1:{port}/postgres?sslmode=disable"
             run = subprocess.run(["go", "test", "./...", "-count=1", "-v"], cwd=ROOT,
@@ -186,6 +194,40 @@ DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LI
             if not passed:
                 raise AssertionError(run.stdout + run.stderr)
             print("go-kernel-integration PASS", flush=True)
+            # Exercise the real executable with the migrated legacy rows. All
+            # credentials and data belong to this disposable loopback cluster.
+            binary = work / ("outboxd.exe" if os.name == "nt" else "outboxd")
+            build = subprocess.run(["go", "build", "-o", str(binary), "./cmd/outboxd"],
+                                   cwd=ROOT, capture_output=True, text=True, env=env,
+                                   creationflags=flags, timeout=120)
+            if build.returncode:
+                raise AssertionError(build.stdout + build.stderr)
+            worker_env = env.copy()
+            worker_env["ANET_DATABASE_URL"] = test_env["ANET_TEST_DSN"]
+            worker_env["ANET_DOMAIN"] = "d"
+            with (work / "outboxd.log").open("w", encoding="utf-8") as worker_log:
+                worker = subprocess.Popen([str(binary)], cwd=ROOT, env=worker_env,
+                                          stdout=worker_log, stderr=subprocess.STDOUT,
+                                          creationflags=flags)
+                try:
+                    deadline = time.monotonic() + 15
+                    while True:
+                        if worker.poll() is not None:
+                            raise AssertionError("outboxd exited before delivery; see outboxd.log")
+                        accepted = sql("SELECT count(*) FROM delivery_inbox i JOIN outbox o ON o.dedup_key=i.dedup_key AND o.task_id=i.task_id WHERE i.source_domain='d' AND i.dedup_key IN ('cmd','legacy-flight') AND o.status='DONE';")
+                        if accepted.returncode == 0 and accepted.stdout.strip() == "2":
+                            break
+                        if time.monotonic() >= deadline:
+                            raise AssertionError("outboxd failed to deliver migrated rows")
+                        time.sleep(0.05)
+                    probe("outboxd-local-delivery", """
+DO $$ BEGIN IF (SELECT count(*) FROM outbox WHERE dedup_key IN ('cmd','legacy-flight') AND status='DONE') <> 2
+ THEN RAISE EXCEPTION 'worker did not acknowledge'; END IF; END $$;
+""")
+                finally:
+                    if worker.poll() is None:
+                        worker.terminate()
+                    worker.wait(timeout=10)
     finally:
         (work / "summary.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
         if started:
