@@ -1,0 +1,11 @@
+rpc-daemon
+fork/exec C:\Users\76790\AppData\Local\Temp\go-build571608546\b389\tcs.test.exe: The process cannot access the file because it is being used by another process.
+FAIL	github.com/agentnet/agentnet/services/tcs	0.006s
+FAIL
+go: unlinkat C:\Users\76790\AppData\Local\Temp\go-build571608546\b389\tcs.test.exe: The process cannot access the file because it is being used by another process.
+
+rpc-final
+fork/exec C:\Users\76790\AppData\Local\Temp\go-build3221129598\b389\tcs.test.exe: The process cannot access the file because it is being used by another process.
+FAIL	github.com/agentnet/agentnet/services/tcs	0.007s
+FAIL
+go: unlinkat C:\Users\76790\AppData\Local\Temp\go-build3221129598\b389\tcs.test.exe: The process cannot access the file because it is being used by another process.

@@ -54,13 +54,13 @@ are the canonical payload schema for this internal API:
   usage, usage_source and evidence. The result key issuer attests the business
   outcome; a worker's unsigned statement cannot release an uncertain hold.
 
-The network protobufs are not yet bound to this internal envelope API. An adapter
-must verify complete signed content before translating; it must not accept the
-old unsigned AuthorizationDecision.allow field as proof.
+The network protobufs now bind to this envelope API through `services/rpc`.
+The server verifies complete signed content and rejects the old unsigned
+AuthorizationDecision.allow field as proof.
 
 ## Transactions and setup
 
-Apply 001, 002, 003 in order to a new database; 002 also upgrades a d6b219c schema.
+Apply migrations 001–006 in order to a new database; 002 also upgrades a d6b219c schema.
 003 leaves legacy task ownership NULL, so the new kernel denies access until an
 operator performs an evidence-based ownership backfill. Do not guess owners.
 
@@ -76,9 +76,10 @@ are canonical decimal strings with at most 14 integer digits and 6 fractional di
 The operation registry is copied at construction and controls target/action/resource,
 capability, purpose and required dimensions; the proposal cannot omit a budget dimension.
 
-Provision domains/principals/agents/instances and trusted root grants through the
-identity control plane before calling the kernel. The integration fixture seeds these
-objects explicitly; this package does not silently grant authority on task submission.
+Provision domains/principals/agents/instances and standing consent through the
+trusted identity control plane before using the network service. Its signed root
+permit creates the grant in T1. Legacy library fixtures seed trusted root grants
+explicitly; an unsigned command cannot create a grant on its own.
 
 ## Validation
 
@@ -112,3 +113,10 @@ Execution increment (design 18): apply 005 as well. T2 records send-time grant/a
 provenance and seeds a durable execution job. Idempotent-key operations require a
 positive TargetTTL; local-tx is rejected until an atomic business handler exists.
 Parameter storage and execution/reconciliation are in services/execution.
+
+Authenticated service increment (design 19): apply 006 as well. Network submission
+requires an ICS root permit derived from trusted standing consent. T1 independently
+checks its revision, scope and per-task ceilings, then creates the root grant in
+the same transaction as the task and acceptance receipt. T2 and send-time gates
+also check consent revision and data class. Legacy library fixtures with manually
+provisioned grants remain supported; network clients cannot create those roots.

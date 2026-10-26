@@ -3,7 +3,6 @@
 package tcs
 
 import (
-	"bytes"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -15,7 +14,8 @@ import (
 	"time"
 
 	decimal "github.com/agentnet/agentnet/internal/amount"
-	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/authority"
+	"github.com/agentnet/agentnet/internal/signed"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,12 +49,14 @@ type Operation struct {
 	Action, Resource, Capability, Purpose string
 	Dimensions                            []string
 	TargetTTL                             time.Duration // required for idempotent-key targets
+	Sensitivity, DataClass                string        // required by authenticated ICS/transport configuration
 }
 type Config struct {
 	Domain                               string
 	CommandKeys                          map[string]ed25519.PublicKey
 	DecisionKeys                         map[string]ed25519.PublicKey
 	ResultKeys                           map[string]ed25519.PublicKey
+	RootKeys                             map[string]ed25519.PublicKey
 	Operations                           map[string]Operation // target_ref -> server-controlled policy
 	LeaseTTL, LeaseGrace, DecisionMaxAge time.Duration
 }
@@ -102,6 +104,10 @@ func New(db *pgxpool.Pool, c Config) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	c.RootKeys, err = copyKeys(c.RootKeys)
+	if err != nil {
+		return nil, err
+	}
 	ops := map[string]Operation{}
 	for target, op := range c.Operations {
 		if target == "" || op.Action == "" || op.Resource == "" || op.Purpose != "tool_call" || len(op.Dimensions) == 0 {
@@ -135,6 +141,7 @@ type Command struct {
 	ContractVersion int               `json:"contract_version"`
 	Contract        json.RawMessage   `json:"contract"`
 	Limits          map[string]string `json:"limits"`
+	Root            *RootRequest      `json:"root,omitempty"`
 }
 type Submission struct {
 	Kind    string  `json:"kind"`
@@ -144,6 +151,7 @@ type Submission struct {
 type Admission struct {
 	TaskID, ReceiptID string
 	Existing          bool
+	RootGrantID       string
 }
 type Reservation struct{ ID, Dimension, Amount, State string }
 type Lease struct {
@@ -156,15 +164,13 @@ type Proposal struct {
 	Epoch, ExpectedVersion                                                                   int64
 	Reservations                                                                             map[string]string // dimension -> reservation ID
 	UpperBounds                                                                              map[string]string
+	DataClass                                                                                string
 }
 type Effect struct {
 	ID, State string
 	Existing  bool
 }
-type Envelope struct {
-	KeyID              string
-	Payload, Signature []byte
-}
+type Envelope = signed.Envelope
 type Decision struct {
 	Kind            string    `json:"kind"`
 	ID              string    `json:"decision_id"`
@@ -183,6 +189,8 @@ type Decision struct {
 	AuthorityDigest string    `json:"authority_digest"`
 	Audience        string    `json:"audience"`
 	Sensitivity     string    `json:"sensitivity"`
+	DataClass       string    `json:"data_class,omitempty"`
+	PolicyVersion   string    `json:"policy_version,omitempty"`
 }
 
 // Result is signed by a trusted adapter/reconciler. Worker self-report is not
@@ -220,20 +228,30 @@ func id(prefix string) string {
 	return prefix + "_" + hex.EncodeToString(b[:])
 }
 func verify(e Envelope, keys map[string]ed25519.PublicKey, out any) error {
-	key, ok := keys[e.KeyID]
-	if !ok {
+	if err := signed.Decode(e, keys, out); err != nil {
 		return Denied
-	}
-	b, err := canonical.Bytes(e.Payload)
-	if err != nil || !ed25519.Verify(key, b, e.Signature) {
-		return Denied
-	}
-	decoder := json.NewDecoder(bytes.NewReader(b))
-	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(out); err != nil {
-		return Invalid
 	}
 	return nil
+}
+
+type RootRequest struct {
+	ConsentID string           `json:"consent_id"`
+	Rights    authority.Rights `json:"rights"`
+}
+type RootPermit struct {
+	Kind           string           `json:"kind"`
+	GrantID        string           `json:"grant_id"`
+	CommandDigest  string           `json:"command_digest"`
+	ConsentID      string           `json:"consent_id"`
+	ConsentVersion int64            `json:"consent_version"`
+	Caller         Caller           `json:"caller"`
+	Audience       string           `json:"audience"`
+	IssuedAt       time.Time        `json:"issued_at"`
+	ExpiresAt      time.Time        `json:"expires_at"`
+	GrantNotBefore time.Time        `json:"grant_not_before"`
+	GrantExpiresAt time.Time        `json:"grant_expires_at"`
+	PolicyVersion  string           `json:"policy_version"`
+	Rights         authority.Rights `json:"rights"`
 }
 
 type task struct {

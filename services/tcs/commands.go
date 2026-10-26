@@ -12,6 +12,9 @@ import (
 )
 
 func (s *Store) Submit(ctx context.Context, c Caller, signed Envelope) (Admission, error) {
+	return s.submit(ctx, c, signed, nil)
+}
+func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *RootPermit) (Admission, error) {
 	var submission Submission
 	if err := verify(signed, s.cfg.CommandKeys, &submission); err != nil {
 		return Admission{}, err
@@ -20,6 +23,9 @@ func (s *Store) Submit(ctx context.Context, c Caller, signed Envelope) (Admissio
 		return Admission{}, Denied
 	}
 	cmd := submission.Command
+	if (cmd.Root != nil) != (root != nil) {
+		return Admission{}, Denied
+	}
 	var out Admission
 	if cmd.ID == "" || cmd.Audience != s.cfg.Domain || cmd.NotAfter.IsZero() || cmd.ContractID == "" || cmd.ContractVersion < 1 || len(cmd.Limits) != 4 {
 		return out, Invalid
@@ -82,7 +88,7 @@ func (s *Store) Submit(ctx context.Context, c Caller, signed Envelope) (Admissio
 		return out, Expired
 	}
 	var stored string
-	err = tx.QueryRow(ctx, `SELECT i.task_id,i.payload_digest,r.receipt_id FROM command_inbox i JOIN receipts r ON r.task_id=i.task_id AND r.command_id=i.command_id AND r.kind='ACCEPTED' WHERE i.command_id=$1 AND i.audience_domain_id=$2`, cmd.ID, cmd.Audience).Scan(&out.TaskID, &stored, &out.ReceiptID)
+	err = tx.QueryRow(ctx, `SELECT i.task_id,i.payload_digest,r.receipt_id,COALESCE((SELECT grant_id FROM grants WHERE task_id=i.task_id AND consent_id IS NOT NULL LIMIT 1),'') FROM command_inbox i JOIN receipts r ON r.task_id=i.task_id AND r.command_id=i.command_id AND r.kind='ACCEPTED' WHERE i.command_id=$1 AND i.audience_domain_id=$2`, cmd.ID, cmd.Audience).Scan(&out.TaskID, &stored, &out.ReceiptID, &out.RootGrantID)
 	if err == nil {
 		if stored != digest {
 			return Admission{}, Conflict
@@ -126,6 +132,12 @@ func (s *Store) Submit(ctx context.Context, c Caller, signed Envelope) (Admissio
  VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8::jsonb)`, out.TaskID, s.cfg.Domain, cmd.ContractID, cmd.ContractVersion, c.Principal, c.Agent, body.Deadline, string(limits))
 	if err != nil {
 		return out, err
+	}
+	if root != nil {
+		if err = s.insertRoot(ctx, tx, c, cmd, root, out.TaskID, body.Deadline); err != nil {
+			return Admission{}, err
+		}
+		out.RootGrantID = root.GrantID
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO command_inbox(command_id,audience_domain_id,task_id,profile,payload_digest,not_after,expires_at)
  VALUES($1,$2,$3,'agent-network/0.1',$4,$5,GREATEST(clock_timestamp()+interval '168 hours',$5))`, cmd.ID, s.cfg.Domain, out.TaskID, digest, cmd.NotAfter)
@@ -264,38 +276,43 @@ func (s *Store) AcquireLease(ctx context.Context, c Caller, taskID string) (Leas
 }
 
 func (s *Store) Cancel(ctx context.Context, c Caller, taskID string) (int64, error) {
+	version, _, err := s.CancelDetailed(ctx, c, taskID)
+	return version, err
+}
+
+func (s *Store) CancelDetailed(ctx context.Context, c Caller, taskID string) (int64, bool, error) {
 	tx, err := s.begin(ctx)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	defer tx.Rollback(ctx)
 	t, err := s.lockTask(ctx, tx, c, taskID)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	var version int64
 	if t.Status == "CANCELLED" {
 		err = tx.QueryRow(ctx, "SELECT cancel_version FROM tasks WHERE task_id=$1", taskID).Scan(&version)
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
-		return version, commit(ctx, tx)
+		return version, true, commit(ctx, tx)
 	}
 	if t.Status == "SUCCEEDED" || t.Status == "FAILED" {
-		return 0, Terminal
+		return 0, false, Terminal
 	}
 	err = tx.QueryRow(ctx, `UPDATE tasks SET status='CANCELLED',cancelled_at=clock_timestamp(),cancel_version=COALESCE(cancel_version,0)+1,task_version=task_version+1 WHERE task_id=$1 RETURNING cancel_version`, taskID).Scan(&version)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	if err = event(ctx, tx, taskID, "CANCELLED", map[string]int64{"cancel_version": version}); err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO outbox(task_id,event_type,payload,dedup_key) VALUES($1,'CANCELLED',jsonb_build_object('cancel_version',$2::bigint),$3)`, taskID, version, "cancel:"+taskID)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	return version, commit(ctx, tx)
+	return version, false, commit(ctx, tx)
 }
 
 // lockReservations implements tasks -> accounts (sorted IDs) -> reservations

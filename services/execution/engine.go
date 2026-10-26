@@ -86,6 +86,8 @@ func (e *Engine) startSend(ctx context.Context, j *job) error {
  AND g.parent_grant_id IS NULL AND g.root_grant_id=g.grant_id AND g.status='active' AND g.revoked_at IS NULL
  AND g.not_before<=clock_timestamp() AND g.expires_at>=clock_timestamp()
  AND g.rights->'actions' ? f.dispatch_action AND g.rights->'resources' ? f.dispatch_resource
+ AND (g.consent_id IS NULL OR (g.rights->'data_classes' ? f.dispatch_data_class AND g.rights->'spatial'->'domains' ? $2
+ AND EXISTS(SELECT 1 FROM root_consents c WHERE c.consent_id=g.consent_id AND c.version=g.consent_version AND c.revoked_at IS NULL AND c.not_before<=clock_timestamp() AND c.expires_at>=clock_timestamp())))
  AND i.revoked_at IS NULL AND p.revoked_at IS NULL AND a.status='active' AND p.domain_id=$2 AND a.domain_id=$2
  FOR SHARE OF g`, j.EffectID, e.cfg.Domain).Scan(&grant)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -107,6 +109,7 @@ func (e *Engine) startSend(ctx context.Context, j *job) error {
 	// Re-check the time-sensitive grant and actor state after any job lock wait.
 	err = tx.QueryRow(ctx, `SELECT g.expires_at>=clock_timestamp() AND t.deadline>=clock_timestamp()
  AND i.revoked_at IS NULL AND p.revoked_at IS NULL AND a.status='active'
+ AND (g.consent_id IS NULL OR EXISTS(SELECT 1 FROM root_consents c WHERE c.consent_id=g.consent_id AND c.version=g.consent_version AND c.revoked_at IS NULL AND c.expires_at>=clock_timestamp()))
  FROM effects f JOIN grants g ON g.grant_id=f.dispatch_grant_id JOIN tasks t ON t.task_id=f.task_id
  JOIN agent_instances i ON i.instance_id=f.dispatch_actor_instance_id JOIN agents a ON a.agent_id=i.agent_id
  JOIN principals p ON p.principal_id=a.owner_principal_id WHERE f.effect_id=$1`, j.EffectID).Scan(&allowed)

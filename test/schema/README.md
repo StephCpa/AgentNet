@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–005 (including legacy IN_FLIGHT and effect provenance handling) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–006 (including legacy IN_FLIGHT, effect provenance and identity policy) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -49,11 +49,20 @@ external-peer testing remains pending.
 
 The delivery increment adds eight delivery tests and two kernel tests (notification
 flow and T1 process kill), with four real child-process crash windows in total.
-The current isolated runner has 26 checks. Latest evidence is in
+That delivery snapshot has 26 runner checks. Its evidence is in
 `test/evidence/2026-10-27/delivery/`; older kernel evidence remains an immutable snapshot.
 
-Execution increment: the current runner has 28 checks. It includes 25 TCS, 8 delivery
+Execution increment: that snapshot has 28 runner checks. It includes 25 TCS, 8 delivery
 and 17 execution database integration tests, plus two JCS and one parameter-store
 unit tests. Real OS-kill windows total seven, including three mock-target FI-03
 capabilities. See `test/evidence/2026-10-27/execution/`; 26 above describes the prior
 delivery snapshot. Production authenticated target interoperation remains pending.
+
+The authenticated-service increment adds migration 006 and real TCP/mTLS tests,
+including the actual anetd executable with temporary PEM/config files. The runner
+has 29 checks; Go counts and retained output are in
+`test/evidence/2026-10-27/rpc/`. Network test fixtures provision trusted consent;
+they do not establish OIDC integration or a production enrollment control plane.
+The final snapshot contains 64 database tests (25 TCS, 8 delivery, 17 execution,
+14 RPC) and 3 unit tests. Process-local `GOFLAGS=-p=1` was used for this Windows
+run after temporary executable file-in-use errors; assertions were not retried.

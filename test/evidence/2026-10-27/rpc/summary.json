@@ -1,0 +1,175 @@
+[
+  {
+    "case": "migration-001",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "version",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "seed",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "partial-settlement-commits",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "delegated-blocks-reserve",
+    "passed": true,
+    "expected_error": "ANET-BUD-INVARIANT",
+    "returncode": 3
+  },
+  {
+    "case": "account-update-checked",
+    "passed": true,
+    "expected_error": "ANET-BUD-INVARIANT",
+    "returncode": 3
+  },
+  {
+    "case": "four-dimensions-one-effect",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "four-dimensions-one-attempt",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "effect-rebind-rejected",
+    "passed": true,
+    "expected_error": "ANET-BUD-BINDING-IMMUTABLE",
+    "returncode": 3
+  },
+  {
+    "case": "effect-unbind-rejected",
+    "passed": true,
+    "expected_error": "ANET-BUD-BINDING-IMMUTABLE",
+    "returncode": 3
+  },
+  {
+    "case": "attempt-rebind-rejected",
+    "passed": true,
+    "expected_error": "ANET-BUD-BINDING-IMMUTABLE",
+    "returncode": 3
+  },
+  {
+    "case": "two-targets-rejected",
+    "passed": true,
+    "expected_error": "check constraint",
+    "returncode": 3
+  },
+  {
+    "case": "duplicate-root-rejected",
+    "passed": true,
+    "expected_error": "unique constraint",
+    "returncode": 3
+  },
+  {
+    "case": "negative-settled-rejected",
+    "passed": true,
+    "expected_error": "check constraint",
+    "returncode": 3
+  },
+  {
+    "case": "negative-delegated-rejected",
+    "passed": true,
+    "expected_error": "check constraint",
+    "returncode": 3
+  },
+  {
+    "case": "t1-task-before-inbox",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "expiry-order-rejected",
+    "passed": true,
+    "expected_error": "check constraint",
+    "returncode": 3
+  },
+  {
+    "case": "partition-maintenance-repeat",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "terminal-restart-rejected",
+    "passed": true,
+    "expected_error": "ANET-TSK-TERMINAL",
+    "returncode": 3
+  },
+  {
+    "case": "concurrent-reserve-serialized",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "migration-003",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "legacy-in-flight",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "migration-004",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "migration-005",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "migration-006",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "legacy-effect-never-assumed-unsent",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "legacy-in-flight-recoverable",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "go-kernel-integration",
+    "passed": true,
+    "returncode": 0
+  },
+  {
+    "case": "outboxd-local-delivery",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  }
+]

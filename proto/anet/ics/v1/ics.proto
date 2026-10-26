@@ -6,6 +6,7 @@ package anet.ics.v1;
 option go_package = "github.com/agentnet/agentnet/proto/gen/anet/ics/v1;icsv1";
 
 import "google/protobuf/timestamp.proto";
+import "anet/common/v1/signed.proto";
 
 // 实例注册（01 §3.1）：认证主体登记
 message RegisterInstanceRequest {
@@ -45,6 +46,9 @@ message DecideRequest {
   string data_class = 5;
   string sensitivity = 6;                // sensitive | standard
   string audience_domain_id = 7;
+  string target_ref = 8;
+  string params_digest = 9;
+  string authority_digest = 10; // optional expected snapshot; response supplies authoritative digest
 }
 message Decision {
   string decision_id = 1;
@@ -64,7 +68,15 @@ message Decision {
   string audience_domain_id = 14;
   string sensitivity = 15;
   string decision_handle = 16;           // 签名句柄（ICS 私钥签名，TCS 可独立验真；或走 ICS->TCS mTLS 通道）
+  anet.common.v1.SignedEnvelope signed_decision = 17;
+  string authority_digest = 18;
+  string target_ref = 19;
+  string data_class = 20;
+  google.protobuf.Timestamp expires_at = 21;
 }
+
+message IssueRootPermitRequest { anet.common.v1.SignedEnvelope signed_command = 1; }
+message RootPermit { anet.common.v1.SignedEnvelope signed_permit = 1; }
 
 // 单调收缩复核（06 §3 checkShrink；CreateSubtask 事务内调用）
 message CheckShrinkRequest {
@@ -93,6 +105,7 @@ message RevokeResult {
 }
 
 service IdentityPolicy {
+  rpc IssueRootPermit(IssueRootPermitRequest) returns (RootPermit);
   rpc RegisterInstance(RegisterInstanceRequest) returns (InstanceRecord);
   rpc ExchangeDelegationToken(ExchangeDelegationTokenRequest) returns (DelegatedToken);
   rpc Decide(DecideRequest) returns (Decision);

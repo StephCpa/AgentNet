@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "6a6e7de",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "commands": [
+    "go vet ./...",
+    "python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/rpc-final-serial --kernel-tests"
+  ],
+  "environment": {
+    "GOFLAGS": "-p=1"
+  },
+  "runner_checks": 29,
+  "database_integration_tests_excluding_process_helpers": {
+    "TestKernel": 25,
+    "TestDelivery": 8,
+    "TestExecution": 17,
+    "TestRPC": 14
+  },
+  "database_test_total": 64,
+  "canonical_unit_tests": 2,
+  "parameter_store_unit_tests": 1,
+  "generated_go_files_verified": 7,
+  "protoc": "33.0",
+  "protoc_gen_go": "v1.36.10",
+  "protoc_gen_go_grpc": "1.5.1",
+  "go_vet_exit_code": 0,
+  "isolated_postgres_stopped": true,
+  "network_transport": "Real TCP/TLS 1.3 mutual authentication with generated temporary certificates and a PostgreSQL identity registry",
+  "actual_daemon_process": "Build and start cmd/anetd with real PEM/config files; root permit, submit, get, lease, decision, reserve and admit",
+  "send_gate_integration": "Network admission -> local durable delivery -> HTTP mock target -> mTLS signed result reporting; consent revocation/version and grant class/domain changes block send",
+  "scope": "Single-domain root-consent profile; no OIDC, general delegation, production business target interoperation or complete M1 exit",
+  "prior_attempts": [
+    {
+      "directory": ".local/rpc-first",
+      "outcome": "29 runner checks passed before executable/role/send integration additions"
+    },
+    {
+      "directory": ".local/rpc-daemon",
+      "outcome": "RPC tests passed; Windows file-in-use prevented starting tcs.test.exe; runner failed"
+    },
+    {
+      "directory": ".local/rpc-verified",
+      "outcome": "29 runner checks passed before final send-gate integration addition"
+    },
+    {
+      "directory": ".local/rpc-final",
+      "outcome": "All 14 RPC tests passed; Windows file-in-use prevented starting tcs.test.exe; runner failed"
+    }
+  ]
+}

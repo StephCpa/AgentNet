@@ -1,0 +1,150 @@
+package rpc
+
+import (
+	"context"
+	"crypto/ed25519"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/services/ics"
+	"github.com/agentnet/agentnet/services/tcs"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
+)
+
+type OperationConfig struct {
+	Action      string   `json:"action"`
+	Resource    string   `json:"resource"`
+	Capability  string   `json:"capability"`
+	Purpose     string   `json:"purpose"`
+	Dimensions  []string `json:"dimensions"`
+	TargetTTL   string   `json:"target_ttl,omitempty"`
+	Sensitivity string   `json:"sensitivity"`
+	DataClass   string   `json:"data_class"`
+}
+type FileConfig struct {
+	Domain              string                       `json:"domain"`
+	TrustDomain         string                       `json:"trust_domain"`
+	Listen              string                       `json:"listen"`
+	CertificateFile     string                       `json:"certificate_file"`
+	PrivateKeyFile      string                       `json:"private_key_file"`
+	ClientCAFile        string                       `json:"client_ca_file"`
+	ICSKeyID            string                       `json:"ics_key_id"`
+	ICSSigningKeyFile   string                       `json:"ics_signing_key_file"`
+	CommandKeys         map[string]ed25519.PublicKey `json:"command_keys"`
+	ResultKeys          map[string]ed25519.PublicKey `json:"result_keys"`
+	ICSVerificationKeys map[string]ed25519.PublicKey `json:"ics_verification_keys,omitempty"`
+	Operations          map[string]OperationConfig   `json:"operations"`
+}
+
+// OpenRuntime loads explicit configuration. It never enrolls identities, creates
+// consent, trusts request metadata, or applies migrations as a startup side effect.
+func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.Pool, string, error) {
+	if path == "" || dsn == "" {
+		return nil, nil, "", fmt.Errorf("config file and ANET_DATABASE_URL are required")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	raw, err = canonical.Bytes(raw)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("invalid configuration JSON")
+	}
+	var c FileConfig
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&c); err != nil {
+		return nil, nil, "", err
+	}
+	base := filepath.Dir(path)
+	resolve := func(name string) string {
+		if filepath.IsAbs(name) {
+			return name
+		}
+		return filepath.Join(base, name)
+	}
+	cert, err := tls.LoadX509KeyPair(resolve(c.CertificateFile), resolve(c.PrivateKeyFile))
+	if err != nil {
+		return nil, nil, "", err
+	}
+	ca, err := os.ReadFile(resolve(c.ClientCAFile))
+	if err != nil {
+		return nil, nil, "", err
+	}
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(ca) {
+		return nil, nil, "", fmt.Errorf("client CA file has no certificates")
+	}
+	private, err := os.ReadFile(resolve(c.ICSSigningKeyFile))
+	if err != nil {
+		return nil, nil, "", err
+	}
+	block, rest := pem.Decode(private)
+	if block == nil || block.Type != "PRIVATE KEY" || len(strings.TrimSpace(string(rest))) != 0 {
+		return nil, nil, "", fmt.Errorf("ICS key must be one PKCS8 PEM private key")
+	}
+	parsed, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("invalid ICS private key")
+	}
+	key, ok := parsed.(ed25519.PrivateKey)
+	if !ok {
+		return nil, nil, "", fmt.Errorf("ICS requires Ed25519")
+	}
+	public := key.Public().(ed25519.PublicKey)
+	if c.ICSKeyID == "" {
+		return nil, nil, "", fmt.Errorf("ics_key_id is required")
+	}
+	if c.ICSVerificationKeys == nil {
+		c.ICSVerificationKeys = map[string]ed25519.PublicKey{}
+	}
+	if old, ok := c.ICSVerificationKeys[c.ICSKeyID]; ok && !old.Equal(public) {
+		return nil, nil, "", fmt.Errorf("ICS key ID collides with a different public key")
+	}
+	c.ICSVerificationKeys[c.ICSKeyID] = public
+	ops := map[string]tcs.Operation{}
+	for name, o := range c.Operations {
+		var ttl time.Duration
+		if o.TargetTTL != "" {
+			ttl, err = time.ParseDuration(o.TargetTTL)
+			if err != nil {
+				return nil, nil, "", fmt.Errorf("invalid target_ttl")
+			}
+		}
+		ops[name] = tcs.Operation{Action: o.Action, Resource: o.Resource, Capability: o.Capability, Purpose: o.Purpose, Dimensions: o.Dimensions, TargetTTL: ttl, Sensitivity: o.Sensitivity, DataClass: o.DataClass}
+	}
+	db, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	fail := func(err error) (*grpc.Server, *pgxpool.Pool, string, error) { db.Close(); return nil, nil, "", err }
+	if _, err = db.Exec(ctx, `SELECT consent_id FROM root_consents LIMIT 0`); err != nil {
+		return fail(fmt.Errorf("database unavailable or migrations incomplete"))
+	}
+	store, err := tcs.New(db, tcs.Config{Domain: c.Domain, CommandKeys: c.CommandKeys, RootKeys: c.ICSVerificationKeys, DecisionKeys: c.ICSVerificationKeys, ResultKeys: c.ResultKeys, Operations: ops})
+	if err != nil {
+		return fail(err)
+	}
+	policy, err := ics.New(db, ics.Config{Domain: c.Domain, KeyID: c.ICSKeyID, Key: key, CommandKeys: c.CommandKeys, Operations: ops})
+	if err != nil {
+		return fail(err)
+	}
+	server, err := New(db, store, policy, Config{Domain: c.Domain, TrustDomain: c.TrustDomain, Certificate: cert, ClientCAs: roots, Operations: ops})
+	if err != nil {
+		return fail(err)
+	}
+	if c.Listen == "" {
+		server.Stop()
+		return fail(fmt.Errorf("listen is required"))
+	}
+	return server, db, c.Listen, nil
+}

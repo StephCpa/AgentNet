@@ -1,0 +1,11 @@
+syntax = "proto3";
+package anet.common.v1;
+option go_package = "github.com/agentnet/agentnet/proto/gen/anet/common/v1;commonv1";
+
+// Payload is the complete versioned JCS JSON document. Its authenticated fields
+// are never replaced with unsigned duplicate protobuf fields.
+message SignedEnvelope {
+ string key_id = 1;
+ bytes payload = 2;
+ bytes signature = 3;
+}

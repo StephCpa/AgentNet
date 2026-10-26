@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/agentnet/agentnet/internal/authority"
 	"github.com/agentnet/agentnet/internal/canonical"
 	"github.com/jackc/pgx/v5"
 )
@@ -64,6 +65,9 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	if !ok {
 		return out, Denied
 	}
+	if (op.Sensitivity != "" && p.Sensitivity != op.Sensitivity) || (op.DataClass != "" && p.DataClass != op.DataClass) {
+		return out, Denied
+	}
 	if p.Sensitivity != "standard" && p.Sensitivity != "sensitive" {
 		return out, Invalid
 	}
@@ -75,6 +79,9 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 		return out, err
 	}
 	if d.Kind != "anet.authorization/1" || !d.Allow || d.ID == "" || d.Subject != c.Principal || d.Agent != c.Agent || d.Instance != c.Instance || d.Task != p.TaskID || d.Target != p.Target || d.Action != op.Action || d.Resource != op.Resource || d.ParamsDigest != p.ParamsDigest || d.AuthorityDigest != p.AuthorityDigest || d.Audience != s.cfg.Domain || d.Sensitivity != p.Sensitivity {
+		return out, DecisionMismatch
+	}
+	if d.DataClass != p.DataClass {
 		return out, DecisionMismatch
 	}
 	// The persisted grant must also be live. Its rights cannot be replaced by a
@@ -89,6 +96,27 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	}
 	if err != nil {
 		return out, err
+	}
+	g, err := authority.LoadGrant(ctx, tx, grant)
+	if err != nil {
+		return out, err
+	}
+	if g.ConsentID != "" {
+		var consent string
+		err = tx.QueryRow(ctx, `SELECT consent_id FROM root_consents WHERE consent_id=$1 AND version=$2 AND revoked_at IS NULL AND not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FOR SHARE`, g.ConsentID, g.ConsentVersion).Scan(&consent)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return out, Denied
+		}
+		if err != nil {
+			return out, err
+		}
+		digest, err := g.Digest()
+		if err != nil {
+			return out, err
+		}
+		if digest != d.AuthorityDigest || d.PolicyVersion != g.Policy || !authority.Contains(g.Rights.DataClasses, d.DataClass) || !authority.Contains(g.Rights.Spatial.Domains, s.cfg.Domain) {
+			return out, DecisionMismatch
+		}
 	}
 	ids := []string{}
 	seen := map[string]bool{}
@@ -156,7 +184,7 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 		return out, err
 	}
 	_, err = tx.Exec(ctx, `UPDATE effects SET dispatch_grant_id=$2,dispatch_actor_instance_id=$3,
- target_ttl_us=NULLIF($4::bigint,0),dispatch_action=$5,dispatch_resource=$6 WHERE effect_id=$1`, p.EffectID, d.Grant, c.Instance, op.TargetTTL.Microseconds(), op.Action, op.Resource)
+ target_ttl_us=NULLIF($4::bigint,0),dispatch_action=$5,dispatch_resource=$6,dispatch_data_class=$7 WHERE effect_id=$1`, p.EffectID, d.Grant, c.Instance, op.TargetTTL.Microseconds(), op.Action, op.Resource, d.DataClass)
 	if err != nil {
 		return out, err
 	}
