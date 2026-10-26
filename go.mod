@@ -3,8 +3,11 @@ module github.com/agentnet/agentnet
 go 1.24.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20261011152517-32a48195b9b2
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/jackc/pgx/v5 v5.7.6
+	golang.org/x/oauth2 v0.30.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250707201910-8d1bb00bc6a7
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.10

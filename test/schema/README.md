@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–006 (including legacy IN_FLIGHT, effect provenance and identity policy) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–007 (including legacy IN_FLIGHT, effect provenance, identity policy and user sessions) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -66,3 +66,10 @@ they do not establish OIDC integration or a production enrollment control plane.
 The final snapshot contains 64 database tests (25 TCS, 8 delivery, 17 execution,
 14 RPC) and 3 unit tests. Process-local `GOFLAGS=-p=1` was used for this Windows
 run after temporary executable file-in-use errors; assertions were not retried.
+
+OIDC/user-consent increment (design 20): migration 007, 30 runner checks and 74
+database tests (the previous 64 plus 10 identity tests), with 3 unit tests. This
+includes a separate HTTPS IdP fixture, the real identityd process, browser consent
+feeding ICS/T1, negative token/CSRF/ownership cases and expiry after a row-lock
+wait. Evidence: `test/evidence/2026-10-27/identity/`. Production IdP enrollment and
+the full GW/DPoP/credential lifecycle remain pending.

@@ -104,7 +104,9 @@ Go 库级事务内核已通过 22 项 PG16 集成测试（另有 10 个决定绑
 
 18 增量：FI-03 的 HTTP mock 业务端/独立事务崩溃窗口已覆盖 queryable、idempotent-key、opaque；另有 ABSENT 后迟到提交、TTL、无查询 API、取消后对账和结果重报验证。该阶段累计 50 项数据库集成测试，不能替代真实目标认证、全部 FI、归档及微基准退出证据。
 
-19 增量：真实 TCP/mTLS 验证身份/角色撤销、根同意与授权决定绑定、T1 根 grant 原子提交；独立 anetd 进程完成配置/证书加载及接纳闭环。分项结果与当前计数见 [19](19-authenticated-services.md) 及其证据目录。未实现 OIDC、通用委托、长连接事件流及真实协议互操作。
+19 增量：真实 TCP/mTLS 验证身份/角色撤销、根同意与授权决定绑定、T1 根 grant 原子提交；独立 anetd 进程完成配置/证书加载及接纳闭环。该阶段结果见 [19](19-authenticated-services.md) 及其证据目录。
+
+20 增量：OIDC 授权码/PKCE 登录、用户同意创建/撤销、会话与主体/映射复核、真实锁等待后过期回滚；独立 identityd 进程完成登录与批准。当前累计 74 项数据库集成测试、3 项单测、30 项 runner 检查通过。独立 HTTPS IdP fixture 证据见 [20](20-oidc-and-user-consent.md)；生产 IdP、通用委托、长连接事件流、完整 GW 和真实目标协议仍待完成。
 
 ### M1–M4 退出条件
 

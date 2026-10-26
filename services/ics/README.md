@@ -28,4 +28,5 @@ reconciliation and conservative settlement continue through the existing kernel.
 
 Network entry points and setup are documented in [`../rpc/README.md`](../rpc/README.md).
 Standing consent is trusted provisioning, not agent-supplied evidence of user
-consent. OIDC integration and the human consent control plane remain separate work.
+consent. `services/identity` now provides OIDC browser login and a human approval/
+revocation page; issuer/subject mappings and permission profiles remain admin-owned.

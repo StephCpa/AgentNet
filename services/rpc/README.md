@@ -72,7 +72,8 @@ and token exchange. DIR bindings are generated but no DIR server is registered.
 
 `anetd` runs TCS/ICS only. Outbox delivery and the execution engine remain separate
 components; starting this daemon alone does not execute external business effects.
-OIDC/DPoP, certificate enrollment/rotation, general revocation/push, denied-request
+`services/identity` now supplies OIDC browser login and user consent (design 20).
+DPoP, certificate enrollment/rotation, general revocation/push, RPC denied-request
 audit, production target transport and ART classification remain unfinished.
 
 ## Verification

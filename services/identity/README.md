@@ -1,0 +1,108 @@
+# OIDC login and user consent
+
+`cmd/identityd` runs the HTTPS user control page. It performs authorization-code
+login with discovery/JWKS, S256 PKCE, state bound to a browser cookie, and a nonce
+bound to the ID token. It verifies signature, exact issuer, client audience, azp
+where applicable, issue/expiry times, nonce and any access-token hash. Supported
+ID-token algorithms are RS256, ES256 and EdDSA; no unsigned/HMAC fallback exists.
+
+`issuer + subject` maps to a previously provisioned user principal in
+`oidc_subjects`. Email, display name and request-body user IDs cannot create or
+link accounts. User sessions are opaque random cookies; only their hashes are
+stored. Sessions last no longer than the ID token (at most one hour, with 500 ms
+expiry margin). Every authenticated request rechecks the session, mapping and
+live principal in PostgreSQL. Local logout revokes the session in the database.
+
+The control page shows configured permission profiles and owned Agents. A user
+can approve a profile with lower per-task ceilings, choose a shorter validity
+period, optionally restrict it to one owned registered instance, and revoke an
+existing consent. These are standing permissions for multiple tasks; they are
+not aggregate user spending limits. The page states this before approval.
+
+The form cannot supply arbitrary rights, policy versions or subject identity.
+Mutations require an exact Origin and session-derived CSRF token. Unknown and
+duplicate fields are rejected. Consent writes and successful audit events share
+a transaction; failed transactions roll back before a separate denial audit.
+An unavailable denial audit returns 503. Session expiry is rechecked after lock
+waits. Revocation requires the current version and increments it, invalidating
+previous ICS permits/decisions through the existing T1/T2/send checks.
+
+## Deployment
+
+Apply migrations 001–007. Provision the domain, user principal, Agent and instances
+through the trusted administration path, then add the exact IdP subject mapping:
+
+```sql
+INSERT INTO oidc_subjects(domain_id,issuer,subject,principal_id)
+VALUES ('dom_example','https://id.example.org','<immutable IdP subject>','usr_example');
+```
+
+Register a code-flow client at the IdP with an exact callback URL such as
+`https://identity.example.org/callback`. Discovery must advertise PKCE S256 and
+all endpoints must use HTTPS. The service does not follow upstream redirects.
+Client authentication follows the provider token endpoint; `client_secret_file`
+is optional for a public client. The IdP must issue ID tokens of at most one hour.
+
+```json
+{
+  "domain": "dom_example",
+  "listen": "127.0.0.1:8444",
+  "public_url": "https://identity.example.org",
+  "issuer": "https://id.example.org",
+  "client_id": "agentnet-control",
+  "client_secret_file": "oidc-client-secret",
+  "certificate_file": "server.pem",
+  "private_key_file": "server.key",
+  "profiles": {
+    "research": {
+      "name": "Research tools",
+      "policy_version": "research/1",
+      "max_hours": 24,
+      "rights": {
+        "actions": ["search"], "resources": ["catalog:research"],
+        "data_classes": ["public"], "depth_left": 0,
+        "delegation_scope": [],
+        "spatial": {"domains": ["dom_example"], "egress_only_via_gateway": true}
+      },
+      "task_limits": {"money": "10", "tokens": "100000", "calls": "100", "messages": "100"}
+    }
+  }
+}
+```
+
+`public_url` is an HTTPS origin without a trailing slash; its authority must match
+the incoming Host exactly. Paths are relative to the config file. Optional
+`issuer_ca_file` adds a private issuer CA to the system roots. There is no TLS
+verification bypass, plaintext listener or trust in forwarded identity headers.
+
+```powershell
+$env:ANET_DATABASE_URL = '<deployment database connection string>'
+go run ./cmd/identityd -config <identity-config.json>
+```
+
+The process loads certificates and explicit configuration; it neither migrates nor
+creates users/Agents automatically. The PKCE verifier exists only in the short-lived
+login transaction table until callback consumption/expiry cleanup. ID/access tokens,
+client secrets, cookies and authorization codes are not written to the audit log.
+
+## Validation and remaining work
+
+```text
+python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/identity-new --kernel-tests
+```
+
+Tests use a separate HTTPS IdP implementing discovery, authorization, one-use code
+exchange, PKCE and RSA/JWKS. They cover actual identityd startup, legitimate login,
+claim/signature failures, code injection, state/callback replay, CSRF, ownership,
+session/mapping/principal revocation, expiry after a real row-lock wait, consent
+versions, and browser approval/withdrawal feeding ICS/T1. Retained evidence:
+`test/evidence/2026-10-27/identity/` and design 20.
+
+No particular production IdP has been provisioned or tested. Refresh tokens,
+IdP back-channel/global logout, user/Agent administration, instance certificate
+enrollment/rotation, client-credentials + DPoP, token exchange and the full GW
+pipeline remain separate work. Expired sessions require a new login. Legacy
+manually provisioned consent remains readable/revocable by its owner.
+
+Protocol references: [OIDC Core, authorization code flow](https://openid.net/specs/openid-connect-core-1_0.html#CodeFlowAuth),
+[OAuth security BCP, code injection and CSRF](https://www.rfc-editor.org/rfc/rfc9700.html#section-2.1.1).
