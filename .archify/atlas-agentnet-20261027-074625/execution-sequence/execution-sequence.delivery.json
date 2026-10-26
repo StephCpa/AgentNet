@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c048e7d2-4764-43c0-96f6-ee2facd05411",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\execution-sequence\\candidate.json",
+  "output": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\execution-sequence\\execution-sequence.html",
+  "specification": {
+    "sha256": "5e0ced345606190f108086c1d512e7fa755012a264e7f7b06b9493b6915e2306",
+    "bytes": 5713
+  },
+  "artifact": {
+    "sha256": "01fbe0d3577c85fef1d0bf1a7433e28de5f466842da55180efab11ee361fc4bc",
+    "bytes": 820967
+  }
+}

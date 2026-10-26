@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "tree",
+  "quality": "showcase",
+  "specification": {
+    "path": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\candidate.json",
+    "sha256": "72d2347ae751001425bfb22392658aa4ee0c21803d830bdb3a37b3fc9f430cdb",
+    "bytes": 5094
+  },
+  "artifact": {
+    "path": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\module-tree.html",
+    "sha256": "82a7a773ba1c26ad58571b2732799a0fbf2b45b8dc79050377a9cc948e5334cf",
+    "bytes": 832923
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\review-2\\module-tree.finalize.json",
+    "summaryReceipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\review-2\\module-tree.finalize-summary.json",
+    "browserCheckReceipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\review-2\\module-tree.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 7927,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentNet · 交互架构图集</title>
+<!-- ARCHIFY_LICENSE -->
+<style>
+:root{color-scheme:dark;--ink:#e7edf4;--muted:#93a5b8;--accent:#63dfcd;--line:#29394b;--side:#101d2d}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI","Microsoft YaHei",sans-serif;background:#101d2d;color:var(--ink);height:100vh;overflow:hidden}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #63dfcd;outline-offset:3px}.app{display:grid;grid-template-columns:238px minmax(0,1fr);height:100vh}.sidebar{padding:28px 16px 18px;display:flex;flex-direction:column;border-right:1px solid var(--line);overflow:auto}.brand{padding:0 12px;font-size:25px;font-weight:750;letter-spacing:-.8px}.brand span{color:var(--accent)}.eyebrow{padding:8px 12px 24px;font-size:10px;letter-spacing:2.5px;color:var(--muted)}nav{display:grid;gap:7px}.nav{width:100%;text-align:left;display:flex;gap:12px;align-items:center;padding:13px 12px;border:1px solid transparent;border-radius:10px;background:transparent;color:#b8c6d6}.nav:hover{background:#1a2a3e}.nav[aria-current="page"]{background:#1d3943;color:#fff;border-color:#326260}.number{font-size:11px;color:#82bdb8;font-family:monospace}.nav strong{display:block;font-size:14px;line-height:1.6}.nav small{font-size:10px;color:#91a5b8;display:block;margin-top:2px}.foot{margin-top:auto;padding:28px 12px 0;color:var(--muted);font-size:11px;line-height:1.9}.foot a{color:#afded7;text-decoration:none}.foot code{color:#cdd9e6}.main{min-width:0;display:flex;flex-direction:column;background:#f5f7fa}.top{background:#142336;border-bottom:1px solid var(--line);padding:15px 22px 13px;display:flex;gap:18px;align-items:center;justify-content:space-between}.heading{min-width:0}.heading h1{font-size:18px;margin:0 0 5px}.heading p{font-size:11px;line-height:1.6;color:#a9bacb;margin:0;max-width:710px}.actions{display:flex;gap:7px;flex-shrink:0}.actions button{border:1px solid #3b5065;color:#d8e2ec;background:#203348;padding:8px 11px;border-radius:7px;font-size:12px;white-space:nowrap}.actions .primary{background:#63dfcd;color:#0d302f;border-color:#63dfcd;font-weight:650}.actions button:disabled{opacity:.5;cursor:wait}.frame-wrap{flex:1;min-height:0;position:relative}iframe{width:100%;height:100%;display:block;border:0;background:#f5f7fa}.loading{position:absolute;inset:0;display:grid;place-items:center;background:#f5f7fa;color:#30445a;z-index:2}.loading[hidden]{display:none}.hint{height:26px;padding:5px 20px;background:#e9eef3;color:#5c6b7b;font-size:10px;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.app.focus{grid-template-columns:0 minmax(0,1fr)}.app.focus .sidebar{visibility:hidden;padding:0;border:0}.app.focus .top{padding:10px 20px}@media(max-width:1100px){.app{grid-template-columns:205px minmax(0,1fr)}.top{align-items:flex-start;flex-direction:column;gap:10px}.actions{align-self:flex-end}.sidebar{padding-inline:10px}}@media(max-width:700px){.app{grid-template-columns:1fr}.sidebar{padding:12px;border-right:0;border-bottom:1px solid var(--line);max-height:160px}.brand{font-size:20px}.eyebrow,.foot{display:none}nav{display:flex;overflow:auto;margin-top:10px}.nav{min-width:130px;padding:7px}.nav small{display:none}.app{grid-template-rows:auto minmax(0,1fr)}.top{padding:12px}.heading p{display:none}.actions{align-self:auto;flex-wrap:wrap}.app.focus{grid-template-rows:0 minmax(0,1fr)}.hint{padding-inline:10px}}
+@media(prefers-reduced-motion:no-preference){.nav,.actions button{transition:background .18s,border-color .18s}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+ <aside class="sidebar" aria-label="图集导航">
+  <div class="brand">Agent<span>Net</span></div><div class="eyebrow">ARCHITECTURE ATLAS / 2026</div>
+  <nav id="nav" aria-label="选择图表"></nav>
+  <div class="foot">代码快照 <code>c2f5766</code><br>7 个视角 · 离线可用<br>由 <a href="https://github.com/tt-a1i/archify" target="_blank" rel="noopener">Archify v3.2.0</a> 生成<br>单域实现 · 后续能力见图中说明</div>
+ </aside>
+ <main class="main">
+  <header class="top"><div class="heading"><h1 id="title">AgentNet 架构图集</h1><p id="description"></p></div>
+   <div class="actions"><button id="motion" class="primary" disabled aria-pressed="false">▶ 播放动画</button><button id="theme" disabled>明暗主题</button><button id="focus" aria-pressed="false">展开画布</button><button id="download" disabled>下载此图</button></div>
+  </header>
+  <div class="frame-wrap"><div class="loading" id="loading" role="status">正在载入图表…</div><iframe id="viewer" title="AgentNet 交互图表" allow="fullscreen" referrerpolicy="no-referrer"></iframe></div>
+  <div class="hint">点击节点查看详情和源码 · 滚轮缩放 / 拖动画布 · 图内导出菜单 · 数字键 1–7 切换视角 · 动画表示交互方向，不代表实时流量</div>
+ </main>
+</div>
+<script id="atlas-data" type="application/json">__ATLAS_DATA__</script>
+<script>
+'use strict';
+const views=JSON.parse(document.getElementById('atlas-data').textContent);
+const frame=document.getElementById('viewer'), nav=document.getElementById('nav'), motion=document.getElementById('motion'), theme=document.getElementById('theme'), download=document.getElementById('download');
+let current=0, observer=null;
+views.forEach((v,i)=>{const b=document.createElement('button');b.className='nav';b.type='button';b.innerHTML='<span class="number">'+v.number+'</span><span><strong>'+v.title+'</strong><small>'+v.subtitle+'</small></span>';b.addEventListener('click',()=>select(i));nav.appendChild(b)});
+function sync(){const d=frame.contentDocument;if(!d)return;const b=d.getElementById('btn-motion');const live=d.documentElement.dataset.motion==='live';motion.disabled=!b||b.disabled||b.hidden;motion.textContent=live?'Ⅱ 暂停动画':'▶ 播放动画';motion.setAttribute('aria-pressed',String(live));theme.disabled=!d.getElementById('btn-theme');}
+function select(i){current=i;const v=views[i];if(observer)observer.disconnect();document.getElementById('title').textContent=v.number+' / '+v.title;document.getElementById('description').textContent=v.description;[...nav.children].forEach((b,n)=>{if(n===i)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});document.getElementById('loading').hidden=false;motion.disabled=theme.disabled=download.disabled=true;frame.title=v.title+' · AgentNet';frame.srcdoc=v.html;history.replaceState(null,'','#'+v.slug)}
+frame.addEventListener('load',()=>{if(!frame.contentDocument?.getElementById('btn-theme'))return;document.getElementById('loading').hidden=true;download.disabled=false;sync();observer=new MutationObserver(sync);observer.observe(frame.contentDocument.documentElement,{attributes:true,attributeFilter:['data-motion']});});
+motion.addEventListener('click',()=>{frame.contentDocument.getElementById('btn-motion')?.click();sync()});
+theme.addEventListener('click',()=>frame.contentDocument.getElementById('btn-theme')?.click());
+document.getElementById('focus').addEventListener('click',e=>{const expanded=document.getElementById('app').classList.toggle('focus');e.currentTarget.textContent=expanded?'显示导航':'展开画布';e.currentTarget.setAttribute('aria-pressed',String(expanded));frame.contentWindow.dispatchEvent(new Event('resize'))});
+download.addEventListener('click',()=>{const v=views[current],url=URL.createObjectURL(new Blob([v.html],{type:'text/html;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='agentnet-'+v.slug+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)});
+document.addEventListener('keydown',e=>{if(!e.altKey&&!e.ctrlKey&&!e.metaKey&&/^[1-7]$/.test(e.key)&&!['INPUT','TEXTAREA'].includes(e.target.tagName))select(Number(e.key)-1)});
+const initial=views.findIndex(v=>v.slug===location.hash.slice(1));select(initial<0?0:initial);
+</script>
+</body></html>

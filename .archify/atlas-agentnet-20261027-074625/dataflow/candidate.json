@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "AgentNet · 命令事实与归档数据流",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/dataflow/dataflow.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    }
+  },
+  "stages": [
+    {
+      "label": "输入来源"
+    },
+    {
+      "label": "绑定 / 读取"
+    },
+    {
+      "label": "校验 / 编码"
+    },
+    {
+      "label": "权威 / 冷存"
+    },
+    {
+      "label": "读取结果"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "intent",
+      "type": "frontend",
+      "label": "任务意图",
+      "sublabel": "契约 / 限额",
+      "sources": [
+        {
+          "path": "services/gateway/service.go"
+        }
+      ],
+      "stage": 0,
+      "row": 0
+    },
+    {
+      "id": "bind",
+      "type": "security",
+      "label": "签名绑定",
+      "sublabel": "身份 + not_after",
+      "sources": [
+        {
+          "path": "services/gateway/service.go"
+        }
+      ],
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "admit",
+      "type": "backend",
+      "label": "T1 接纳",
+      "sublabel": "契约与授权检查",
+      "sources": [
+        {
+          "path": "services/tcs/commands.go"
+        }
+      ],
+      "stage": 2,
+      "row": 0
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "权威账本",
+      "sublabel": "任务 / 回执 / 预算",
+      "sources": [
+        {
+          "path": "services/tcs/commands.go"
+        }
+      ],
+      "stage": 3,
+      "row": 0
+    },
+    {
+      "id": "snapshot",
+      "type": "backend",
+      "label": "GetTask",
+      "sublabel": "认证后的事实快照",
+      "sources": [
+        {
+          "path": "services/tcs/details.go"
+        }
+      ],
+      "stage": 4,
+      "row": 0
+    },
+    {
+      "id": "events",
+      "type": "database",
+      "label": "事件分区",
+      "sublabel": "task_events / audit",
+      "sources": [
+        {
+          "path": "services/archive/export.go"
+        }
+      ],
+      "stage": 0,
+      "row": 2
+    },
+    {
+      "id": "export",
+      "type": "backend",
+      "label": "归档读取",
+      "sublabel": "已封闭 UTC 月分区",
+      "sources": [
+        {
+          "path": "services/archive/maintenance.go"
+        }
+      ],
+      "stage": 1,
+      "row": 2
+    },
+    {
+      "id": "encode",
+      "type": "backend",
+      "label": "Parquet 编码",
+      "sublabel": "分块 / 索引 / 摘要",
+      "sources": [
+        {
+          "path": "services/archive/export.go"
+        }
+      ],
+      "stage": 2,
+      "row": 2
+    },
+    {
+      "id": "s3",
+      "type": "database",
+      "label": "S3 对象",
+      "sublabel": "版本 / 内容校验",
+      "sources": [
+        {
+          "path": "services/archive/s3.go"
+        }
+      ],
+      "stage": 3,
+      "row": 2
+    },
+    {
+      "id": "lookup",
+      "type": "backend",
+      "label": "归档补查",
+      "sublabel": "按域与任务过滤",
+      "sources": [
+        {
+          "path": "services/archive/read.go"
+        }
+      ],
+      "stage": 4,
+      "row": 2
+    }
+  ],
+  "flows": [
+    {
+      "id": "intent-bind",
+      "from": "intent",
+      "to": "bind",
+      "label": "原始意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bind-admit",
+      "from": "bind",
+      "to": "admit",
+      "label": "签名命令",
+      "variant": "security"
+    },
+    {
+      "id": "admit-ledger",
+      "from": "admit",
+      "to": "ledger",
+      "label": "原子提交",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ledger-snapshot",
+      "from": "ledger",
+      "to": "snapshot",
+      "label": "权威记录",
+      "variant": "default"
+    },
+    {
+      "id": "events-export",
+      "from": "events",
+      "to": "export",
+      "label": "历史行",
+      "variant": "default"
+    },
+    {
+      "id": "export-encode",
+      "from": "export",
+      "to": "encode",
+      "label": "数据分块",
+      "variant": "default"
+    },
+    {
+      "id": "encode-s3",
+      "from": "encode",
+      "to": "s3",
+      "label": "归档对象",
+      "variant": "dashed"
+    },
+    {
+      "id": "s3-lookup",
+      "from": "s3",
+      "to": "lookup",
+      "label": "验证后读取",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "两条数据路径",
+      "items": [
+        "上排：GW 固定签名，TCS 原子保存任务、四维账户、ACCEPTED、事件与 outbox。",
+        "下排：同一 PostgreSQL 的历史事件与审计分区，经 archived 编码后写入对象存储。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "当前范围",
+      "items": [
+        "账本和事件分区是同库不同逻辑集合，不是两个独立权威库。",
+        "参数内容存放与 effect 执行见时序图；原始参数不写入 outbox。",
+        "ART 产物引用、证据清单与 VERIFIED 不属于当前归档数据流。"
+      ]
+    }
+  ]
+}

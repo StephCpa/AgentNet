@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "单域任务树 · 权限与预算逐级收缩",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/delegation-tree/delegation-tree.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    }
+  },
+  "layout": {
+    "direction": "down",
+    "nodeW": 195,
+    "nodeMaxW": 250,
+    "gapX": 50,
+    "gapY": 100
+  },
+  "nodes": [
+    {
+      "id": "root",
+      "label": "根任务",
+      "sublabel": "原用户 subject / 四维 B",
+      "sources": [
+        {
+          "path": "services/tcs/root.go"
+        }
+      ]
+    },
+    {
+      "id": "childA",
+      "label": "子任务 A",
+      "sublabel": "接收 actor A / 独立租约",
+      "sources": [
+        {
+          "path": "services/tcs/subtasks.go"
+        }
+      ],
+      "parent": "root"
+    },
+    {
+      "id": "childB",
+      "label": "子任务 B",
+      "sublabel": "接收 actor B / 独立租约",
+      "sources": [
+        {
+          "path": "services/tcs/subtasks.go"
+        }
+      ],
+      "parent": "root"
+    },
+    {
+      "id": "grandA",
+      "label": "孙任务 A1",
+      "sublabel": "父链权限交集 / 深度 -1",
+      "sources": [
+        {
+          "path": "internal/authority/chain.go"
+        }
+      ],
+      "parent": "childA"
+    },
+    {
+      "id": "grandB",
+      "label": "孙任务 A2",
+      "sublabel": "账户 B 来自父 H → D",
+      "sources": [
+        {
+          "path": "services/tcs/subtasks.go"
+        }
+      ],
+      "parent": "childA"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "结构示意，不是实时任务",
+      "items": [
+        "实际任务数量由运行时创建；图中 A/B/A1/A2 是示意实例，没有虚构金额。",
+        "每级保留原 owner / subject，执行权由接收 actor、有效租约和完整授权父链决定。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "创建与结清",
+      "items": [
+        "CreateSubtask 同事务转移父 H → D 并建立子 B；四维守恒为 S + H + D ≤ B。",
+        "CloseSubtaskBudget 需终态、无 UNKNOWN/ADMITTED、无 HELD/下放、所有后代已结清。",
+        "结清后父 D 减原子额度，父 S 加子 S，子账户封存 B=S。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "取消与拒绝",
+      "items": [
+        "父取消通过持久队列逐级传播；取消本身不释放未知成本。",
+        "接收方策略、权限子集、深度、并发数、预算和原命令时效都在创建时检查。",
+        "当前是同域委托；跨域额度交接仍待完成。"
+      ]
+    }
+  ]
+}

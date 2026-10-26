@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "sequence",
+  "quality": "showcase",
+  "specification": {
+    "path": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\admission-sequence\\candidate.json",
+    "sha256": "88930eeec7966832c9bd1607897165e456eae5be96f139bd024aa237bcf3781c",
+    "bytes": 4653
+  },
+  "artifact": {
+    "path": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\admission-sequence\\admission-sequence.html",
+    "sha256": "2f96a6252667a6fdedc86a358745ff0dd771f37b99aa208e4ad83ba9aecb0bbf",
+    "bytes": 816049
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\admission-sequence\\admission-sequence.finalize.json",
+    "summaryReceipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\admission-sequence\\admission-sequence.finalize-summary.json",
+    "browserCheckReceipt": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\admission-sequence\\admission-sequence.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 8603,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

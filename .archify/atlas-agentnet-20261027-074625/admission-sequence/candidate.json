@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "根任务 · 首次接纳时序",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/admission-sequence/admission-sequence.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "agent",
+      "type": "external",
+      "label": "Agent 实例",
+      "sublabel": "已登记的 mTLS 身份",
+      "sources": [
+        {
+          "path": "services/rpc/auth.go"
+        }
+      ]
+    },
+    {
+      "id": "gw",
+      "type": "backend",
+      "label": "GW",
+      "sublabel": "持久签名",
+      "sources": [
+        {
+          "path": "services/gateway/service.go"
+        }
+      ]
+    },
+    {
+      "id": "ics",
+      "type": "security",
+      "label": "ICS",
+      "sublabel": "用户同意与父链",
+      "sources": [
+        {
+          "path": "services/ics/service.go"
+        }
+      ]
+    },
+    {
+      "id": "tcs",
+      "type": "backend",
+      "label": "TCS",
+      "sublabel": "权威事务",
+      "sources": [
+        {
+          "path": "services/tcs/commands.go"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "提交即事实",
+      "sources": [
+        {
+          "path": "schema/001_core.sql"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "agent",
+      "to": "gw",
+      "y": 175,
+      "label": "提交无签名意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "gw",
+      "to": "pg",
+      "y": 223,
+      "label": "固定身份、ID、签名",
+      "variant": "default"
+    },
+    {
+      "id": "m3",
+      "from": "pg",
+      "to": "gw",
+      "y": 271,
+      "label": "签名绑定已提交",
+      "variant": "return"
+    },
+    {
+      "id": "m4",
+      "from": "gw",
+      "to": "ics",
+      "y": 319,
+      "label": "请求根许可",
+      "variant": "security"
+    },
+    {
+      "id": "m5",
+      "from": "ics",
+      "to": "pg",
+      "y": 367,
+      "label": "核验身份与同意",
+      "variant": "security"
+    },
+    {
+      "id": "m6",
+      "from": "pg",
+      "to": "ics",
+      "y": 415,
+      "label": "当前授权上限",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "ics",
+      "to": "gw",
+      "y": 463,
+      "label": "签名根许可",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "gw",
+      "to": "tcs",
+      "y": 511,
+      "label": "签名命令与许可",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m9",
+      "from": "tcs",
+      "to": "pg",
+      "y": 559,
+      "label": "锁 ID / 查旧回执",
+      "variant": "default"
+    },
+    {
+      "id": "m10",
+      "from": "pg",
+      "to": "tcs",
+      "y": 607,
+      "label": "确认首次接纳",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "tcs",
+      "to": "pg",
+      "y": 655,
+      "label": "契约校验后提交 T1",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m12",
+      "from": "pg",
+      "to": "tcs",
+      "y": 703,
+      "label": "整笔事务提交成功",
+      "variant": "return"
+    },
+    {
+      "id": "m13",
+      "from": "tcs",
+      "to": "gw",
+      "y": 751,
+      "label": "ACCEPTED / task_id",
+      "variant": "return"
+    },
+    {
+      "id": "m14",
+      "from": "gw",
+      "to": "agent",
+      "y": 799,
+      "label": "返回权威接纳回执",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "首次接纳的事务边界",
+      "items": [
+        "T1 同时写入契约、任务、根授权、四维账户、inbox、ACCEPTED 回执、事件、outbox 和审计。",
+        "严格契约校验包含离线 schema 编译；当前不执行产物验收。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "重复与崩溃",
+      "items": [
+        "同 ID 同摘要恢复既有回执；改参冲突；原 not_after 不因重启延长。",
+        "已保存根许可时，GW 先尝试恢复接纳事实；旧命令精确恢复先于新契约校验。",
+        "本图是顺序示意，不是延迟测量；任一守卫失败均不进入首次 T1 提交。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "diagram_type": "tree",
+  "meta": {
+    "title": "AgentNet · 仓库能力层次",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/module-tree/module-tree.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    }
+  },
+  "layout": {
+    "direction": "right",
+    "nodeW": 180,
+    "nodeMaxW": 240,
+    "gapX": 80,
+    "gapY": 28
+  },
+  "nodes": [
+    {
+      "id": "root",
+      "label": "AgentNet",
+      "sublabel": "单域实现 + 联邦设计",
+      "sources": [
+        {
+          "path": "README.md"
+        }
+      ]
+    },
+    {
+      "id": "control",
+      "label": "控制与授权",
+      "sublabel": "services",
+      "sources": [
+        {
+          "path": "services/rpc/server.go"
+        }
+      ],
+      "parent": "root",
+      "collapsed": true
+    },
+    {
+      "id": "gateway",
+      "label": "GW / RPC",
+      "sublabel": "认证、签名、审计",
+      "sources": [
+        {
+          "path": "services/gateway/service.go"
+        }
+      ],
+      "parent": "control"
+    },
+    {
+      "id": "tcs",
+      "label": "TCS",
+      "sublabel": "任务、操作、预算",
+      "sources": [
+        {
+          "path": "services/tcs/types.go"
+        }
+      ],
+      "parent": "control"
+    },
+    {
+      "id": "ics",
+      "label": "ICS / Identity",
+      "sublabel": "用户同意、凭证、父链",
+      "sources": [
+        {
+          "path": "services/ics/service.go"
+        }
+      ],
+      "parent": "control"
+    },
+    {
+      "id": "recovery",
+      "label": "执行与恢复",
+      "sublabel": "持久工作循环",
+      "sources": [
+        {
+          "path": "services/execution/engine.go"
+        }
+      ],
+      "parent": "root",
+      "collapsed": true
+    },
+    {
+      "id": "delivery",
+      "label": "Delivery / Tasktree",
+      "sublabel": "投递、子树取消",
+      "sources": [
+        {
+          "path": "cmd/outboxd/main.go"
+        }
+      ],
+      "parent": "recovery"
+    },
+    {
+      "id": "exec",
+      "label": "Execution / Local",
+      "sublabel": "外部恢复、本地事务",
+      "sources": [
+        {
+          "path": "services/tcs/local.go"
+        }
+      ],
+      "parent": "recovery"
+    },
+    {
+      "id": "archive",
+      "label": "Archive",
+      "sublabel": "Parquet / S3 / 补查",
+      "sources": [
+        {
+          "path": "services/archive/README.md"
+        }
+      ],
+      "parent": "recovery"
+    },
+    {
+      "id": "contracts",
+      "label": "规范与验证",
+      "sublabel": "可执行约束",
+      "sources": [
+        {
+          "path": "docs/detailed-design/README.md"
+        }
+      ],
+      "parent": "root",
+      "collapsed": true
+    },
+    {
+      "id": "schema",
+      "label": "Schema / Proto",
+      "sublabel": "015 迁移、gRPC 契约",
+      "sources": [
+        {
+          "path": "schema/015_immutable_contracts.sql"
+        }
+      ],
+      "parent": "contracts"
+    },
+    {
+      "id": "core",
+      "label": "Internal",
+      "sublabel": "JCS、授权、契约编译",
+      "sources": [
+        {
+          "path": "internal/contract/contract.go"
+        }
+      ],
+      "parent": "contracts"
+    },
+    {
+      "id": "tests",
+      "label": "Test / Evidence",
+      "sublabel": "TLA、PG、故障与微基准",
+      "sources": [
+        {
+          "path": "docs/detailed-design/13-verification-and-testing.md"
+        }
+      ],
+      "parent": "contracts"
+    },
+    {
+      "id": "planned",
+      "label": "后续能力",
+      "sublabel": "尚未整体交付",
+      "sources": [
+        {
+          "path": "docs/detailed-design/31-contract-admission-and-immutability.md"
+        }
+      ],
+      "parent": "root",
+      "collapsed": true
+    },
+    {
+      "id": "art",
+      "label": "ART / VERIFIED",
+      "sublabel": "证据与验收待实现",
+      "sources": [
+        {
+          "path": "docs/detailed-design/09-evidence-and-context.md"
+        }
+      ],
+      "parent": "planned"
+    },
+    {
+      "id": "federation",
+      "label": "跨域 / 协议互操作",
+      "sublabel": "目录、A2A、MCP 待完成",
+      "sources": [
+        {
+          "path": "docs/detailed-design/08-gateway-and-protocol-adapters.md"
+        }
+      ],
+      "parent": "planned"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "如何读这棵树",
+      "items": [
+        "父子连线表示能力归属，不是网络调用或运行时进程。",
+        "模块分组是阅读视图；精确物理路径见节点来源。",
+        "后续能力仅以设计文档为依据，不标记为已运行。",
+        "点击节点下的 + 展开分组；使用缩放查看细节。"
+      ]
+    }
+  ]
+}

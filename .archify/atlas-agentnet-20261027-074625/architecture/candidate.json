@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AgentNet · 已实现的单域架构",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/architecture/architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    },
+    "views": [
+      {
+        "id": "admission",
+        "label": "任务接纳",
+        "focus": [
+          "worker",
+          "gateway",
+          "ics",
+          "tcs",
+          "pg"
+        ]
+      },
+      {
+        "id": "recovery",
+        "label": "执行恢复",
+        "focus": [
+          "pg",
+          "delivery",
+          "executor",
+          "target"
+        ]
+      },
+      {
+        "id": "archive",
+        "label": "归档路径",
+        "focus": [
+          "pg",
+          "archive",
+          "objects"
+        ]
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "worker",
+      "type": "external",
+      "label": "Agent 实例",
+      "sublabel": "mTLS / 提交提案",
+      "sources": [
+        {
+          "path": "services/rpc/auth.go"
+        }
+      ],
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "GW 网关",
+      "sublabel": "固定身份与签名",
+      "sources": [
+        {
+          "path": "services/gateway/service.go"
+        }
+      ],
+      "pos": [
+        340,
+        40
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "tcs",
+      "type": "backend",
+      "label": "TCS 控制面",
+      "sublabel": "任务 / effect / 预算",
+      "sources": [
+        {
+          "path": "services/tcs/commands.go"
+        }
+      ],
+      "pos": [
+        640,
+        40
+      ],
+      "size": [
+        190,
+        76
+      ]
+    },
+    {
+      "id": "ics",
+      "type": "security",
+      "label": "ICS 策略",
+      "sublabel": "根同意 / 权限父链",
+      "sources": [
+        {
+          "path": "services/ics/service.go"
+        }
+      ],
+      "pos": [
+        340,
+        260
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "唯一权威状态",
+      "sources": [
+        {
+          "path": "schema/001_core.sql"
+        }
+      ],
+      "pos": [
+        640,
+        260
+      ],
+      "size": [
+        190,
+        86
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "backend",
+      "label": "archived",
+      "sublabel": "月分区归档 / 补查",
+      "sources": [
+        {
+          "path": "services/archive/export.go"
+        }
+      ],
+      "pos": [
+        960,
+        260
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "objects",
+      "type": "database",
+      "label": "S3 / MinIO",
+      "sublabel": "归档对象与版本",
+      "sources": [
+        {
+          "path": "services/archive/s3.go"
+        }
+      ],
+      "pos": [
+        960,
+        40
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "delivery",
+      "type": "backend",
+      "label": "outboxd",
+      "sublabel": "本域投递 / 子树取消",
+      "sources": [
+        {
+          "path": "cmd/outboxd/main.go"
+        }
+      ],
+      "pos": [
+        340,
+        480
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "执行引擎",
+      "sublabel": "发送 / 查询 / 恢复",
+      "sources": [
+        {
+          "path": "services/execution/engine.go"
+        }
+      ],
+      "pos": [
+        640,
+        480
+      ],
+      "size": [
+        190,
+        76
+      ]
+    },
+    {
+      "id": "target",
+      "type": "external",
+      "label": "目标适配器",
+      "sublabel": "当前为 mockbiz 故障台",
+      "sources": [
+        {
+          "path": "adapters/mockbiz/README.md"
+        }
+      ],
+      "pos": [
+        960,
+        480
+      ],
+      "size": [
+        170,
+        76
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "worker-gateway",
+      "from": "worker",
+      "to": "gateway",
+      "label": "mTLS 提案",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gateway-tcs",
+      "from": "gateway",
+      "to": "tcs",
+      "label": "签名命令",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gateway-ics",
+      "from": "gateway",
+      "to": "ics",
+      "label": "根许可",
+      "variant": "security"
+    },
+    {
+      "id": "gateway-pg",
+      "from": "gateway",
+      "to": "pg",
+      "label": "签名持久化",
+      "variant": "default"
+    },
+    {
+      "id": "ics-pg",
+      "from": "ics",
+      "to": "pg",
+      "label": "校验同意",
+      "variant": "security"
+    },
+    {
+      "id": "tcs-pg",
+      "from": "tcs",
+      "to": "pg",
+      "label": "原子事务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "delivery-pg",
+      "from": "delivery",
+      "to": "pg",
+      "label": "投递与取消",
+      "variant": "dashed"
+    },
+    {
+      "id": "executor-pg",
+      "from": "executor",
+      "to": "pg",
+      "label": "作业与结果",
+      "variant": "default"
+    },
+    {
+      "id": "executor-target",
+      "from": "executor",
+      "to": "target",
+      "label": "按能力执行",
+      "variant": "emphasis"
+    },
+    {
+      "id": "archive-pg",
+      "from": "archive",
+      "to": "pg",
+      "label": "读取分区",
+      "variant": "default"
+    },
+    {
+      "id": "archive-objects",
+      "from": "archive",
+      "to": "objects",
+      "label": "归档与校验",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "控制权在哪里",
+      "items": [
+        "GW、ICS、TCS 可合并在 anetd 内；图示为逻辑职责，不表示独立网络跳数。",
+        "Agent 仅提出计划；TCS 在事务中校验身份、租约、授权、版本及四维预算。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "持久化与恢复",
+      "items": [
+        "GW 保存原命令签名；TCS 保存接纳事实、预算和 outbox。",
+        "outboxd 与执行引擎通过数据库记录衔接，不是进程间直接推送。",
+        "执行引擎是可复用 Go 组件；真实生产目标接入仍待完成。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "尚未实现",
+      "items": [
+        "ART 产物与披露、版本化证据清单、VERIFIED 验收、完整跨域协议仍待实现。",
+        "现有 S3 路径是数据库分区归档，不是 ART 验收服务。"
+      ]
+    }
+  ]
+}

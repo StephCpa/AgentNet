@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "c7107845-88be-4cec-a830-7ef9c5ccff7c",
+  "status": "current",
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\effect-lifecycle\\candidate.json",
+  "output": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\effect-lifecycle\\effect-lifecycle.html",
+  "specification": {
+    "sha256": "e8a5673b07e52ab128803147c56ea861051858e3d9c1bab967d1843071b8a078",
+    "bytes": 3496
+  },
+  "artifact": {
+    "sha256": "5072ec8c95e788b1f52699ac40e8870d3b491a1cba825765e295c40103695776",
+    "bytes": 811756
+  }
+}

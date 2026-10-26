@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "d6ecb03c-7f89-4305-a3fa-efe0db8a3e7d",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\architecture\\candidate.json",
+  "output": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\architecture\\architecture.html",
+  "specification": {
+    "sha256": "a1fb2e7e347e0cd3687af765f468d496519a090130f6be2d9f031a719a2ca6f4",
+    "bytes": 7187
+  },
+  "artifact": {
+    "sha256": "d220f1b97b7aeea89eb3d9c1d7b82211094f78f98160eec2af10dbbc5723b707",
+    "bytes": 828085
+  }
+}

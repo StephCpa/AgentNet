@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "960a7527-d965-438c-ba28-d2b7a37807dd",
+  "status": "current",
+  "command": "deliver",
+  "type": "dataflow",
+  "input": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\dataflow\\candidate.json",
+  "output": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\dataflow\\dataflow.html",
+  "specification": {
+    "sha256": "b7c1b31c694c5af22973ec109927beca70af5917dd7a51047f8b538bc415913e",
+    "bytes": 5416
+  },
+  "artifact": {
+    "sha256": "25b81794cd5f7ace0356cf7719157379516c1c0ca399a91aac88dd7fbbd4ebb5",
+    "bytes": 819442
+  }
+}

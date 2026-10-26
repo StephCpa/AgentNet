@@ -1,0 +1,3 @@
+# Archify receipts hash exact bytes; preserve generated files across checkouts.
+* -text
+*.png binary

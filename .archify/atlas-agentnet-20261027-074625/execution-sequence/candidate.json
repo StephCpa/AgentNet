@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Queryable effect · 响应丢失与对账",
+    "locale": "zh-CN",
+    "output": ".archify/atlas-agentnet-20261027-074625/execution-sequence/execution-sequence.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/StephCpa/AgentNet.git",
+      "revision": "c2f5766fe4d86de470310f46b755a8675fb67f8b",
+      "link_mode": "local-only"
+    }
+  },
+  "participants": [
+    {
+      "id": "agent",
+      "type": "external",
+      "label": "提案者",
+      "sublabel": "持有租约与预留",
+      "sources": [
+        {
+          "path": "services/tcs/effects.go"
+        }
+      ]
+    },
+    {
+      "id": "ics",
+      "type": "security",
+      "label": "ICS",
+      "sublabel": "绑定式决定",
+      "sources": [
+        {
+          "path": "services/ics/service.go"
+        }
+      ]
+    },
+    {
+      "id": "tcs",
+      "type": "backend",
+      "label": "TCS",
+      "sublabel": "接纳与结算",
+      "sources": [
+        {
+          "path": "services/tcs/effects.go"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "任务 / effect / job",
+      "sources": [
+        {
+          "path": "schema/005_execution.sql"
+        }
+      ]
+    },
+    {
+      "id": "exec",
+      "type": "backend",
+      "label": "执行器",
+      "sublabel": "持久发送标记",
+      "sources": [
+        {
+          "path": "services/execution/engine.go"
+        }
+      ]
+    },
+    {
+      "id": "target",
+      "type": "external",
+      "label": "业务目标",
+      "sublabel": "queryable 场景",
+      "sources": [
+        {
+          "path": "adapters/mockbiz/README.md"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "agent",
+      "to": "ics",
+      "y": 175,
+      "label": "申请绑定式决定",
+      "variant": "security"
+    },
+    {
+      "id": "m2",
+      "from": "ics",
+      "to": "agent",
+      "y": 223,
+      "label": "返回签名决定",
+      "variant": "return"
+    },
+    {
+      "id": "m3",
+      "from": "agent",
+      "to": "tcs",
+      "y": 271,
+      "label": "提案、租约与预留",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m4",
+      "from": "tcs",
+      "to": "pg",
+      "y": 319,
+      "label": "守卫通过后提交 T2",
+      "variant": "security"
+    },
+    {
+      "id": "m5",
+      "from": "pg",
+      "to": "tcs",
+      "y": 367,
+      "label": "effect 与 job 已提交",
+      "variant": "return"
+    },
+    {
+      "id": "m6",
+      "from": "tcs",
+      "to": "agent",
+      "y": 415,
+      "label": "返回接纳结果",
+      "variant": "return"
+    },
+    {
+      "id": "m7",
+      "from": "exec",
+      "to": "pg",
+      "y": 463,
+      "label": "读取通知 / 复核发送权",
+      "variant": "security"
+    },
+    {
+      "id": "m8",
+      "from": "pg",
+      "to": "exec",
+      "y": 511,
+      "label": "发送标记已持久化",
+      "variant": "return"
+    },
+    {
+      "id": "m9",
+      "from": "exec",
+      "to": "target",
+      "y": 559,
+      "label": "Send：effect + attempt",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m10",
+      "from": "exec",
+      "to": "tcs",
+      "y": 607,
+      "label": "响应超时：报告 UNKNOWN",
+      "variant": "default"
+    },
+    {
+      "id": "m11",
+      "from": "tcs",
+      "to": "pg",
+      "y": 655,
+      "label": "UNKNOWN；保留 HELD",
+      "variant": "default"
+    },
+    {
+      "id": "m12",
+      "from": "exec",
+      "to": "target",
+      "y": 703,
+      "label": "Query：核对原 effect",
+      "variant": "default"
+    },
+    {
+      "id": "m13",
+      "from": "target",
+      "to": "exec",
+      "y": 751,
+      "label": "COMMITTED 与证据",
+      "variant": "return"
+    },
+    {
+      "id": "m14",
+      "from": "exec",
+      "to": "pg",
+      "y": 799,
+      "label": "保存签名终态结果",
+      "variant": "default"
+    },
+    {
+      "id": "m15",
+      "from": "exec",
+      "to": "tcs",
+      "y": 847,
+      "label": "重放同一签名结果",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m16",
+      "from": "tcs",
+      "to": "pg",
+      "y": 895,
+      "label": "校验后原子结算",
+      "variant": "security"
+    },
+    {
+      "id": "m17",
+      "from": "pg",
+      "to": "tcs",
+      "y": 943,
+      "label": "提交终态与预算",
+      "variant": "return"
+    },
+    {
+      "id": "m18",
+      "from": "tcs",
+      "to": "exec",
+      "y": 991,
+      "label": "返回最终事实",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "场景与前置",
+      "items": [
+        "示例为 queryable 目标已提交但响应丢失；图中间距仅表示先后。",
+        "提案前已领取租约、取得四维预留；outboxd 将 EFFECT_ADMITTED 投递到本域 inbox。",
+        "参数从 Files.Load 读取并校验摘要，不从 outbox 携带正文。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "不能把未知当作失败",
+      "items": [
+        "queryable 在不确定发送后遇到 ABSENT / PENDING / UNKNOWN，不自动重发。",
+        "idempotent-key 才可在原目标 TTL 内按同一业务键重试；opaque 只能升级人工。",
+        "已持久化的签名结果重报不执行新业务；effect COMMITTED 不代表任务 VERIFIED。"
+      ]
+    }
+  ]
+}

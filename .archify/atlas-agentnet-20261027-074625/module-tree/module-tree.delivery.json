@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "41dab89d-742b-4057-9e05-698f1d1e710c",
+  "status": "current",
+  "command": "deliver",
+  "type": "tree",
+  "input": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\candidate.json",
+  "output": "E:\\AgentNet\\.archify\\atlas-agentnet-20261027-074625\\module-tree\\module-tree.html",
+  "specification": {
+    "sha256": "72d2347ae751001425bfb22392658aa4ee0c21803d830bdb3a37b3fc9f430cdb",
+    "bytes": 5094
+  },
+  "artifact": {
+    "sha256": "82a7a773ba1c26ad58571b2732799a0fbf2b45b8dc79050377a9cc948e5334cf",
+    "bytes": 832923
+  }
+}
