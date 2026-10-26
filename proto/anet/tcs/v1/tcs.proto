@@ -299,6 +299,18 @@ message ListUnknownEffectsRequest {
 // 服务定义
 // ---------------------------------------------------------------------------
 
+// Local handlers execute business writes and settle budgets in T2's transaction.
+message ExecuteLocalEffectRequest {
+  AdmitEffectRequest admission = 1;
+  bytes parameters_json = 2; // RFC 8785 digest must match the signed decision.
+}
+message LocalEffectResult {
+  EffectAdmission admission = 1;
+  bytes result_json = 2;
+  string result_ref = 3;
+  map<string, string> usage = 4;
+}
+
 service TaskControl {
   // T1（幂等）
   rpc SubmitCommand(SubmitCommandRequest) returns (AdmissionResult);
@@ -308,6 +320,7 @@ service TaskControl {
 
   // T2 + 结果（04）
   rpc AdmitEffect(AdmitEffectRequest) returns (EffectAdmission);
+  rpc ExecuteLocalEffect(ExecuteLocalEffectRequest) returns (LocalEffectResult);
   rpc ReportEffectResult(ReportEffectResultRequest) returns (EffectState);
   rpc ListUnknownEffects(ListUnknownEffectsRequest) returns (stream EffectState);
 

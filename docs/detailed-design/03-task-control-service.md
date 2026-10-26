@@ -304,3 +304,7 @@ RETURN {t.cancel_version};
 `ANET-TSK-*`：`TERMINAL / VERSION-CONFLICT / STATE-GUARD-FAILED / NOT-FOUND / DEADLINE`
 `ANET-EFF-*`：`TASK-TERMINAL / TASK-CANCELLED / FENCED / PARAMS-CONFLICT / RESERVATION-INVALID / LEASE-INVALID`（04 §续）
 `ANET-AUT-*`：`DECISION-MISMATCH`（06 §续）
+
+## local-tx 入口补充（实现 24）
+
+`ExecuteLocalEffect` 接受原 `AdmitEffectRequest` 与 `parameters_json`，共用首次接纳的身份、决定、版本、租约和预留守卫。T2 在本地处理器内合并业务变更与结果结算，只递增一次 task_version；返回终态及持久结果。精确重放返回 EXISTING，不再次递增版本或消费预算。新 local-tx 操作不能走异步 `AdmitEffect`；业务版本拒绝也形成可重放的 REJECTED effect。参数规范化、处理器限制与恢复边界见 [24](24-local-transactions.md)。

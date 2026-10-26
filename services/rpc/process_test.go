@@ -27,6 +27,7 @@ import (
 // protocol tests do; no test-only handler or plaintext transport is installed.
 func TestRPCDaemonProcess(t *testing.T) {
 	f := setup(t)
+	addRecords(f)
 	dir := t.TempDir()
 	write := func(name string, data []byte) {
 		t.Helper()
@@ -66,15 +67,30 @@ func TestRPCDaemonProcess(t *testing.T) {
 	for target, op := range f.cfg.Operations {
 		c.Operations[target] = service.OperationConfig{Action: op.Action, Resource: op.Resource, Capability: op.Capability, Purpose: op.Purpose, Dimensions: op.Dimensions, Sensitivity: op.Sensitivity, DataClass: op.DataClass}
 	}
+	localOp := c.Operations["records"]
+	localOp.LocalHandler = "record.put/v1"
+	c.Operations["records"] = localOp
 	raw, err := json.Marshal(c)
 	if err != nil {
 		t.Fatal(err)
 	}
 	write("config.json", raw)
-	for _, name := range []string{"missing-key", "untrusted-key", "same-ics-key", "zero-ttl", "long-ttl"} {
+	for _, name := range []string{"missing-key", "untrusted-key", "same-ics-key", "zero-ttl", "long-ttl", "unknown-local", "external-local"} {
 		t.Run(name, func(t *testing.T) {
 			bad := c
+			bad.Operations = map[string]service.OperationConfig{}
+			for k, v := range c.Operations {
+				bad.Operations[k] = v
+			}
 			switch name {
+			case "unknown-local":
+				op := bad.Operations["records"]
+				op.LocalHandler = "unregistered"
+				bad.Operations["records"] = op
+			case "external-local":
+				op := bad.Operations["records"]
+				op.Capability = "queryable"
+				bad.Operations["records"] = op
 			case "missing-key":
 				bad.GWSigningKeyFile = ""
 			case "untrusted-key":
@@ -163,6 +179,15 @@ func TestRPCDaemonProcess(t *testing.T) {
 	if _, err = f.control.AdmitEffect(f.ctx, proposal); err != nil {
 		t.Fatal(err)
 	}
+	savedCommand := f.command
+	f.command.ID += "-local"
+	f.command.ContractID += "-local"
+	localRequest := recordRequest(f, f.submit())
+	localResult, e := f.control.ExecuteLocalEffect(f.ctx, localRequest)
+	if e != nil || localResult.GetAdmission().GetState() != "COMMITTED" {
+		t.Fatal(localResult, e)
+	}
+	f.command = savedCommand
 	f.command.ID += "-gateway"
 	f.command.ContractID += "-gateway"
 	r := intent(f)
@@ -174,6 +199,10 @@ func TestRPCDaemonProcess(t *testing.T) {
 	saved := storedCommand(f)
 	stop()
 	_ = start()
+	replayLocal, e := tcsv1.NewTaskControlClient(f.connect(f.workerCert)).ExecuteLocalEffect(f.ctx, localRequest)
+	if e != nil || replayLocal.GetAdmission().GetOutcome() != tcsv1.EffectAdmission_EXISTING || replayLocal.GetResultRef() != localResult.ResultRef {
+		t.Fatal("local result after daemon restart", replayLocal, e)
+	}
 	g = gwv1.NewGatewayClient(f.connect(f.workerCert))
 	again, err := g.SubmitCommand(f.ctx, r)
 	if err != nil || again.GetTaskId() != first.TaskId || again.GetOutcome() != tcsv1.AdmissionResult_EXISTING {

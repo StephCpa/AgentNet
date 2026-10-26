@@ -15,6 +15,7 @@ import (
 
 	decimal "github.com/agentnet/agentnet/internal/amount"
 	"github.com/agentnet/agentnet/internal/authority"
+	"github.com/agentnet/agentnet/internal/localtx"
 	"github.com/agentnet/agentnet/internal/signed"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -63,6 +64,7 @@ type Operation struct {
 	Sensitivity, DataClass                string        // required by authenticated ICS/transport configuration
 }
 type Config struct {
+	LocalHandlers                        map[string]localtx.Handler `json:"-"` // trusted compiled handlers keyed by target
 	Domain                               string
 	CommandKeys                          map[string]ed25519.PublicKey
 	DecisionKeys                         map[string]ed25519.PublicKey
@@ -120,11 +122,18 @@ func New(db *pgxpool.Pool, c Config) (*Store, error) {
 		return nil, err
 	}
 	ops := map[string]Operation{}
+	handlers := map[string]localtx.Handler{}
+	for target, h := range c.LocalHandlers {
+		if h == nil || c.Operations[target].Capability != "local-tx" {
+			return nil, Invalid
+		}
+		handlers[target] = h
+	}
 	for target, op := range c.Operations {
 		if target == "" || op.Action == "" || op.Resource == "" || op.Purpose != "tool_call" || len(op.Dimensions) == 0 {
 			return nil, Invalid
 		}
-		if op.Capability != "opaque" && op.Capability != "queryable" && op.Capability != "idempotent-key" {
+		if op.Capability != "opaque" && op.Capability != "queryable" && op.Capability != "idempotent-key" && op.Capability != "local-tx" {
 			return nil, Invalid
 		}
 		if op.TargetTTL < 0 || (op.Capability == "idempotent-key" && op.TargetTTL < time.Millisecond) {
@@ -137,10 +146,17 @@ func New(db *pgxpool.Pool, c Config) (*Store, error) {
 			}
 			seen[d] = true
 		}
+		if op.Capability == "local-tx" {
+			h := handlers[target]
+			if h == nil || op.TargetTTL != 0 || h.Validate(op.Action, op.Resource, op.Dimensions) != nil {
+				return nil, Invalid
+			}
+		}
 		op.Dimensions = append([]string(nil), op.Dimensions...)
 		ops[target] = op
 	}
 	c.Operations = ops
+	c.LocalHandlers = handlers
 	return &Store{db: db, cfg: c}, nil
 }
 

@@ -7,7 +7,7 @@ the registered certificate fingerprint, exact URI, live principal/agent/instance
 and any required role in PostgreSQL. CN, metadata and request body identity are
 not authentication inputs. Existing TLS channels do not bypass revocation checks.
 
-Apply migrations 001–010 and provision the domain, identities, certificate
+Apply migrations 001–011 and provision the domain, identities, certificate
 registrations and standing `root_consents` through a trusted control plane. These
 administrative operations are not exposed to workers. Consent limits are **per
 task**, not aggregate user quotas. A consent update must increase its version.
@@ -96,3 +96,11 @@ The suite uses real TCP/mTLS and PostgreSQL, including a separately built/launch
 The checkpoint has 14 RPC tests within 64 total database tests and 29 runner
 checks. On this Windows run, process-local `GOFLAGS=-p=1` avoided temporary test
 executable contention; the individual concurrency/OS-kill tests remain enabled.
+
+## Local transactions
+
+`ExecuteLocalEffect` accepts a signed admission plus canonicalizable JSON parameters.
+Configure `capability: local-tx` and `local_handler: record.put/v1`; action must be
+`record.put` and resource a configured `records:` namespace. The four dimensions
+are required. Unknown handlers and handlers attached to external capabilities
+fail startup. See [local handler](../../adapters/local/README.md) and design 24.

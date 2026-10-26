@@ -122,3 +122,7 @@ erDiagram
 - 前向迁移，编号即序（`001_core.sql`、`002_...`）；expand-contract：先加新表/新列，双写验证后删除旧路径。
 - 每次迁移必须附带回滚说明（恢复到前一快照 + PITR，见 12 §4）。
 - 触发器与约束的变更随迁移走，禁止线上手工 DDL。
+
+## local-tx 实现表（迁移 011）
+
+`local_records` 以 `(domain_id, resource, record_key)` 为主键，保存版本、JSONB 业务值及最后写入 effect；`local_effect_results` 以 effect_id 为主键保存原结果和服务计量。两者与 effect 终态、预算结算在同一事务提交（24），没有独立的异步派发作业。归档必须保留 effect 与业务结果的关联；该迁移的回退说明见 adapters/local/README.md。

@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–010 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings and renewals) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–011 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings, renewals and local transactions) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -97,3 +97,9 @@ tests. Evidence: `test/evidence/2026-10-27/renewal/`. Real anetd/instancerenew p
 exercise CA loading, two-phase activation, OS kill, post-commit publication failure,
 same-key restart recovery and automatic watch triggering. Linux CLI/file tests
 cross-compile only; the runtime evidence is Windows. No full M1 exit is claimed.
+
+Local transaction increment (design 24): 34 runner checks, 111 database tests and
+7 unit tests passed; three process helpers are excluded. Seven new TCS tests cover
+atomic business/ledger writes, replay, CAS, expiry/revocation, cancellation and
+actual commit-boundary process kills. RPC and the shipped daemon exercise the
+compiled handler and restart recovery. Evidence: `test/evidence/2026-10-27/localtx/`.

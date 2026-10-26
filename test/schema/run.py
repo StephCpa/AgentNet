@@ -184,6 +184,7 @@ DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LI
             probe("migration-008", (ROOT / "schema/008_instance_credentials.sql").read_text(encoding="utf-8"))
             probe("migration-009", (ROOT / "schema/009_gateway_commands.sql").read_text(encoding="utf-8"))
             probe("migration-010", (ROOT / "schema/010_credential_renewals.sql").read_text(encoding="utf-8"))
+            probe("migration-011", (ROOT / "schema/011_local_transactions.sql").read_text(encoding="utf-8"))
             probe("legacy-effect-never-assumed-unsent", """
 DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM effect_execution WHERE effect_id='e' AND escalated AND send_count=0)
  THEN RAISE EXCEPTION 'legacy effect was not isolated for manual recovery'; END IF; END $$;

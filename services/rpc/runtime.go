@@ -13,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	localadapter "github.com/agentnet/agentnet/adapters/local"
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/localtx"
 	"github.com/agentnet/agentnet/internal/pki"
 	credentialservice "github.com/agentnet/agentnet/services/credentials"
 	"github.com/agentnet/agentnet/services/gateway"
@@ -24,14 +26,15 @@ import (
 )
 
 type OperationConfig struct {
-	Action      string   `json:"action"`
-	Resource    string   `json:"resource"`
-	Capability  string   `json:"capability"`
-	Purpose     string   `json:"purpose"`
-	Dimensions  []string `json:"dimensions"`
-	TargetTTL   string   `json:"target_ttl,omitempty"`
-	Sensitivity string   `json:"sensitivity"`
-	DataClass   string   `json:"data_class"`
+	LocalHandler string   `json:"local_handler,omitempty"`
+	Action       string   `json:"action"`
+	Resource     string   `json:"resource"`
+	Capability   string   `json:"capability"`
+	Purpose      string   `json:"purpose"`
+	Dimensions   []string `json:"dimensions"`
+	TargetTTL    string   `json:"target_ttl,omitempty"`
+	Sensitivity  string   `json:"sensitivity"`
+	DataClass    string   `json:"data_class"`
 }
 type FileConfig struct {
 	Domain              string                       `json:"domain"`
@@ -121,7 +124,16 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.
 	}
 	c.ICSVerificationKeys[c.ICSKeyID] = public
 	ops := map[string]tcs.Operation{}
+	handlers := map[string]localtx.Handler{}
 	for name, o := range c.Operations {
+		if o.Capability == "local-tx" {
+			if o.LocalHandler != "record.put/v1" {
+				return nil, nil, "", fmt.Errorf("local-tx requires a registered local_handler")
+			}
+			handlers[name] = localadapter.Records{}
+		} else if o.LocalHandler != "" {
+			return nil, nil, "", fmt.Errorf("local_handler requires local-tx")
+		}
 		var ttl time.Duration
 		if o.TargetTTL != "" {
 			ttl, err = time.ParseDuration(o.TargetTTL)
@@ -142,7 +154,7 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.
 	if _, err = db.Exec(ctx, `SELECT rpc_method,reason_code FROM audit_log LIMIT 0`); err != nil {
 		return fail(fmt.Errorf("request audit migration incomplete"))
 	}
-	store, err := tcs.New(db, tcs.Config{Domain: c.Domain, CommandKeys: c.CommandKeys, RootKeys: c.ICSVerificationKeys, DecisionKeys: c.ICSVerificationKeys, ResultKeys: c.ResultKeys, Operations: ops})
+	store, err := tcs.New(db, tcs.Config{Domain: c.Domain, CommandKeys: c.CommandKeys, RootKeys: c.ICSVerificationKeys, DecisionKeys: c.ICSVerificationKeys, ResultKeys: c.ResultKeys, Operations: ops, LocalHandlers: handlers})
 	if err != nil {
 		return fail(err)
 	}

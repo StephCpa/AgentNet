@@ -30,6 +30,7 @@ const (
 	TaskControl_UpdateTaskStatus_FullMethodName   = "/anet.tcs.v1.TaskControl/UpdateTaskStatus"
 	TaskControl_CreateSubtask_FullMethodName      = "/anet.tcs.v1.TaskControl/CreateSubtask"
 	TaskControl_AdmitEffect_FullMethodName        = "/anet.tcs.v1.TaskControl/AdmitEffect"
+	TaskControl_ExecuteLocalEffect_FullMethodName = "/anet.tcs.v1.TaskControl/ExecuteLocalEffect"
 	TaskControl_ReportEffectResult_FullMethodName = "/anet.tcs.v1.TaskControl/ReportEffectResult"
 	TaskControl_ListUnknownEffects_FullMethodName = "/anet.tcs.v1.TaskControl/ListUnknownEffects"
 	TaskControl_CancelTask_FullMethodName         = "/anet.tcs.v1.TaskControl/CancelTask"
@@ -51,6 +52,7 @@ type TaskControlClient interface {
 	CreateSubtask(ctx context.Context, in *CreateSubtaskRequest, opts ...grpc.CallOption) (*AdmissionResult, error)
 	// T2 + 结果（04）
 	AdmitEffect(ctx context.Context, in *AdmitEffectRequest, opts ...grpc.CallOption) (*EffectAdmission, error)
+	ExecuteLocalEffect(ctx context.Context, in *ExecuteLocalEffectRequest, opts ...grpc.CallOption) (*LocalEffectResult, error)
 	ReportEffectResult(ctx context.Context, in *ReportEffectResultRequest, opts ...grpc.CallOption) (*EffectState, error)
 	ListUnknownEffects(ctx context.Context, in *ListUnknownEffectsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[EffectState], error)
 	// T3
@@ -116,6 +118,16 @@ func (c *taskControlClient) AdmitEffect(ctx context.Context, in *AdmitEffectRequ
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EffectAdmission)
 	err := c.cc.Invoke(ctx, TaskControl_AdmitEffect_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *taskControlClient) ExecuteLocalEffect(ctx context.Context, in *ExecuteLocalEffectRequest, opts ...grpc.CallOption) (*LocalEffectResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LocalEffectResult)
+	err := c.cc.Invoke(ctx, TaskControl_ExecuteLocalEffect_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +234,7 @@ type TaskControlServer interface {
 	CreateSubtask(context.Context, *CreateSubtaskRequest) (*AdmissionResult, error)
 	// T2 + 结果（04）
 	AdmitEffect(context.Context, *AdmitEffectRequest) (*EffectAdmission, error)
+	ExecuteLocalEffect(context.Context, *ExecuteLocalEffectRequest) (*LocalEffectResult, error)
 	ReportEffectResult(context.Context, *ReportEffectResultRequest) (*EffectState, error)
 	ListUnknownEffects(*ListUnknownEffectsRequest, grpc.ServerStreamingServer[EffectState]) error
 	// T3
@@ -257,6 +270,9 @@ func (UnimplementedTaskControlServer) CreateSubtask(context.Context, *CreateSubt
 }
 func (UnimplementedTaskControlServer) AdmitEffect(context.Context, *AdmitEffectRequest) (*EffectAdmission, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AdmitEffect not implemented")
+}
+func (UnimplementedTaskControlServer) ExecuteLocalEffect(context.Context, *ExecuteLocalEffectRequest) (*LocalEffectResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecuteLocalEffect not implemented")
 }
 func (UnimplementedTaskControlServer) ReportEffectResult(context.Context, *ReportEffectResultRequest) (*EffectState, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportEffectResult not implemented")
@@ -389,6 +405,24 @@ func _TaskControl_AdmitEffect_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TaskControlServer).AdmitEffect(ctx, req.(*AdmitEffectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TaskControl_ExecuteLocalEffect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecuteLocalEffectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskControlServer).ExecuteLocalEffect(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TaskControl_ExecuteLocalEffect_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskControlServer).ExecuteLocalEffect(ctx, req.(*ExecuteLocalEffectRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -556,6 +590,10 @@ var TaskControl_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdmitEffect",
 			Handler:    _TaskControl_AdmitEffect_Handler,
+		},
+		{
+			MethodName: "ExecuteLocalEffect",
+			Handler:    _TaskControl_ExecuteLocalEffect_Handler,
 		},
 		{
 			MethodName: "ReportEffectResult",

@@ -10,6 +10,10 @@ import (
 )
 
 func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope) (Effect, error) {
+	return s.admit(ctx, c, p, signed, nil)
+}
+
+func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope, local *localCall) (Effect, error) {
 	out := Effect{ID: p.EffectID}
 	if p.EffectID == "" || p.TaskID == "" || p.CommandID == "" || !digestRE.MatchString(p.ParamsDigest) || !digestRE.MatchString(p.AuthorityDigest) {
 		return out, Invalid
@@ -30,6 +34,11 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 			return Effect{}, EffectConflict
 		}
 		if commandID == p.CommandID && target == p.Target && pd == p.ParamsDigest && ad == p.AuthorityDigest {
+			if local != nil {
+				if err = loadLocal(ctx, tx, p.EffectID, local); err != nil {
+					return out, err
+				}
+			}
 			out.Existing = true
 			return out, commit(ctx, tx)
 		}
@@ -64,6 +73,9 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	op, ok := s.cfg.Operations[p.Target]
 	if !ok {
 		return out, Denied
+	}
+	if (op.Capability == "local-tx") != (local != nil) {
+		return out, Invalid
 	}
 	if (op.Sensitivity != "" && p.Sensitivity != op.Sensitivity) || (op.DataClass != "" && p.DataClass != op.DataClass) {
 		return out, Denied
@@ -145,33 +157,48 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 			return out, ReservationInvalid
 		}
 	}
-	now, err = currentTime(ctx, tx)
-	if err != nil {
+	recheck := func() error {
+		now, err = currentTime(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if err = s.identity(ctx, tx, c); err != nil {
+			return err
+		}
+		if err = active(t, now); err != nil {
+			return err
+		}
+		if d.At.After(now) || now.Sub(d.At) > s.cfg.DecisionMaxAge || d.ExpiresAt.Before(now) {
+			return DecisionMismatch
+		}
+		var live bool
+		err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM leases WHERE lease_id=$1 AND task_id=$2 AND worker_instance_id=$3 AND epoch=$4 AND superseded_at IS NULL AND expires_at>=clock_timestamp())`, p.LeaseID, p.TaskID, c.Instance, p.Epoch).Scan(&live)
+		if err != nil {
+			return err
+		}
+		if !live {
+			return LeaseInvalid
+		}
+		err = tx.QueryRow(ctx, "SELECT not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FROM grants WHERE grant_id=$1", grant).Scan(&live)
+		if err != nil {
+			return err
+		}
+		if !live {
+			return Denied
+		}
+		if g.ConsentID != "" {
+			err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM root_consents WHERE consent_id=$1 AND version=$2 AND revoked_at IS NULL AND not_before<=clock_timestamp() AND expires_at>=clock_timestamp())", g.ConsentID, g.ConsentVersion).Scan(&live)
+			if err != nil {
+				return err
+			}
+			if !live {
+				return Denied
+			}
+		}
+		return nil
+	}
+	if err = recheck(); err != nil {
 		return out, err
-	}
-	if err = s.identity(ctx, tx, c); err != nil {
-		return out, err
-	}
-	if err = active(t, now); err != nil {
-		return out, err
-	}
-	if d.At.After(now) || now.Sub(d.At) > s.cfg.DecisionMaxAge || d.ExpiresAt.Before(now) {
-		return out, DecisionMismatch
-	}
-	var live bool
-	err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM leases WHERE lease_id=$1 AND task_id=$2 AND worker_instance_id=$3 AND epoch=$4 AND superseded_at IS NULL AND expires_at>=clock_timestamp())`, p.LeaseID, p.TaskID, c.Instance, p.Epoch).Scan(&live)
-	if err != nil {
-		return out, err
-	}
-	if !live {
-		return out, LeaseInvalid
-	}
-	err = tx.QueryRow(ctx, "SELECT not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FROM grants WHERE grant_id=$1", grant).Scan(&live)
-	if err != nil {
-		return out, err
-	}
-	if !live {
-		return out, Denied
 	}
 	for _, h := range rows {
 		_, err = tx.Exec(ctx, "UPDATE budget_reservations SET effect_id=$2 WHERE reservation_id=$1", h.ID, p.EffectID)
@@ -188,15 +215,31 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	if err != nil {
 		return out, err
 	}
-	_, err = tx.Exec(ctx, "INSERT INTO effect_execution(effect_id) VALUES($1)", p.EffectID)
-	if err != nil {
-		return out, err
-	}
+
 	_, err = tx.Exec(ctx, "UPDATE tasks SET task_version=task_version+1 WHERE task_id=$1", p.TaskID)
 	if err != nil {
 		return out, err
 	}
 	if err = event(ctx, tx, p.TaskID, "EFFECT_ADMITTED", map[string]string{"effect_id": p.EffectID, "actor": c.Instance, "decision_id": d.ID}); err != nil {
+		return out, err
+	}
+	if local != nil {
+		if err = s.finishLocal(ctx, tx, p, op, rows, local); err != nil {
+			return out, err
+		}
+		// The handler and final persistence may wait for locks. Revalidate temporal
+		// authority after those waits, before committing the atomic business fact.
+		if err = recheck(); err != nil {
+			return out, err
+		}
+		if err = commit(ctx, tx); err != nil {
+			return Effect{}, err
+		}
+		out.State = local.result.Outcome
+		return out, nil
+	}
+	_, err = tx.Exec(ctx, "INSERT INTO effect_execution(effect_id) VALUES($1)", p.EffectID)
+	if err != nil {
 		return out, err
 	}
 	// Durable dispatch intent is in the same transaction; no network call happens here.

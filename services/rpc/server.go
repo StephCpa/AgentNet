@@ -235,25 +235,9 @@ func (c *control) AdmitEffect(ctx context.Context, r *tcsv1.AdmitEffectRequest) 
 	if err != nil {
 		return nil, err
 	}
-	if !strict(r, 1, 3, 4, 5) || r.Effect == nil {
-		return nil, rpcError(tcs.Invalid)
-	}
-	auth, err := envelope(r.SignedDecision)
+	p, auth, err := c.decodeProposal(r)
 	if err != nil {
 		return nil, rpcError(err)
-	}
-	f := r.Effect
-	op, ok := c.ops[f.TargetRef]
-	if !ok || (f.Capability != "" && f.Capability != op.Capability) {
-		return nil, rpcError(tcs.Denied)
-	}
-	p := tcs.Proposal{EffectID: f.EffectId, TaskID: f.TaskId, CommandID: f.CommandId, Target: f.TargetRef, ParamsDigest: f.ParamsDigest, AuthorityDigest: f.AuthorityDigest, LeaseID: r.LeaseId, Sensitivity: f.Sensitivity, DataClass: f.DataClass, Epoch: f.Epoch, ExpectedVersion: r.ExpectedTaskVersion, Reservations: map[string]string{}, UpperBounds: map[string]string{}}
-	for _, h := range f.Reservations {
-		if h == nil || p.Reservations[h.Dimension] != "" {
-			return nil, rpcError(tcs.Invalid)
-		}
-		p.Reservations[h.Dimension] = h.ReservationRef
-		p.UpperBounds[h.Dimension] = h.UpperBound
 	}
 	e, err := c.store.Admit(ctx, who, p, auth)
 	if err != nil {
@@ -262,6 +246,51 @@ func (c *control) AdmitEffect(ctx context.Context, r *tcsv1.AdmitEffectRequest) 
 	out := &tcsv1.EffectAdmission{State: e.State}
 	if e.Existing {
 		out.Outcome = tcsv1.EffectAdmission_EXISTING
+	}
+	return out, nil
+}
+func (c *control) decodeProposal(r *tcsv1.AdmitEffectRequest) (tcs.Proposal, tcs.Envelope, error) {
+	if !strict(r, 1, 3, 4, 5) || r.Effect == nil {
+		return tcs.Proposal{}, tcs.Envelope{}, tcs.Invalid
+	}
+	auth, err := envelope(r.SignedDecision)
+	if err != nil {
+		return tcs.Proposal{}, tcs.Envelope{}, err
+	}
+	f := r.Effect
+	op, ok := c.ops[f.TargetRef]
+	if !ok || (f.Capability != "" && f.Capability != op.Capability) {
+		return tcs.Proposal{}, tcs.Envelope{}, tcs.Denied
+	}
+	p := tcs.Proposal{EffectID: f.EffectId, TaskID: f.TaskId, CommandID: f.CommandId, Target: f.TargetRef, ParamsDigest: f.ParamsDigest, AuthorityDigest: f.AuthorityDigest, LeaseID: r.LeaseId, Sensitivity: f.Sensitivity, DataClass: f.DataClass, Epoch: f.Epoch, ExpectedVersion: r.ExpectedTaskVersion, Reservations: map[string]string{}, UpperBounds: map[string]string{}}
+	for _, h := range f.Reservations {
+		if h == nil || p.Reservations[h.Dimension] != "" {
+			return tcs.Proposal{}, tcs.Envelope{}, tcs.Invalid
+		}
+		p.Reservations[h.Dimension] = h.ReservationRef
+		p.UpperBounds[h.Dimension] = h.UpperBound
+	}
+	return p, auth, nil
+}
+func (c *control) ExecuteLocalEffect(ctx context.Context, r *tcsv1.ExecuteLocalEffectRequest) (*tcsv1.LocalEffectResult, error) {
+	who, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !strict(r) || r.Admission == nil {
+		return nil, rpcError(tcs.Invalid)
+	}
+	p, auth, err := c.decodeProposal(r.Admission)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	result, err := c.store.ExecuteLocal(ctx, who, p, auth, r.ParametersJson)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	out := &tcsv1.LocalEffectResult{Admission: &tcsv1.EffectAdmission{State: result.Effect.State}, ResultJson: result.Result.Payload, ResultRef: result.ResultRef, Usage: result.Result.Usage}
+	if result.Effect.Existing {
+		out.Admission.Outcome = tcsv1.EffectAdmission_EXISTING
 	}
 	return out, nil
 }

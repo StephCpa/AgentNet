@@ -2,7 +2,7 @@
 
 跨组织 Agent 网络系统：联邦信任域架构、任务契约、可靠执行、预算与授权控制、可核查证据链。
 
-- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–23，含复审与实现证据导航）
+- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–24，含复审与实现证据导航）
 - **数据库 Schema**：[schema/001_core.sql](schema/001_core.sql)（PostgreSQL 16+，权威 DDL）
 - **接口定义**：[proto/anet/](proto/anet/)（`anet.tcs.v1` / `anet.ics.v1` / `anet.dir.v1`）
 - **形式模型**：[test/tla/](test/tla/)（TaskMachine / CmdExpiry / BudgetLedger / AuthzShrink，四基线 + 12 变异通过）
@@ -17,6 +17,7 @@
 - **实例凭证生命周期**：[本地密钥工具](cmd/instancekey/)；[登记、轮换、撤销与锁等待复核](docs/detailed-design/21-instance-credentials.md)。
 - **单域 SDK 网关入口**：[services/gateway](services/gateway/)；[首次签名持久化、回执恢复与请求失败审计](docs/detailed-design/22-gateway-ingress-and-audit.md)。
 - **无人值守实例续签**：[services/credentials](services/credentials/)；[两步激活、本地恢复日志与自动客户端](docs/detailed-design/23-unattended-credential-renewal.md)。
-- 状态：v0.2.2 复审后已实现事务内核、本域投递与业务恢复、单域 mTLS/根授权、OIDC 同意控制面、手动/自动实例凭证轮换与 SDK 网关签名/审计（2026-10-27）；M0/M1 尚未整体退出，委托、完整 GW、真实协议目标、完整 FI 与归档/微基准待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
+- **本地原子业务**：[adapters/local](adapters/local/)；[接纳、业务变更、结果与预算同事务](docs/detailed-design/24-local-transactions.md)。
+- 状态：v0.2.2 复审后已实现事务内核、本域投递与业务恢复、单域 mTLS/根授权、OIDC 同意控制面、手动/自动实例凭证轮换、SDK 网关签名/审计与 local-tx（2026-10-27）；M0/M1 尚未整体退出，委托、完整 GW、真实协议目标、完整 FI 与归档/微基准待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
 
 第一版目标闭环：**三个信任域、两种 Agent 协议（A2A 1.0 / MCP 2026-07-28）、围绕同一长期任务完成发现、委托、预算分配、执行、证据回传、故障恢复与验收。**

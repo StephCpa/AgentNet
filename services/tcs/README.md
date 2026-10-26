@@ -67,7 +67,7 @@ the mTLS transport always supplies it. See design 21 for credential lifecycle sc
 
 ## Transactions and setup
 
-Apply migrations 001–010 in order to a new database; 002 also upgrades a d6b219c schema.
+Apply migrations 001–011 in order to a new database; 002 also upgrades a d6b219c schema.
 003 leaves legacy task ownership NULL, so the new kernel denies access until an
 operator performs an evidence-based ownership backfill. Do not guess owners.
 
@@ -118,7 +118,7 @@ initial kernel checkpoint; remote transport and external business recovery remai
 
 Execution increment (design 18): apply 005 as well. T2 records send-time grant/actor
 provenance and seeds a durable execution job. Idempotent-key operations require a
-positive TargetTTL; local-tx is rejected until an atomic business handler exists.
+positive TargetTTL; at this historical checkpoint, local-tx was rejected pending an atomic business handler.
 Parameter storage and execution/reconciliation are in services/execution.
 
 Authenticated service increment (design 19): apply 006 as well. Network submission
@@ -127,3 +127,9 @@ checks its revision, scope and per-task ceilings, then creates the root grant in
 the same transaction as the task and acceptance receipt. T2 and send-time gates
 also check consent revision and data class. Legacy library fixtures with manually
 provisioned grants remain supported; network clients cannot create those roots.
+
+Local transaction increment (design 24): apply 011. `ExecuteLocal` reuses T2 guards
+and commits the compiled handler, terminal effect, saved result, settlement and
+audit together. New local effects cannot use asynchronous Admit. Exact replay
+returns the saved result; failures roll back business writes too. See
+`adapters/local/README.md` for configuration, metering and handler constraints.

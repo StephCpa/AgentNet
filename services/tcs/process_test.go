@@ -11,13 +11,21 @@ import (
 	"testing"
 	"time"
 
+	localadapter "github.com/agentnet/agentnet/adapters/local"
+	"github.com/agentnet/agentnet/internal/localtx"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type processSubmission struct {
+	Local    *processLocal `json:",omitempty"`
 	Config   Config
 	Caller   Caller
 	Envelope Envelope
+}
+
+type processLocal struct {
+	Proposal   Proposal
+	Parameters []byte
 }
 
 // This entry point only executes in a child process. The parent kills it at an
@@ -41,11 +49,19 @@ func TestKernelProcessHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	if input.Local != nil {
+		input.Config.LocalHandlers = map[string]localtx.Handler{input.Local.Proposal.Target: localadapter.Records{}}
+	}
 	s, err := New(db, input.Config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.Submit(context.Background(), input.Caller, input.Envelope); err != nil {
+	if input.Local != nil {
+		_, err = s.ExecuteLocal(context.Background(), input.Caller, input.Local.Proposal, input.Envelope, input.Local.Parameters)
+	} else {
+		_, err = s.Submit(context.Background(), input.Caller, input.Envelope)
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("FAULT_COMMITTED")
@@ -76,7 +92,7 @@ func TestKernelProcessKillBeforeAndAfterCommit(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			input, err := json.Marshal(processSubmission{f.cfg, f.caller, signed})
+			input, err := json.Marshal(processSubmission{Config: f.cfg, Caller: f.caller, Envelope: signed})
 			if err != nil {
 				t.Fatal(err)
 			}
