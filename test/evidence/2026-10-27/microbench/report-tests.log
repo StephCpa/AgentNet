@@ -1,0 +1,10 @@
+test_known_quantiles_and_counts (test_report_micro.ReportEvidenceTests) ... ok
+test_rejects_failure_and_unverified_facts (test_report_micro.ReportEvidenceTests) ... ok
+test_rejects_impossible_concurrency_or_stage_time (test_report_micro.ReportEvidenceTests) ... ok
+test_rejects_missing_or_duplicate_case (test_report_micro.ReportEvidenceTests) ... ok
+test_rejects_tampered_quantile (test_report_micro.ReportEvidenceTests) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+
+OK

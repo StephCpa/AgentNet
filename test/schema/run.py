@@ -12,6 +12,7 @@ from pathlib import Path
 import socket
 import signal
 import subprocess
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,9 +26,16 @@ def main():
     parser.add_argument("--upgrade", type=Path, help="Apply a forward migration after --schema")
     parser.add_argument("--kernel-tests", action="store_true", help="Apply implementation migrations and test the Go kernels against this cluster")
     parser.add_argument("--minio-bin", type=Path, help="Run the additional real MinIO archive gate with this prebuilt binary")
+    parser.add_argument("--microbench", action="store_true", help="After correctness gates, run the opt-in real mTLS/PG microbenchmark")
+    parser.add_argument("--bench-samples", type=int, default=200, help="Measured operations per microbenchmark case (1..1000)")
+    parser.add_argument("--bench-repetitions", type=int, default=3, help="Independent case repetitions (1..10)")
     args = parser.parse_args()
     if args.minio_bin and not args.kernel_tests:
         parser.error("--minio-bin requires --kernel-tests")
+    if args.microbench and not args.kernel_tests:
+        parser.error("--microbench requires --kernel-tests")
+    if not 1 <= args.bench_samples <= 1000 or not 1 <= args.bench_repetitions <= 10:
+        parser.error("benchmark samples/repetitions outside supported limits")
     if args.minio_bin:
         args.minio_bin = args.minio_bin.resolve(strict=True)
     args.pg_bin = args.pg_bin.resolve()
@@ -203,14 +211,14 @@ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
 """)
             test_env = env.copy()
             test_env["ANET_TEST_DSN"] = f"postgresql://postgres@127.0.0.1:{port}/postgres?sslmode=disable"
-            def go_gate(name, command, marker, filename):
+            def go_gate(name, command, marker, filename, timeout_seconds=360):
                 # Preserve partial evidence and stop descendants on a timeout.
                 with (work / filename).open("w", encoding="utf-8") as test_log:
                     run = subprocess.Popen(command, cwd=ROOT, stdout=test_log,
                                            stderr=subprocess.STDOUT, env=test_env,
                                            creationflags=flags, start_new_session=os.name != "nt")
                     try:
-                        run.wait(timeout=360)
+                        run.wait(timeout=timeout_seconds)
                     except subprocess.TimeoutExpired:
                         if os.name == "nt":
                             subprocess.run(["taskkill", "/PID", str(run.pid), "/T", "/F"],
@@ -218,7 +226,7 @@ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
                         else:
                             os.killpg(run.pid, signal.SIGKILL)
                         run.wait(timeout=15)
-                        results.append(dict(case=name, passed=False, timeout_seconds=360))
+                        results.append(dict(case=name, passed=False, timeout_seconds=timeout_seconds))
                         raise AssertionError("Go gate timed out; partial evidence in " + filename)
                 output = (work / filename).read_text(encoding="utf-8", errors="replace")
                 passed = run.returncode == 0 and "--- SKIP:" not in output and marker in output
@@ -234,6 +242,23 @@ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
                 go_gate("archive-minio-integration", ["go", "test", "./services/archive",
                         "-tags=minio_integration", "-run=^TestArchiveMinIO$", "-count=1", "-v"],
                         "TestArchiveMinIO", "minio-tests.log")
+            if args.microbench:
+                test_env["ANET_MICRO_REPORT"] = str(work / "microbench.json")
+                test_env["ANET_MICRO_SAMPLES"] = str(args.bench_samples)
+                test_env["ANET_MICRO_REPETITIONS"] = str(args.bench_repetitions)
+                go_gate("rpc-microbenchmark", ["go", "test", "./services/rpc",
+                        "-tags=microbench", "-run=^TestRPCMicrobenchmark$", "-count=1", "-v", "-timeout=15m"],
+                        "TestRPCMicrobenchmark", "microbench.log", timeout_seconds=900)
+                report = subprocess.run([sys.executable, str(ROOT / "test/bench/report_micro.py"),
+                                         str(work / "microbench.json"), "--output", str(work / "microbench-report.md")],
+                                        cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                                        env=test_env, creationflags=flags, timeout=30)
+                (work / "microbench-report.log").write_text(report.stdout + report.stderr, encoding="utf-8")
+                results.append(dict(case="microbenchmark-report", passed=report.returncode == 0,
+                                    returncode=report.returncode))
+                if report.returncode:
+                    raise AssertionError("invalid benchmark evidence; see microbench-report.log")
+                print("microbenchmark-report PASS", flush=True)
             # Exercise the real executable with the migrated legacy rows. All
             # credentials and data belong to this disposable loopback cluster.
             binary = work / ("outboxd.exe" if os.name == "nt" else "outboxd")

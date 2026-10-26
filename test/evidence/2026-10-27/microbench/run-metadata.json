@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "a1dfb2d",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "go_minimum": "1.24.9",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "minio": {
+    "source_tag": "RELEASE.2025-09-07T16-13-09Z",
+    "module": "github.com/minio/minio",
+    "version": "v0.0.0-20250907161309-07c3a429bfed",
+    "sum": "h1:deu0m9BiyqnMbGWfJi1PpVyotSXlDnTmRIme1cUXnxo=",
+    "build": "go install github.com/minio/minio@v0.0.0-20250907161309-07c3a429bfed; built locally from pinned official source, not a release binary"
+  },
+  "commands": [
+    "go vet ./...",
+    "go vet -tags=microbench ./services/rpc",
+    "python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/micro-final --kernel-tests --minio-bin .local/archive-tools/minio.exe --microbench --bench-samples 200 --bench-repetitions 3",
+    "python -m unittest discover -s test/bench -p test_report_micro.py -v"
+  ],
+  "environment": {
+    "GOFLAGS": "-p=1",
+    "GOPROXY": "https://goproxy.cn",
+    "proxy_scope": "HTTP_PROXY/HTTPS_PROXY/ALL_PROXY removed case-insensitively from the command subprocess environment only; global configuration unchanged"
+  },
+  "runner_checks": 38,
+  "database_tests": {
+    "TestKernel": 26,
+    "TestLocal": 7,
+    "TestArchive": 10,
+    "TestDelivery": 8,
+    "TestExecution": 17,
+    "TestRPC": 39,
+    "TestIdentity": 15,
+    "TestArchiveMinIO (separate tagged gate)": 1
+  },
+  "database_test_total": 123,
+  "unit_tests": [
+    "TestRejectMalformedUTF8AndDuplicateKeys",
+    "TestUTF16OrderAndNumbers",
+    "TestCredentialFilePublicationAndLock",
+    "TestPKIIgnoresRequestedIdentityAndCA",
+    "TestPKIRejectsWeakAndTamperedRequests",
+    "TestPKIIssuerBounds",
+    "TestExecutionParameterStoreConcurrentPublish",
+    "TestS3RejectsUnsafeConfiguration"
+  ],
+  "process_helpers_excluded": [
+    "TestArchiveProcessHelper",
+    "TestDeliveryProcessHelper",
+    "TestExecutionProcessHelper",
+    "TestKernelProcessHelper"
+  ],
+  "go_vet_exit_code": 0,
+  "generated_binding_files_verified": 11,
+  "isolated_postgres_stopped": true,
+  "report_validator_tests": 5,
+  "benchmark_operations": 4800,
+  "benchmark_rpc_calls": 13200,
+  "benchmark_warmup_operations": 480,
+  "benchmark_configurations": 8,
+  "benchmark_repetitions": 3,
+  "benchmark_samples_per_case": 200,
+  "microbench_tag_go_vet_exit_code": 0,
+  "hardware": {
+    "cpu": "AMD Ryzen 9 5900HS with Radeon Graphics",
+    "physical_cores": 8,
+    "logical_processors": 16,
+    "physical_memory_bytes": 25132666880
+  },
+  "scope": "Closed-loop local microbenchmark over real TCP/mTLS with PostgreSQL; client and services share a Go test process. No external LLM/business target, open-loop offered load, production capacity, paired B1-B4 benefit or complete M1 exit established.",
+  "development_note": "First 20-sample pilot correctly rejected an invalid one-hour gateway TTL configured by the new harness. The harness now uses the production default. A separate debug run passed, then warmup was changed to use measurement concurrency so pool expansion is not mixed into measured samples. This retained run used frozen final benchmark/validator sources, a fresh isolated cluster, three repetitions, and no assertion or measurement retry. Existing production sources were unchanged."
+}

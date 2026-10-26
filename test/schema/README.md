@@ -122,3 +122,17 @@ The default command without MinIO has 35 runner checks and 122 database tests.
 Evidence: `test/evidence/2026-10-27/archive/`. It includes archive/lookup recovery,
 bounded cleanup and signed replay after expiry (FI-13), not full M1/M4 exit or
 capacity evidence. Commands and development failures are recorded with the logs.
+
+## Control-path microbenchmark
+
+Add `--microbench --bench-samples 200 --bench-repetitions 3` to the kernel command.
+This runs the separate `microbench` build tag after correctness tests, retains
+every measured sample, validates raw metrics/facts and renders a report. Its
+15-minute process ceiling does not retry failed measurements. See
+`test/bench/README.md` for timing, workload and reporting semantics.
+
+Design 26's retained run passed 38 runner checks with both MinIO and microbench
+enabled; correctness counts remain 123 database tests and 8 Go unit tests.
+The additional performance/report gates are counted separately from those tests.
+Evidence: `test/evidence/2026-10-27/microbench/`; the 4,800-operation report is a
+local closed-loop reference, not the M3 task comparison or production capacity.
