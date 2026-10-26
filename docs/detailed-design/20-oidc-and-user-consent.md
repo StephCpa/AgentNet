@@ -38,6 +38,8 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/identity-new --
 
 ## 下一步
 
+后续状态：21 已实现用户管理的实例凭证登记、轮换与撤销；无人值守续签和节点证明尚未完成。下文保留本阶段计划，当前范围以 21 为准。
+
 继续完成实例凭证登记/轮换与撤销控制、GW 入站签名封装/审计，继而落实 client-credentials + DPoP、委托令牌交换和真实协议目标。当前会话到期后重新登录；refresh token、IdP 全局/后通道注销、长期会话归档尚未实现。用户/Agent 管理和身份映射仍需可信管理员预置。
 
 19 的 ICS/TCS 拒绝审计尚未被本轮控制页审计取代。完整 M1 仍需真实协议/FI、local-tx、归档和微基准；M2–M4 的跨域、证据验收和规模验证继续保留。

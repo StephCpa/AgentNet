@@ -17,7 +17,7 @@ func (s *Store) SubmitAuthorized(ctx context.Context, c Caller, command, root En
 		return Admission{}, err
 	}
 	digest, err := canonical.Digest(command.Payload)
-	if err != nil || permit.Kind != "anet.root-permit/1" || permit.CommandDigest != digest || permit.Caller != c || permit.Audience != s.cfg.Domain || permit.GrantID == "" || permit.ConsentID == "" || !authority.Valid(permit.Rights, s.cfg.Domain) {
+	if err != nil || permit.Kind != "anet.root-permit/1" || permit.CommandDigest != digest || !permit.Caller.SameIdentity(c) || permit.Audience != s.cfg.Domain || permit.GrantID == "" || permit.ConsentID == "" || !authority.Valid(permit.Rights, s.cfg.Domain) {
 		return Admission{}, Denied
 	}
 	return s.submit(ctx, c, command, &permit)

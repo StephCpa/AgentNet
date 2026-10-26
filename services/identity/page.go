@@ -29,6 +29,14 @@ type pageView struct {
 	Agents          []agentView
 	Profiles        []profileView
 	Consents        []consentView
+	Instances       []instanceView
+	CanIssue        bool
+	RequestID       string
+}
+type instanceView struct {
+	ID, Agent, RequestID string
+	Version              int64
+	Expires, Revoked     *time.Time
 }
 
 var pageTemplate = template.Must(template.New("control").Parse(`<!doctype html>
@@ -49,7 +57,14 @@ var pageTemplate = template.Must(template.New("control").Parse(`<!doctype html>
 <h2>已有授权</h2>{{range .Consents}}<section><h3><code>{{.ID}}</code></h3><p>Agent：<code>{{.Agent}}</code>{{if .Instance}} · 限定实例：<code>{{.Instance}}</code>{{end}}</p><p>到期：{{.Expires.UTC.Format "2006-01-02 15:04:05 UTC"}}</p>
 <p>操作：{{range .Rights.Actions}}{{.}} {{end}} · 资源：{{range .Rights.Resources}}{{.}} {{end}} · 数据类别：{{range .Rights.DataClasses}}{{.}} {{end}}</p><p>每任务额度：{{range $dim,$amount:=.Limits}}{{$dim}} {{$amount}}　{{end}}</p>
 {{if .Revoked}}<strong>已撤销</strong>{{else}}<form method="post" action="/consents"><input type="hidden" name="csrf" value="{{$root.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="consent" value="{{.ID}}"><input type="hidden" name="version" value="{{.Version}}"><button>撤销授权</button></form>{{end}}</section>{{else}}<p>尚无授权。</p>{{end}}
-<small>撤销会阻止新操作。已发出的业务请求仍需对账；已发生的费用不会被撤销。</small>{{end}}</body></html>`))
+<small>撤销会阻止新操作。已发出的业务请求仍需对账；已发生的费用不会被撤销。</small>
+<h2>运行实例</h2><p>实例私钥由运行实例本地保管。登记或轮换时，只提交公钥证书请求（CSR），不要上传私钥。</p>
+{{if .CanIssue}}<section><h3>登记新实例</h3><form method="post" action="/instances"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="enroll"><input type="hidden" name="request_id" value="{{.RequestID}}"><label>Agent <select required name="agent">{{range .Agents}}<option value="{{.ID}}">{{.Handle}}</option>{{end}}</select></label><label>CSR <textarea name="csr" rows="6" cols="60" required></textarea></label><button>登记并下载证书</button></form></section>{{end}}
+{{range .Instances}}<section><h3><code>{{.ID}}</code></h3><p>Agent：<code>{{.Agent}}</code> · 凭证版本 {{.Version}}</p><p>{{if .Expires}}证书到期：{{.Expires.UTC.Format "2006-01-02 15:04:05 UTC"}}{{else}}未记录证书到期时间{{end}}</p>
+{{if .Revoked}}<strong>实例已撤销</strong>{{else}}
+{{if $root.CanIssue}}<form method="post" action="/instances"><input type="hidden" name="csrf" value="{{$root.CSRF}}"><input type="hidden" name="action" value="rotate"><input type="hidden" name="agent" value="{{.Agent}}"><input type="hidden" name="instance" value="{{.ID}}"><input type="hidden" name="version" value="{{.Version}}"><input type="hidden" name="request_id" value="{{.RequestID}}"><label>新密钥的 CSR <textarea name="csr" rows="6" cols="60" required></textarea></label><p>轮换会立即停用旧证书。请将新证书安装到持有新私钥的实例，再重新连接。</p><button>轮换并下载新证书</button></form>{{end}}
+<form method="post" action="/instances"><input type="hidden" name="csrf" value="{{$root.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="instance" value="{{.ID}}"><input type="hidden" name="version" value="{{.Version}}"><button>撤销实例</button></form>{{end}}</section>{{else}}<p>尚无已登记实例。</p>{{end}}
+{{end}}</body></html>`))
 
 func (s *Service) page(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -73,6 +88,8 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request) {
 		}
 		view.Principal = principal
 		view.CSRF = csrf(session)
+		view.CanIssue = s.cfg.CredentialIssuer != nil
+		view.RequestID = random()
 		rows, err := tx.Query(r.Context(), `SELECT agent_id,handle FROM agents WHERE domain_id=$1 AND owner_principal_id=$2 AND status='active' ORDER BY agent_id`, s.cfg.Domain, principal)
 		if err != nil {
 			s.fail(w, r, 503, "agents lookup")
@@ -112,6 +129,24 @@ func (s *Service) page(w http.ResponseWriter, r *http.Request) {
 		rows.Close()
 		if err != nil || rows.Err() != nil {
 			s.fail(w, r, 503, "consents read")
+			return
+		}
+		rows, err = tx.Query(r.Context(), `SELECT i.instance_id,i.agent_id,i.credential_version,c.expires_at,i.revoked_at FROM agent_instances i JOIN agents a ON a.agent_id=i.agent_id LEFT JOIN instance_credentials c ON c.fingerprint=i.cred_hash WHERE a.domain_id=$1 AND a.owner_principal_id=$2 ORDER BY i.instance_id`, s.cfg.Domain, principal)
+		if err != nil {
+			s.fail(w, r, 503, "instance list")
+			return
+		}
+		for rows.Next() {
+			var i instanceView
+			if err = rows.Scan(&i.ID, &i.Agent, &i.Version, &i.Expires, &i.Revoked); err != nil {
+				break
+			}
+			i.RequestID = random()
+			view.Instances = append(view.Instances, i)
+		}
+		rows.Close()
+		if err != nil || rows.Err() != nil {
+			s.fail(w, r, 503, "instance list read")
 			return
 		}
 		if err = tx.Commit(r.Context()); err != nil {

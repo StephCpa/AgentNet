@@ -7,7 +7,7 @@ the registered certificate fingerprint, exact URI, live principal/agent/instance
 and any required role in PostgreSQL. CN, metadata and request body identity are
 not authentication inputs. Existing TLS channels do not bypass revocation checks.
 
-Apply migrations 001–006 and provision the domain, identities, certificate
+Apply migrations 001–008 and provision the domain, identities, certificate
 registrations and standing `root_consents` through a trusted control plane. These
 administrative operations are not exposed to workers. Consent limits are **per
 task**, not aggregate user quotas. A consent update must increase its version.
@@ -73,7 +73,9 @@ and token exchange. DIR bindings are generated but no DIR server is registered.
 `anetd` runs TCS/ICS only. Outbox delivery and the execution engine remain separate
 components; starting this daemon alone does not execute external business effects.
 `services/identity` now supplies OIDC browser login and user consent (design 20).
-DPoP, certificate enrollment/rotation, general revocation/push, RPC denied-request
+Owner-controlled certificate enrollment/rotation/revocation is now provided by
+design 21; transport fingerprints are rechecked inside ICS/TCS after lock waits.
+DPoP, unattended renewal, general revocation/push, RPC denied-request
 audit, production target transport and ART classification remain unfinished.
 
 ## Verification

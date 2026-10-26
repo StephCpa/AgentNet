@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–007 (including legacy IN_FLIGHT, effect provenance, identity policy and user sessions) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–008 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions and credentials) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -72,4 +72,13 @@ database tests (the previous 64 plus 10 identity tests), with 3 unit tests. This
 includes a separate HTTPS IdP fixture, the real identityd process, browser consent
 feeding ICS/T1, negative token/CSRF/ownership cases and expiry after a row-lock
 wait. Evidence: `test/evidence/2026-10-27/identity/`. Production IdP enrollment and
-the full GW/DPoP/credential lifecycle remain pending.
+the full GW/DPoP/credential lifecycle were pending in that snapshot.
+
+Owner-controlled credential increment (design 21): migration 008, 31 runner checks,
+81 database tests (25 TCS, 8 delivery, 17 execution, 16 RPC, 15 identity) and 6 unit
+tests (2 JCS, 1 parameter-store, 3 PKI). Three process-helper entries are excluded.
+Tests include fresh-key rotation, exact certificate replay, concurrent rotation,
+session expiry during locks, old-credential fencing after TCS/ICS lock waits and
+the actual instancekey/identityd executables. Evidence:
+`test/evidence/2026-10-27/credentials/`. This implements owner-controlled enrollment,
+rotation and revocation; unattended renewal and complete GW/DPoP remain pending.

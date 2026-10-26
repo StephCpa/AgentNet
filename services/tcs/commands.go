@@ -19,7 +19,7 @@ func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *Roo
 	if err := verify(signed, s.cfg.CommandKeys, &submission); err != nil {
 		return Admission{}, err
 	}
-	if submission.Kind != "anet.command/1" || submission.Caller != c {
+	if submission.Kind != "anet.command/1" || !submission.Caller.SameIdentity(c) {
 		return Admission{}, Denied
 	}
 	cmd := submission.Command

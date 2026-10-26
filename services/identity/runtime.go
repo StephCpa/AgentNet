@@ -14,20 +14,25 @@ import (
 	"time"
 
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/pki"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type FileConfig struct {
-	Domain           string             `json:"domain"`
-	Listen           string             `json:"listen"`
-	PublicURL        string             `json:"public_url"`
-	Issuer           string             `json:"issuer"`
-	ClientID         string             `json:"client_id"`
-	ClientSecretFile string             `json:"client_secret_file,omitempty"`
-	IssuerCAFile     string             `json:"issuer_ca_file,omitempty"`
-	CertificateFile  string             `json:"certificate_file"`
-	PrivateKeyFile   string             `json:"private_key_file"`
-	Profiles         map[string]Profile `json:"profiles"`
+	Domain              string             `json:"domain"`
+	Listen              string             `json:"listen"`
+	PublicURL           string             `json:"public_url"`
+	Issuer              string             `json:"issuer"`
+	ClientID            string             `json:"client_id"`
+	ClientSecretFile    string             `json:"client_secret_file,omitempty"`
+	IssuerCAFile        string             `json:"issuer_ca_file,omitempty"`
+	CertificateFile     string             `json:"certificate_file"`
+	PrivateKeyFile      string             `json:"private_key_file"`
+	Profiles            map[string]Profile `json:"profiles"`
+	CredentialCAFile    string             `json:"credential_ca_file,omitempty"`
+	CredentialCAKeyFile string             `json:"credential_ca_key_file,omitempty"`
+	TrustDomain         string             `json:"trust_domain,omitempty"`
+	CredentialTTL       string             `json:"credential_ttl,omitempty"`
 }
 
 func OpenRuntime(ctx context.Context, path, dsn string) (*http.Server, *pgxpool.Pool, error) {
@@ -59,6 +64,27 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*http.Server, *pgxpool.
 		return nil, nil, fmt.Errorf("cannot load HTTPS certificate")
 	}
 	secret := ""
+	var issuer *pki.Issuer
+	if c.CredentialCAFile != "" || c.CredentialCAKeyFile != "" || c.TrustDomain != "" || c.CredentialTTL != "" {
+		if c.CredentialCAFile == "" || c.CredentialCAKeyFile == "" || c.TrustDomain == "" {
+			return nil, nil, fmt.Errorf("credential CA, private key and trust domain are required together")
+		}
+		ca, e := tls.LoadX509KeyPair(resolve(c.CredentialCAFile), resolve(c.CredentialCAKeyFile))
+		if e != nil {
+			return nil, nil, fmt.Errorf("cannot load credential CA")
+		}
+		ttl := 12 * time.Hour
+		if c.CredentialTTL != "" {
+			ttl, e = time.ParseDuration(c.CredentialTTL)
+			if e != nil {
+				return nil, nil, fmt.Errorf("invalid credential TTL")
+			}
+		}
+		issuer, e = pki.New(ca, c.TrustDomain, ttl)
+		if e != nil {
+			return nil, nil, e
+		}
+	}
 	if c.ClientSecretFile != "" {
 		data, e := os.ReadFile(resolve(c.ClientSecretFile))
 		if e != nil {
@@ -92,7 +118,7 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*http.Server, *pgxpool.
 	if _, err = db.Exec(ctx, `SELECT session_hash FROM user_sessions LIMIT 0`); err != nil {
 		return fail(fmt.Errorf("database unavailable or migrations incomplete"))
 	}
-	service, err := New(ctx, db, Config{Domain: c.Domain, Issuer: c.Issuer, ClientID: c.ClientID, ClientSecret: secret, PublicURL: c.PublicURL, Profiles: c.Profiles, HTTPClient: &http.Client{Transport: transport}})
+	service, err := New(ctx, db, Config{Domain: c.Domain, Issuer: c.Issuer, ClientID: c.ClientID, ClientSecret: secret, PublicURL: c.PublicURL, Profiles: c.Profiles, HTTPClient: &http.Client{Transport: transport}, CredentialIssuer: issuer})
 	if err != nil {
 		return fail(err)
 	}

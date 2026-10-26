@@ -64,7 +64,7 @@ func New(db *pgxpool.Pool, c Config) (*Service, error) {
 }
 func (s *Service) identity(ctx context.Context, tx pgx.Tx, c tcs.Caller) error {
 	var live bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM principals p JOIN agents a ON a.owner_principal_id=p.principal_id JOIN agent_instances i ON i.agent_id=a.agent_id WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active')`, c.Principal, c.Agent, c.Instance, s.cfg.Domain).Scan(&live)
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM principals p JOIN agents a ON a.owner_principal_id=p.principal_id JOIN agent_instances i ON i.agent_id=a.agent_id WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active' AND ($5='' OR i.cred_hash=$5))`, c.Principal, c.Agent, c.Instance, s.cfg.Domain, c.CredentialHash).Scan(&live)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (s *Service) audit(ctx context.Context, tx pgx.Tx, c tcs.Caller, task, acti
 }
 func (s *Service) IssueRoot(ctx context.Context, c tcs.Caller, command tcs.Envelope) (tcs.Envelope, error) {
 	var submission tcs.Submission
-	if signed.Decode(command, s.cfg.CommandKeys, &submission) != nil || submission.Kind != "anet.command/1" || submission.Caller != c {
+	if signed.Decode(command, s.cfg.CommandKeys, &submission) != nil || submission.Kind != "anet.command/1" || !submission.Caller.SameIdentity(c) {
 		return tcs.Envelope{}, tcs.Denied
 	}
 	cmd := submission.Command

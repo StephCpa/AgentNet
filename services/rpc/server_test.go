@@ -367,7 +367,7 @@ func TestRPCRegisteredWrongSPIFFEAndLongCertificate(t *testing.T) {
 				life = 25 * time.Hour
 			}
 			bad := cert(t, f.ca, f.caKey, uri, false, life)
-			f.exec(`UPDATE agent_instances SET cred_hash=$2,spiffe_id=$3 WHERE instance_id=$1`, f.caller.Instance, service.Fingerprint(bad.Leaf), uri)
+			f.exec(`UPDATE agent_instances SET cred_hash=$2,spiffe_id=$3,credential_version=credential_version+1 WHERE instance_id=$1`, f.caller.Instance, service.Fingerprint(bad.Leaf), uri)
 			_, err := tcsv1.NewTaskControlClient(f.connect(bad)).GetTask(f.ctx, &tcsv1.GetTaskRequest{TaskId: "anything"})
 			code(t, err, codes.Unauthenticated)
 		})

@@ -2,6 +2,7 @@ package identity_test
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -18,6 +19,7 @@ import (
 
 func TestIdentityDaemonProcess(t *testing.T) {
 	f := setup(t)
+	ca := enableCredentials(f)
 	dir := t.TempDir()
 	write := func(name string, data []byte) {
 		t.Helper()
@@ -34,8 +36,18 @@ func TestIdentityDaemonProcess(t *testing.T) {
 	write("server.key", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: private}))
 	write("issuer-ca.pem", pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: f.provider.server.Certificate().Raw}))
 	write("client-secret", []byte("fixture-secret"))
+	caPrivate, err := x509.MarshalPKCS8PrivateKey(ca.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("workload-ca.pem", pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca.Certificate[0]}))
+	write("workload-ca.key", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: caPrivate}))
 	origin, _ := url.Parse(f.cfg.PublicURL)
 	cfg := identity.FileConfig{Domain: f.domain, Listen: origin.Host, PublicURL: f.cfg.PublicURL, Issuer: f.cfg.Issuer, ClientID: "client", ClientSecretFile: "client-secret", IssuerCAFile: "issuer-ca.pem", CertificateFile: "server.pem", PrivateKeyFile: "server.key", Profiles: f.cfg.Profiles}
+	cfg.CredentialCAFile = "workload-ca.pem"
+	cfg.CredentialCAKeyFile = "workload-ca.key"
+	cfg.TrustDomain = "test.agentnet"
+	cfg.CredentialTTL = "1h"
 	raw, err := json.Marshal(cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -83,5 +95,42 @@ func TestIdentityDaemonProcess(t *testing.T) {
 	h := f.post("/consents", f.form(csrf), f.server.URL, 303)
 	if f.count(`SELECT count(*) FROM root_consents WHERE consent_id=$1 AND subject_principal_id=$2`, h.Get("X-AgentNet-Consent"), f.user) != 1 {
 		t.Fatal("daemon failed to create consent")
+	}
+	keyBinary := filepath.Join(dir, "instancekey.exe")
+	if output, err := exec.CommandContext(f.ctx, "go", "build", "-o", keyBinary, "../../cmd/instancekey").CombinedOutput(); err != nil {
+		t.Fatalf("key generator build: %v %s", err, output)
+	}
+	keyDir := filepath.Join(dir, "workload-key")
+	if output, err := exec.CommandContext(f.ctx, keyBinary, "-out", keyDir).CombinedOutput(); err != nil {
+		t.Fatalf("key generation: %v %s", err, output)
+	}
+	request, err := os.ReadFile(filepath.Join(keyDir, "instance.csr"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateKey, err := os.ReadFile(filepath.Join(keyDir, "instance.key"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, certificatePEM := f.credentialPost(f.credentialForm(csrf, string(request)), 200)
+	block, _ := pem.Decode(certificatePEM)
+	leaf, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrBlock, _ := pem.Decode(request)
+	parsedCSR, err := x509.ParseCertificateRequest(csrBlock.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(leaf.RawSubjectPublicKeyInfo, parsedCSR.RawSubjectPublicKeyInfo) {
+		t.Fatal("certificate does not bind local key")
+	}
+	if _, err = exec.CommandContext(f.ctx, keyBinary, "-out", keyDir).CombinedOutput(); err == nil {
+		t.Fatal("key generator overwrote existing directory")
+	}
+	unchanged, err := os.ReadFile(filepath.Join(keyDir, "instance.key"))
+	if err != nil || !bytes.Equal(unchanged, privateKey) {
+		t.Fatal("key generator changed prior key")
 	}
 }

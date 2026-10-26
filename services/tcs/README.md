@@ -2,8 +2,8 @@
 
 Implementation: `commands.go`, `effects.go`, `lifecycle.go`; migration: `003_tcs_kernel.sql`.
 This package runs real PostgreSQL transactions using pgx. It is a library, not an
-unauthenticated HTTP server. A future gRPC transport must authenticate Caller and
-map the signed envelopes without overriding fields from unsigned request JSON.
+unauthenticated HTTP server. The gRPC transport in `services/rpc` authenticates
+Caller and maps signed envelopes without overriding fields from unsigned JSON.
 
 ## Implemented operations
 
@@ -58,9 +58,16 @@ The network protobufs now bind to this envelope API through `services/rpc`.
 The server verifies complete signed content and rejects the old unsigned
 AuthorizationDecision.allow field as proof.
 
+The transport also supplies `Caller.CredentialHash` from the verified certificate.
+Transaction identity checks match the current fingerprint again after lock waits,
+so certificate rotation fences requests already authenticated with the old key.
+This field is excluded from JSON; signed commands retain the stable three-part
+principal/agent/instance identity. Trusted library fixtures may omit the fingerprint;
+the mTLS transport always supplies it. See design 21 for credential lifecycle scope.
+
 ## Transactions and setup
 
-Apply migrations 001–006 in order to a new database; 002 also upgrades a d6b219c schema.
+Apply migrations 001–008 in order to a new database; 002 also upgrades a d6b219c schema.
 003 leaves legacy task ownership NULL, so the new kernel denies access until an
 operator performs an evidence-based ownership backfill. Do not guess owners.
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/agentnet/agentnet/internal/amount"
 	"github.com/agentnet/agentnet/internal/authority"
+	"github.com/agentnet/agentnet/internal/pki"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,6 +32,7 @@ type Config struct {
 	Domain, Issuer, ClientID, ClientSecret, PublicURL string
 	Profiles                                          map[string]Profile
 	HTTPClient                                        *http.Client
+	CredentialIssuer                                  *pki.Issuer
 }
 type Service struct {
 	db       *pgxpool.Pool
@@ -107,6 +109,7 @@ func New(ctx context.Context, db *pgxpool.Pool, c Config) (*Service, error) {
 	mux.HandleFunc("GET /", s.page)
 	mux.HandleFunc("POST /consents", s.consent)
 	mux.HandleFunc("POST /logout", s.logout)
+	mux.HandleFunc("POST /instances", s.instances)
 	s.handler = mux
 	return s, nil
 }

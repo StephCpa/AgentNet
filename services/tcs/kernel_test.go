@@ -44,7 +44,7 @@ func setup(t *testing.T) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &fixture{t: t, ctx: ctx, db: db, key: key, caller: Caller{id("usr"), id("agt"), id("ins")}}
+	f := &fixture{t: t, ctx: ctx, db: db, key: key, caller: Caller{Principal: id("usr"), Agent: id("agt"), Instance: id("ins")}}
 	f.cfg = Config{Domain: id("dom"), CommandKeys: map[string]ed25519.PublicKey{"gateway": pub}, DecisionKeys: map[string]ed25519.PublicKey{"ics": pub}, ResultKeys: map[string]ed25519.PublicKey{"adapter": pub},
 		Operations: map[string]Operation{"bank": {Action: "pay", Resource: "account:test", Purpose: "tool_call", Capability: "queryable", Dimensions: []string{"money", "tokens", "calls", "messages"}}}}
 	f.exec("INSERT INTO domains(domain_id,name,gateway_endpoint,trust_anchor) VALUES($1,'test','https://invalid.test','{}')", f.cfg.Domain)

@@ -63,6 +63,7 @@ func (a Authenticator) authenticate(ctx context.Context) (identity, error) {
 	if registered != leaf.URIs[0].String() {
 		return id, status.Error(codes.Unauthenticated, "registered URI mismatch")
 	}
+	id.caller.CredentialHash = Fingerprint(leaf)
 	u := leaf.URIs[0]
 	if u.Scheme != "spiffe" || u.Host != a.TrustDomain || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.RawPath != "" || u.Opaque != "" || u.Path != "/agent-instance/"+id.caller.Instance {
 		return id, status.Error(codes.Unauthenticated, "instance URI mismatch")
