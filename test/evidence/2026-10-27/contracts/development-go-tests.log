@@ -1,0 +1,5 @@
+# github.com/agentnet/agentnet/services/tcs
+services\tcs\commands.go:8:2: "time" imported and not used
+FAIL	github.com/agentnet/agentnet/services/tcs [build failed]
+FAIL	github.com/agentnet/agentnet/services/rpc [build failed]
+FAIL

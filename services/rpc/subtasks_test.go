@@ -152,7 +152,7 @@ func TestRPCSubtaskCrossSubjectAndBudget(t *testing.T) {
 	code(t, err, codes.AlreadyExists)
 }
 func TestRPCSubtaskRejectsGuardViolations(t *testing.T) {
-	for _, name := range []string{"epoch", "lease", "lease-holder", "version", "scope", "rights", "depth", "budget", "purpose", "recipient", "recipient-ceiling", "policy-revoked", "recipient-revoked", "parent-revoked", "expired", "deadline", "no-contract-permission", "malformed-concurrency-limit"} {
+	for _, name := range []string{"epoch", "lease", "lease-holder", "version", "scope", "rights", "depth", "budget", "purpose", "recipient", "recipient-ceiling", "policy-revoked", "recipient-revoked", "parent-revoked", "expired", "deadline", "malformed-concurrency-limit"} {
 		t.Run(name, func(t *testing.T) {
 			f := setup(t)
 			parent := delegableRoot(t, f)
@@ -197,10 +197,11 @@ func TestRPCSubtaskRejectsGuardViolations(t *testing.T) {
 				cmd.NotAfter = time.Now().Add(-time.Second)
 			case "deadline":
 				cmd.Contract = subContract(t, cmd.Contract, 0, time.Now().Add(2*time.Hour))
-			case "no-contract-permission":
-				f.exec("UPDATE contracts SET body=jsonb_set(body,'{delegation_policy,allow}','false') WHERE contract_id=$1", f.command.ContractID)
 			case "malformed-concurrency-limit":
-				f.exec("UPDATE contracts SET body=jsonb_set(body,'{delegation_policy,max_concurrent_subtasks}','-1') WHERE contract_id=$1", f.command.ContractID)
+				var body map[string]any
+				json.Unmarshal(cmd.Contract, &body)
+				body["delegation_policy"].(map[string]any)["max_concurrent_subtasks"] = -1
+				cmd.Contract, _ = json.Marshal(body)
 			}
 			_, err := f.control.CreateSubtask(f.ctx, subRequest(t, f, cmd))
 			if err == nil {

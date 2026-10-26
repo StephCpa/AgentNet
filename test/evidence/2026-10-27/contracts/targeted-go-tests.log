@@ -1,0 +1,60 @@
+=== RUN   TestKernelContractValidation
+--- PASS: TestKernelContractValidation (0.16s)
+=== RUN   TestKernelLegacyContractReplay
+--- PASS: TestKernelLegacyContractReplay (0.10s)
+=== RUN   TestKernelContractVersionsImmutable
+--- PASS: TestKernelContractVersionsImmutable (0.15s)
+=== RUN   TestKernelConcurrentContractConflict
+--- PASS: TestKernelConcurrentContractConflict (0.15s)
+PASS
+ok  	github.com/agentnet/agentnet/services/tcs	3.043s
+=== RUN   TestRPCContractAdmissionGuards
+=== RUN   TestRPCContractAdmissionGuards/null-schema
+=== RUN   TestRPCContractAdmissionGuards/invalid-schema
+=== RUN   TestRPCContractAdmissionGuards/empty-acceptance
+=== RUN   TestRPCContractAdmissionGuards/unknown-check
+=== RUN   TestRPCContractAdmissionGuards/no-contract-permission
+--- PASS: TestRPCContractAdmissionGuards (0.67s)
+    --- PASS: TestRPCContractAdmissionGuards/null-schema (0.13s)
+    --- PASS: TestRPCContractAdmissionGuards/invalid-schema (0.11s)
+    --- PASS: TestRPCContractAdmissionGuards/empty-acceptance (0.10s)
+    --- PASS: TestRPCContractAdmissionGuards/unknown-check (0.10s)
+    --- PASS: TestRPCContractAdmissionGuards/no-contract-permission (0.22s)
+=== RUN   TestRPCSubtaskRejectsGuardViolations
+=== RUN   TestRPCSubtaskRejectsGuardViolations/epoch
+=== RUN   TestRPCSubtaskRejectsGuardViolations/lease
+=== RUN   TestRPCSubtaskRejectsGuardViolations/lease-holder
+=== RUN   TestRPCSubtaskRejectsGuardViolations/version
+=== RUN   TestRPCSubtaskRejectsGuardViolations/scope
+=== RUN   TestRPCSubtaskRejectsGuardViolations/rights
+=== RUN   TestRPCSubtaskRejectsGuardViolations/depth
+=== RUN   TestRPCSubtaskRejectsGuardViolations/budget
+=== RUN   TestRPCSubtaskRejectsGuardViolations/purpose
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient-ceiling
+=== RUN   TestRPCSubtaskRejectsGuardViolations/policy-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/parent-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/expired
+=== RUN   TestRPCSubtaskRejectsGuardViolations/deadline
+=== RUN   TestRPCSubtaskRejectsGuardViolations/malformed-concurrency-limit
+--- PASS: TestRPCSubtaskRejectsGuardViolations (3.49s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/epoch (0.22s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/lease (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/lease-holder (0.19s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/version (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/scope (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/rights (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/depth (0.19s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/budget (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/purpose (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient-ceiling (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/policy-revoked (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient-revoked (0.22s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/parent-revoked (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/expired (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/deadline (0.22s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/malformed-concurrency-limit (0.20s)
+PASS
+ok  	github.com/agentnet/agentnet/services/rpc	6.366s

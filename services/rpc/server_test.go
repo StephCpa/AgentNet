@@ -164,7 +164,7 @@ func setup(t *testing.T) *fixture {
 	rights := authority.Rights{Actions: []string{"pay"}, Resources: []string{"account:test"}, DataClasses: []string{"internal"}, Spatial: authority.Spatial{Domains: []string{f.domain}, EgressOnlyViaGateway: true}}
 	rb, _ := json.Marshal(rights)
 	f.exec(`INSERT INTO root_consents(consent_id,domain_id,subject_principal_id,actor_agent_id,rights,task_limits,not_before,expires_at,policy_version) VALUES($1,$2,$3,$4,$5::jsonb,'{"money":"10","tokens":"10","calls":"10","messages":"10"}',clock_timestamp()-interval '1 minute',clock_timestamp()+interval '2 hours','policy/1')`, f.consent, f.domain, f.caller.Principal, f.caller.Agent, string(rb))
-	body, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]string{"verifier": "fixture"}})
+	body, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]any{"verifier": "fixture", "checks": []string{"schema"}, "on_fail": "report"}})
 	f.command = tcs.Command{ID: "command-" + id, Audience: f.domain, NotAfter: time.Now().UTC().Add(time.Hour), ContractID: "contract-" + id, ContractVersion: 1, Contract: body, Limits: map[string]string{"money": "10", "tokens": "10", "calls": "10", "messages": "10"}, Root: &tcs.RootRequest{ConsentID: f.consent, Rights: rights}}
 	return f
 }

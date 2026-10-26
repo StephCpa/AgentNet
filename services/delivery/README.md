@@ -3,7 +3,7 @@
 `Queue` claims committed outbox rows, delivers outside the transaction, and records
 an acknowledgement under a fenced lease. `Inbox` is the local PostgreSQL receiver.
 `cmd/outboxd` runs delivery and local task-tree cancellation workers. Apply all
-implementation migrations through 014 first.
+implementation migrations through 015 first.
 Stop legacy dispatchers before applying 004; their acknowledgements do not carry
 the new lease token. Restart only the token-aware worker after migration commits.
 

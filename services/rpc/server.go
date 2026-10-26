@@ -87,7 +87,7 @@ func rpcError(err error) error {
 	if errors.As(err, &code) {
 		grpcCode := codes.FailedPrecondition
 		switch code {
-		case tcs.Invalid:
+		case tcs.Invalid, tcs.ContractInvalid:
 			grpcCode = codes.InvalidArgument
 		case tcs.Denied, tcs.DecisionMismatch:
 			grpcCode = codes.PermissionDenied

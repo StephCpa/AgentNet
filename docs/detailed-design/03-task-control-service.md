@@ -323,3 +323,5 @@ RETURN {t.cancel_version};
 详见 [29](29-subtask-closeout-and-cancellation.md)。`UpdateTaskStatus`、完整契约与 VERIFIED 验收尚待实现，不能以此增量推断完整状态机已交付。
 
 后续 [30](30-gateway-subtask-ingress.md) 增加 `Gateway.CreateSubtask`，由网关将客户端意图签为现有 `anet.subtask/1`，复用 TCS 的原子委托路径和回执读取。TCS 已有签名接口保持兼容，未因 GW 前置而减少任何创建守卫。
+
+实现进展（31）：新接纳使用统一契约解析、离线 JSON Schema 2020-12 编译与明确验收策略；迁移 015 固定 contracts 和任务的契约引用。远程 schema 引用当前必须内嵌。完整硬约束、ART/VERIFIED 与状态迁移仍未完成，执行边界和旧命令恢复见 [31](31-contract-admission-and-immutability.md)。

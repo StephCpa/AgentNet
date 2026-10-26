@@ -75,7 +75,7 @@ func setup(t *testing.T, cap string) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	contract, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]any{"type": "object"}, "acceptance_policy": map[string]string{"verifier": "test"}})
+	contract, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]any{"type": "object"}, "acceptance_policy": map[string]any{"verifier": "test", "checks": []string{"schema"}, "on_fail": "report"}})
 	cmd := tcs.Command{ID: "command-" + uid, Audience: f.domain, NotAfter: time.Now().UTC().Add(time.Hour), ContractID: "contract-" + uid, ContractVersion: 1, Contract: contract, Limits: map[string]string{"money": "10", "tokens": "10", "calls": "10", "messages": "10"}}
 	admitted, err := f.store.Submit(ctx, f.caller, f.sign(tcs.Submission{Kind: "anet.command/1", Caller: f.caller, Command: cmd}, "gateway"))
 	if err != nil {

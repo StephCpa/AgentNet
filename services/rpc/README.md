@@ -119,3 +119,10 @@ Configure `capability: local-tx` and `local_handler: record.put/v1`; action must
 `record.put` and resource a configured `records:` namespace. The four dimensions
 are required. Unknown handlers and handlers attached to external capabilities
 fail startup. See [local handler](../../adapters/local/README.md) and design 24.
+
+Contract admission (design 31): apply migration 015 before the updated service.
+New admissions use internal/contract for typed acceptance rules and offline
+JSON Schema 2020-12 compilation. External schema resources are rejected; embed
+required resources in $defs. Contracts and existing task contract references
+are immutable. Exact accepted-command replay precedes the stricter profile.
+This does not implement ART, evidence verification or successful task completion.

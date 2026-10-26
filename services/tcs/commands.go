@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
-	"time"
 
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/contract"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -32,27 +32,6 @@ func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *Roo
 	}
 	for d, a := range cmd.Limits {
 		if !dimension(d) || !amount(a, false) {
-			return out, Invalid
-		}
-	}
-	contractDigest, err := canonical.Digest(cmd.Contract)
-	if err != nil {
-		return out, Invalid
-	}
-	var body struct {
-		Deadline  time.Time `json:"deadline"`
-		InputRefs []struct {
-			Version int    `json:"version"`
-			Digest  string `json:"digest"`
-		} `json:"input_refs"`
-		OutputSchema json.RawMessage `json:"output_schema"`
-		Acceptance   json.RawMessage `json:"acceptance_policy"`
-	}
-	if json.Unmarshal(cmd.Contract, &body) != nil || body.Deadline.IsZero() || len(body.InputRefs) == 0 || len(body.OutputSchema) == 0 || len(body.Acceptance) == 0 {
-		return out, Invalid
-	}
-	for _, r := range body.InputRefs {
-		if r.Version < 1 || !digestRE.MatchString(r.Digest) {
 			return out, Invalid
 		}
 	}
@@ -98,6 +77,14 @@ func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *Roo
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return out, err
+	}
+	body, err := contract.Parse(cmd.Contract)
+	if err != nil {
+		return out, ContractInvalid
+	}
+	contractDigest, err := canonical.Digest(cmd.Contract)
+	if err != nil {
+		return out, ContractInvalid
 	}
 	if now.After(body.Deadline) {
 		return out, Deadline

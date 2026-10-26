@@ -2,7 +2,7 @@
 
 跨组织 Agent 网络系统：联邦信任域架构、任务契约、可靠执行、预算与授权控制、可核查证据链。
 
-- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–28，含复审与实现证据导航）
+- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–31，含复审与实现证据导航）
 - **数据库 Schema**：[schema/001_core.sql](schema/001_core.sql)（PostgreSQL 16+，权威 DDL）
 - **接口定义**：[proto/anet/](proto/anet/)（`anet.tcs.v1` / `anet.ics.v1` / `anet.dir.v1`）
 - **形式模型**：[test/tla/](test/tla/)（TaskMachine / CmdExpiry / BudgetLedger / AuthzShrink，四基线 + 12 变异通过）
@@ -24,6 +24,7 @@
 - **单域子任务创建**：[原子创建与身份/预算绑定](docs/detailed-design/28-atomic-subtask-creation.md)。
 - **子树取消与预算结清**：[本域持久传播与一次性归还](docs/detailed-design/29-subtask-closeout-and-cancellation.md)。
 - **子任务网关入口**：[持久签名、跨入口去重与进程恢复](docs/detailed-design/30-gateway-subtask-ingress.md)。
-- 状态：v0.2.2 复审后已实现事务内核、本域投递与业务恢复、单域 mTLS/根授权、OIDC 同意控制面、手动/自动实例凭证轮换、根/子命令网关签名/审计、local-tx、分区归档、单域子任务创建及结清/取消传播（2026-10-27）；M0/M1 尚未整体退出，跨域委托、完整 GW、真实协议目标、完整 FI 与完整任务基准待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
+- **契约接纳与版本固定**：[离线 schema 编译、不可变与历史恢复](docs/detailed-design/31-contract-admission-and-immutability.md)。
+- 状态：v0.2.2 复审后已实现事务内核、本域投递与业务恢复、单域 mTLS/根授权、OIDC 同意控制面、手动/自动实例凭证轮换、根/子命令网关签名/审计、local-tx、分区归档、单域子任务创建及结清/取消传播、契约校验与版本固定（2026-10-27）；M0/M1 尚未整体退出，跨域委托、完整 GW、真实协议目标、完整 FI 与完整任务基准待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
 
 第一版目标闭环：**三个信任域、两种 Agent 协议（A2A 1.0 / MCP 2026-07-28）、围绕同一长期任务完成发现、委托、预算分配、执行、证据回传、故障恢复与验收。**

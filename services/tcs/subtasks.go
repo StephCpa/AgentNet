@@ -9,6 +9,7 @@ import (
 
 	"github.com/agentnet/agentnet/internal/authority"
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/internal/contract"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -39,38 +40,12 @@ type SubtaskSubmission struct {
 	Caller  Caller         `json:"caller"`
 	Command SubtaskCommand `json:"command"`
 }
-type delegationContract struct {
-	Deadline  time.Time `json:"deadline"`
-	TaskType  string    `json:"task_type"`
-	InputRefs []struct {
-		Version int    `json:"version"`
-		Digest  string `json:"digest"`
-	} `json:"input_refs"`
-	OutputSchema json.RawMessage `json:"output_schema"`
-	Acceptance   json.RawMessage `json:"acceptance_policy"`
-	Delegation   struct {
-		Allow         bool     `json:"allow"`
-		MaxDepth      int      `json:"max_depth"`
-		MaxConcurrent int      `json:"max_concurrent_subtasks"`
-		Scope         []string `json:"scope"`
-	} `json:"delegation_policy"`
-}
+type delegationContract = contract.Body
 
 func delegationBody(raw []byte) (delegationContract, error) {
-	var b delegationContract
-	if json.Unmarshal(raw, &b) != nil || b.Deadline.IsZero() || len(b.InputRefs) == 0 || len(b.OutputSchema) == 0 || string(b.OutputSchema) == "null" || len(b.Acceptance) == 0 || string(b.Acceptance) == "null" {
-		return b, Invalid
-	}
-	for _, ref := range b.InputRefs {
-		if ref.Version < 1 || !digestRE.MatchString(ref.Digest) {
-			return b, Invalid
-		}
-	}
-	if b.Delegation.Allow && (b.Delegation.MaxDepth < 1 || b.Delegation.MaxDepth >= authority.MaxChainLength || len(b.Delegation.Scope) == 0 || b.Delegation.MaxConcurrent < 0) {
-		return b, Invalid
-	}
-	if b.Delegation.MaxConcurrent == 0 {
-		b.Delegation.MaxConcurrent = 16
+	b, err := contract.Parse(raw)
+	if err != nil {
+		return b, ContractInvalid
 	}
 	return b, nil
 }
@@ -78,12 +53,12 @@ func delegationBody(raw []byte) (delegationContract, error) {
 // ValidateDelegableContract requires explicit contract permission when consent
 // allows delegation. The root task's absolute depth ceiling never increases.
 func ValidateDelegableContract(raw []byte, r authority.Rights) error {
-	if r.DepthLeft == 0 {
-		return nil
-	}
 	b, err := delegationBody(raw)
 	if err != nil {
 		return err
+	}
+	if r.DepthLeft == 0 {
+		return nil
 	}
 	if !b.Delegation.Allow || b.Delegation.MaxDepth < r.DepthLeft {
 		return Denied
@@ -107,20 +82,6 @@ func (s *Store) CreateSubtask(ctx context.Context, c Caller, envelope Envelope) 
 	}
 	cmd := submission.Command
 	if cmd.ID == "" || cmd.Parent == "" || cmd.Grant == "" || cmd.Lease == "" || cmd.Audience != s.cfg.Domain || cmd.NotAfter.IsZero() || cmd.RecipientPolicy == "" || cmd.RecipientAgent == "" || cmd.RecipientInstance == "" || len(cmd.Allocations) != 4 {
-		return out, Invalid
-	}
-	body, err := delegationBody(cmd.Contract)
-	if err != nil {
-		return out, err
-	}
-	if body.TaskType == "" {
-		return out, Invalid
-	}
-	if err = ValidateDelegableContract(cmd.Contract, cmd.Rights); err != nil {
-		return out, err
-	}
-	contractDigest, err := canonical.Digest(cmd.Contract)
-	if err != nil {
 		return out, Invalid
 	}
 	digest, err := canonical.Digest(envelope.Payload)
@@ -173,6 +134,20 @@ func (s *Store) CreateSubtask(ctx context.Context, c Caller, envelope Envelope) 
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return out, err
+	}
+	body, err := delegationBody(cmd.Contract)
+	if err != nil {
+		return out, err
+	}
+	if body.TaskType == "" {
+		return out, Invalid
+	}
+	if err = ValidateDelegableContract(cmd.Contract, cmd.Rights); err != nil {
+		return out, err
+	}
+	contractDigest, err := canonical.Digest(cmd.Contract)
+	if err != nil {
+		return out, Invalid
 	}
 	if parent.Version != cmd.ExpectedVersion {
 		return out, VersionConflict

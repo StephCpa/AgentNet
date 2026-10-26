@@ -1,0 +1,7 @@
+COMMAND go vet ./...
+EXIT 0
+COMMAND go vet -tags=microbench ./services/rpc
+EXIT 0
+COMMAND python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check
+11 generated Go binding files verified
+EXIT 0

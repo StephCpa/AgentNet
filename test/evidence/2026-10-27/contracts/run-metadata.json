@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-27",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "go_minimum": "1.24.9",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "minio": {
+    "source_tag": "RELEASE.2025-09-07T16-13-09Z",
+    "module": "github.com/minio/minio",
+    "version": "v0.0.0-20250907161309-07c3a429bfed",
+    "sum": "h1:deu0m9BiyqnMbGWfJi1PpVyotSXlDnTmRIme1cUXnxo=",
+    "build": "go install github.com/minio/minio@v0.0.0-20250907161309-07c3a429bfed; built locally from pinned official source, not a release binary"
+  },
+  "environment": {
+    "GOFLAGS": "-p=1",
+    "GOPROXY": "https://goproxy.cn",
+    "proxy_scope": "HTTP_PROXY/HTTPS_PROXY/ALL_PROXY removed case-insensitively from the command subprocess environment only; global configuration unchanged"
+  },
+  "process_helpers_excluded": [
+    "TestArchiveProcessHelper",
+    "TestDeliveryProcessHelper",
+    "TestExecutionProcessHelper",
+    "TestKernelProcessHelper",
+    "TestRPCTreeProcessHelper"
+  ],
+  "go_vet_exit_code": 0,
+  "generated_binding_files_verified": 11,
+  "isolated_postgres_stopped": true,
+  "benchmark_operations": 4800,
+  "benchmark_rpc_calls": 13200,
+  "benchmark_warmup_operations": 480,
+  "benchmark_configurations": 8,
+  "benchmark_repetitions": 3,
+  "benchmark_samples_per_case": 200,
+  "microbench_tag_go_vet_exit_code": 0,
+  "hardware": {
+    "cpu": "AMD Ryzen 9 5900HS with Radeon Graphics",
+    "physical_cores": 8,
+    "logical_processors": 16,
+    "physical_memory_bytes": 25132666880
+  },
+  "base_commit": "58ea791",
+  "commands": [
+    "go vet ./...",
+    "go vet -tags=microbench ./services/rpc",
+    "python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/contracts-final --kernel-tests --minio-bin .local/archive-tools/minio.exe --microbench --bench-samples 200 --bench-repetitions 3"
+  ],
+  "runner_checks": 41,
+  "database_tests": {
+    "TestArchive": 10,
+    "TestDelivery": 8,
+    "TestExecution": 17,
+    "TestIdentity": 16,
+    "TestRPC": 68,
+    "TestKernel": 30,
+    "TestLocal": 7,
+    "TestArchiveMinIO (separate tagged gate)": 1
+  },
+  "database_test_total": 157,
+  "unit_tests": [
+    "TestRejectMalformedUTF8AndDuplicateKeys",
+    "TestUTF16OrderAndNumbers",
+    "TestCredentialFilePublicationAndLock",
+    "TestPKIIgnoresRequestedIdentityAndCA",
+    "TestPKIRejectsWeakAndTamperedRequests",
+    "TestPKIIssuerBounds",
+    "TestExecutionParameterStoreConcurrentPublish",
+    "TestS3RejectsUnsafeConfiguration",
+    "TestDelegationIntersection",
+    "TestDelegationRejectsEveryExpansion",
+    "TestDelegationRecipientCannotRestoreRights",
+    "TestChainDigestBindsAncestorsAndPreservesRoot",
+    "TestChainRejectsUnknownRightsFields",
+    "TestContractRejectsInvalidAdmission",
+    "TestContractCompiledSchema",
+    "TestContractNeverLoadsExternalResources",
+    "TestContractCanonicalAndComplexityBounds",
+    "TestContractReferencedDialectAndRecursion"
+  ],
+  "scope": "Shared admission-time contract profile and offline JSON Schema 2020-12 compilation in TCS root/child and ICS root-permit paths; migration 015 prevents contract mutation/deletion and task contract rebinding. Exact historical admissions replay before strict new-admission parsing. Does not implement ART, complete constraints/reference resolution, registered verifiers, VERIFIED receipts or UpdateTaskStatus. Benchmark measures existing root control paths only.",
+  "development_note": "Initial targeted build failed on a leftover unused time import; corrected targeted tests passed. First complete run passed 41 then-current gates but an independent probe exposed a missing guard: a reference to a nonstandard schema location could select draft-07. The parser now traverses the compiled schema graph with cycle detection; four reference-path negatives and valid recursion tests were added. Final sources were frozen and a fresh isolated run passed 41 gates. All isolated clusters stopped; intermediate results are separate and not substituted for final evidence.",
+  "new_database_tests": [
+    "TestKernelContractValidation",
+    "TestKernelLegacyContractReplay",
+    "TestKernelContractVersionsImmutable",
+    "TestKernelConcurrentContractConflict",
+    "TestRPCContractAdmissionGuards"
+  ],
+  "source_sha256": {
+    "internal/contract/contract.go": "a7f0f53722148eac8ac9463ef3c4f8c4f9c7fc3f086100e3067cdabbc090e293",
+    "internal/contract/contract_test.go": "8408f343b58a0ee41de84f0a7678c5bc746b5d8dc509b19e5748669236f36a69",
+    "schema/015_immutable_contracts.sql": "1f167d62688157de364faa16ce363bfab2815b58f45a07880e571a5b3d7be85b",
+    "services/tcs/commands.go": "f14ee5464642593d0a192c808e81be756856162b53a7fae43b3a559d67d907f0",
+    "services/tcs/subtasks.go": "491f3454f025da7e66c0df94ac976472f5a5632802d5e80975365783d21a1ebc",
+    "test/schema/run.py": "307e621563d071a1aaaab8c74957a6e6ac062e841096ed257ea108abc5a124fd"
+  }
+}

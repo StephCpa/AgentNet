@@ -37,3 +37,10 @@ Network entry points and setup are documented in [`../rpc/README.md`](../rpc/REA
 Standing consent is trusted provisioning, not agent-supplied evidence of user
 consent. `services/identity` now provides OIDC browser login and a human approval/
 revocation page; issuer/subject mappings and permission profiles remain admin-owned.
+
+Contract admission (design 31): apply migration 015 before the updated service.
+New admissions use internal/contract for typed acceptance rules and offline
+JSON Schema 2020-12 compilation. External schema resources are rejected; embed
+required resources in $defs. Contracts and existing task contract references
+are immutable. Exact accepted-command replay precedes the stricter profile.
+This does not implement ART, evidence verification or successful task completion.

@@ -27,6 +27,7 @@ func (c Code) Error() string { return string(c) }
 
 const (
 	Denied             Code = "ANET-AUT-DENIED"
+	ContractInvalid    Code = "ANET-CMD-CONTRACT-INVALID"
 	Invalid            Code = "ANET-CMD-INVALID"
 	Expired            Code = "ANET-CMD-EXPIRED"
 	Conflict           Code = "ANET-CMD-PARAMS-CONFLICT"

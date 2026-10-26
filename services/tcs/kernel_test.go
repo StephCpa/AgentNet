@@ -72,7 +72,7 @@ func (f *fixture) integer(sql string, args ...any) int64 {
 	return n
 }
 func (f *fixture) command() Command {
-	body, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]string{"verifier": "test"}})
+	body, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]any{"verifier": "test", "checks": []string{"schema"}, "on_fail": "report"}})
 	return Command{ID: id("cmd"), Audience: f.cfg.Domain, NotAfter: time.Now().UTC().Add(time.Hour), ContractID: id("con"), ContractVersion: 1, Contract: body, Limits: map[string]string{"money": "10", "tokens": "10", "calls": "10", "messages": "10"}}
 }
 func (f *fixture) sign(v any, key string) Envelope {

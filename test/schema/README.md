@@ -200,3 +200,19 @@ cleanup. It never retries a started command or business assertion. The final
 fresh-cluster run passed MinIO and 4,800 microbenchmark operations (13,200 RPCs,
 zero failures); the cluster stopped. The benchmark still measures root paths,
 not delegated latency or production capacity.
+
+## Contract admission and immutability (design 31)
+
+Apply migrations through 015. The final frozen run passed 41 gates, 157 database
+tests (37 TCS, 8 delivery, 17 execution, 68 RPC, 16 identity, 10 archive plus one
+separate MinIO test), and 18 unit tests; five process helpers are excluded.
+New tests cover typed contract/schema rejection, independent TCS and ICS/GW
+checks, contract/task-reference immutability, new versions, concurrent conflicts,
+and exact recovery of historical admissions before strict new-admission parsing.
+
+Evidence: `test/evidence/2026-10-27/contracts/`. The initial parser admitted a
+reference to a draft-07 resource under a nonstandard schema position. Its probe
+and an intermediate passing run are retained separately; the final graph check
+and regression cases reject it while preserving recursive 2020-12 schemas.
+The final MinIO gate and 4,800-operation microbenchmark passed; the cluster stopped.
+This is not ART, VERIFIED, full contract execution or milestone completion.

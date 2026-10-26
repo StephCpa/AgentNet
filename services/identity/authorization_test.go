@@ -41,7 +41,7 @@ func TestIdentityConsentDrivesRootAcceptance(t *testing.T) {
 				t.Fatal(err)
 			}
 			actor := tcs.Caller{Principal: f.user, Agent: f.agent, Instance: f.instance}
-			contract, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]string{"verifier": "fixture"}})
+			contract, _ := json.Marshal(map[string]any{"deadline": time.Now().UTC().Add(time.Hour), "input_refs": []any{map[string]any{"version": 1, "digest": "sha256:" + strings.Repeat("a", 64)}}, "output_schema": map[string]string{"type": "object"}, "acceptance_policy": map[string]any{"verifier": "fixture", "checks": []string{"schema"}, "on_fail": "report"}})
 			cmd := tcs.Command{ID: "command-" + f.domain, Audience: f.domain, NotAfter: time.Now().UTC().Add(time.Hour), ContractID: "contract-" + f.domain, ContractVersion: 1, Contract: contract, Limits: map[string]string{"money": "5", "tokens": "50", "calls": "10", "messages": "10"}, Root: &tcs.RootRequest{ConsentID: consent, Rights: f.cfg.Profiles["research"].Rights}}
 			command, err := signed.Encode("fixture", key, tcs.Submission{Kind: "anet.command/1", Caller: actor, Command: cmd})
 			if err != nil {

@@ -1,0 +1,3 @@
+package main
+import("fmt";"github.com/agentnet/agentnet/internal/contract";"strings")
+func main(){ b,e:=contract.Parse([]byte(`{"deadline":"2030-01-01T00:00:00Z","input_refs":[{"version":1,"digest":"sha256:`+strings.Repeat("a",64)+`"}],"acceptance_policy":{"verifier":"v","checks":["schema"],"on_fail":"report"},"output_schema":{"definitions":{"legacy":{"$id":"https://anet.invalid/legacy","$schema":"http://json-schema.org/draft-07/schema#","type":"integer"}},"$ref":"#/definitions/legacy"}}`));fmt.Printf("error=%v\n",e);if e==nil{fmt.Printf("referenced draft=%v\n",b.Schema.Ref.DraftVersion)}}

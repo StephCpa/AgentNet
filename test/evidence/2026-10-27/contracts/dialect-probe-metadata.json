@@ -1,0 +1,5 @@
+{
+  "parser_sha256": "f3f01fdbf5e010cfbb1fe0dcff756a434fff2b953293c6ae8d0ed4206e25f80f",
+  "command": "go run ./.local/contract-probe",
+  "expected_bug": "Parse accepts referenced draft-07 resource outside recognized schema keywords"
+}

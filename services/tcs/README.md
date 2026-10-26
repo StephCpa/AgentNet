@@ -147,3 +147,10 @@ requires a terminal, unfrozen child with no HELD reservations, outstanding effec
 delegated balance or unclosed children. It moves the original child B out of parent
 D, adds child S to parent S, and seals child B=S. The immutable result is replayed
 on retries. Cancellation alone never returns budget; remote settlement remains pending.
+
+Contract admission (design 31): apply migration 015 before the updated service.
+New admissions use internal/contract for typed acceptance rules and offline
+JSON Schema 2020-12 compilation. External schema resources are rejected; embed
+required resources in $defs. Contracts and existing task contract references
+are immutable. Exact accepted-command replay precedes the stricter profile.
+This does not implement ART, evidence verification or successful task completion.

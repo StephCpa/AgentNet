@@ -84,3 +84,5 @@ RequestFetch(requester, task, artifact_ref | evidence_kind, purpose):
 - 首版为**策略型**选择（规则表：敏感级 × 接收方能力 × 契约要求 → L1/L2/L3），不做学习型压缩；学习型方案作为消融实验进 13 §5。
 - 任何压缩方案的评估指标是**接收者行动正确率与最终任务结果**（Bayes 充分性反例的教训，总体方案 §2.2），压缩率/语义相似度只作过程指标。
 - 硬约束字段在任何表示级中原样保留（§1），由 GW 在出站再校验一次（I10 的组成部分）。
+
+实施边界（31）：契约版本固定与输出 schema 编译已接入新接纳，详见 [31](31-contract-admission-and-immutability.md)。本文件的 ART 披露继承、清单版本化、受信验证器及 VERIFIED 四元组尚未实现；不能将 schema 编译成功或 effect COMMITTED 解释为验收通过。

@@ -2,7 +2,7 @@
 
 状态：**v0.2.2 已修正本轮发现，M0 尚未退出**（2026-10-27）。初审基线 `b0b74cd`，本轮复审基线 `d6b219c`。总体架构可保留；“全部 P1/P2 已完成三层验证”和“M3 预期冗余”两项旧结论撤回。
 
-后续进展：本文件保留 `88dead1` 的复审快照；随后完成的单域 Go 事务内核、22 项数据库集成测试及 JCS 三语言验证见 [16](16-single-domain-kernel.md)。下表“尚未完成”按该复审时刻理解，最新实施范围见 16–30，包含本域投递、外部目标恢复、认证与用户同意、凭证生命周期、SDK 网关、本地原子事务与分区归档；[24](24-local-transactions.md) 记录 local-tx；[25](25-partition-archive.md) 记录归档及真实对象存储验证；[26](26-control-microbenchmark.md) 记录首份控制路径微基准。[27](27-authority-chain-validation.md) 记录权威父链校验；[28](28-atomic-subtask-creation.md) 记录随后实现的单域原子委托、跨主体 actor 与预算转移；[29](29-subtask-closeout-and-cancellation.md) 记录本域持久取消、子账本结清/归还及进程恢复；[30](30-gateway-subtask-ingress.md) 接通子任务 GW 签名入口与中间相位恢复。
+后续进展：本文件保留 `88dead1` 的复审快照；随后完成的单域 Go 事务内核、22 项数据库集成测试及 JCS 三语言验证见 [16](16-single-domain-kernel.md)。下表“尚未完成”按该复审时刻理解，最新实施范围见 16–31，包含本域投递、外部目标恢复、认证与用户同意、凭证生命周期、SDK 网关、本地原子事务与分区归档；[24](24-local-transactions.md) 记录 local-tx；[25](25-partition-archive.md) 记录归档及真实对象存储验证；[26](26-control-microbenchmark.md) 记录首份控制路径微基准。[27](27-authority-chain-validation.md) 记录权威父链校验；[28](28-atomic-subtask-creation.md) 记录随后实现的单域原子委托、跨主体 actor 与预算转移；[29](29-subtask-closeout-and-cancellation.md) 记录本域持久取消、子账本结清/归还及进程恢复；[30](30-gateway-subtask-ingress.md) 接通子任务 GW 签名入口与中间相位恢复；[31](31-contract-admission-and-immutability.md) 修复 null/错误 schema 接纳和契约可变缺口，新增离线编译及历史恢复兼容，完整证据验收仍待实现。
 
 ## 1. 本轮发现与处理
 
