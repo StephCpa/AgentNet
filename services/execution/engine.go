@@ -93,7 +93,7 @@ func (e *Engine) startSend(ctx context.Context, j *job) error {
 	err = tx.QueryRow(ctx, `SELECT g.grant_id FROM effects f JOIN grants g ON g.grant_id=f.dispatch_grant_id
  JOIN tasks t ON t.task_id=f.task_id JOIN agent_instances i ON i.instance_id=f.dispatch_actor_instance_id
  JOIN agents a ON a.agent_id=i.agent_id JOIN principals p ON p.principal_id=a.owner_principal_id
- WHERE f.effect_id=$1 AND g.task_id=f.task_id AND g.subject_principal_id=p.principal_id AND t.owner_principal_id=p.principal_id
+ WHERE f.effect_id=$1 AND g.task_id=f.task_id AND g.subject_principal_id=t.owner_principal_id
  AND g.actor_agent_id=a.agent_id AND (g.actor_instance_id IS NULL OR g.actor_instance_id=i.instance_id)
  AND g.status='active' AND g.revoked_at IS NULL
  AND g.not_before<=clock_timestamp() AND g.expires_at>=clock_timestamp()

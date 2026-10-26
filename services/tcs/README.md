@@ -1,6 +1,7 @@
 # Single-domain TCS transaction kernel
 
-Implementation: `commands.go`, `effects.go`, `lifecycle.go`; migration: `003_tcs_kernel.sql`.
+Implementation: `commands.go`, `effects.go`, `lifecycle.go`, `subtasks.go`; apply
+the implementation migrations through `013_subtasks.sql`.
 This package runs real PostgreSQL transactions using pgx. It is a library, not an
 unauthenticated HTTP server. The gRPC transport in `services/rpc` authenticates
 Caller and maps signed envelopes without overriding fields from unsigned JSON.
@@ -10,6 +11,7 @@ Caller and maps signed envelopes without overriding fields from unsigned JSON.
 | Operation | Durable behavior |
 |---|---|
 | Submit | Verify GW command signature, serialize command ID, check expiry after waits, atomically create contract/task/four accounts/inbox/receipt/event/outbox; retries return original task and receipt |
+| CreateSubtask | Signed parent lease/version/recipient/contract/rights/allocation binding; recipient intersection and H→D/child accounts commit with child grant, receipt and outbox; exact replay returns original facts |
 | GetTask | Authorized status/version/epoch snapshot |
 | AcquireLease / RenewLease | Bind authenticated instance; preserve epoch on renewal; reject expired renewal; takeover increments epoch after expiry + grace |
 | Reserve | Task and account locks; S+H+D admission; exact NUMERIC amounts, no floating-point money |
@@ -25,9 +27,9 @@ kernel does not truncate real spend to manufacture a budget guarantee.
 
 Root tasks are owned by the authenticated principal. The identity must be a live
 registered instance of an active agent owned by that principal in this domain.
-Persisted grants must be root grants with matching subject/actor/task/action/resource,
-live temporal bounds and no revocation. Delegated grants are explicitly rejected
-until chain checking and delegated-task ownership are implemented.
+Persisted grants must match subject/actor/task/action/resource and pass the full
+authority-chain checks. Delegated tasks keep the original subject and assign a
+separate recipient actor; owning the task is not permission to impersonate its grant actor.
 
 ## Signatures and trust boundary
 
@@ -138,5 +140,7 @@ Authority-chain increment (design 27): T2 loads and locks the complete parent
 grant path, validates each link and root consent, and binds the complete chain
 digest for child grants. It rechecks validity after budget/business lock waits.
 Exact effect replay still returns the original fact after ancestor revocation.
-Public child creation, recipient-policy storage and budget transfer remain pending;
-network identity access still requires the caller principal to own the task.
+Design 28 adds public signed child creation, immutable recipient policies,
+cross-owner actor access and parent H→D/child B transfer. Apply migration 013.
+Budget closeout/return and cancellation propagation remain pending; D is retained
+until explicit closeout, including after cancellation or terminal business results.

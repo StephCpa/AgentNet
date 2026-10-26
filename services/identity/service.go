@@ -75,6 +75,7 @@ func New(ctx context.Context, db *pgxpool.Pool, c Config) (*Service, error) {
 			limits[dim] = p.TaskLimits[dim]
 		}
 		p.TaskLimits = limits
+		p.Rights.DelegationScope = append([]string(nil), p.Rights.DelegationScope...)
 		p.Rights.Actions = append([]string(nil), p.Rights.Actions...)
 		p.Rights.Resources = append([]string(nil), p.Rights.Resources...)
 		p.Rights.DataClasses = append([]string(nil), p.Rights.DataClasses...)

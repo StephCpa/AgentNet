@@ -138,7 +138,7 @@ message AdmissionResult {
   Receipt accepted_receipt = 3;         // EXISTING 时返回原回执
   string error_code = 4;                // ANET-CMD-*
   string error_message = 5;
-  string root_grant_id = 6;
+  string root_grant_id = 6; // accepted task grant: root for SubmitCommand, child for CreateSubtask
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +158,9 @@ message CreateSubtaskRequest {
   }
   repeated BudgetAllocation allocations = 7;
   int64 expected_task_version = 8;
+  // anet.subtask/1 signed by the trusted command issuer; legacy fields 1–8
+  // must be absent. Binds parent lease/epoch, recipient, deadline and allocations.
+  anet.common.v1.SignedEnvelope signed_command = 9;
 }
 
 // ---------------------------------------------------------------------------

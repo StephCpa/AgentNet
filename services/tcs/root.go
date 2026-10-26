@@ -27,6 +27,9 @@ func (s *Store) insertRoot(ctx context.Context, tx pgx.Tx, c Caller, cmd Command
 	if cmd.Root == nil || cmd.Root.ConsentID != p.ConsentID {
 		return Denied
 	}
+	if err := ValidateDelegableContract(cmd.Contract, p.Rights); err != nil {
+		return err
+	}
 	a, _ := json.Marshal(cmd.Root.Rights)
 	b, _ := json.Marshal(p.Rights)
 	ad, _ := canonical.Digest(a)

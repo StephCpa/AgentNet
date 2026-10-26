@@ -144,3 +144,20 @@ enabled; correctness counts remain 123 database tests and 8 Go unit tests.
 The additional performance/report gates are counted separately from those tests.
 Evidence: `test/evidence/2026-10-27/microbench/`; the 4,800-operation report is a
 local closed-loop reference, not the M3 task comparison or production capacity.
+
+## Atomic subtask creation (design 28)
+
+Migration 013 and the frozen suite passed 39 gates, 137 database tests (33 TCS,
+8 delivery, 17 execution, 52 RPC, 16 identity, 10 archive, 1 separate MinIO),
+and 13 Go unit tests; four process helpers are excluded. Nine new top-level
+database tests cover actual signed child creation, original subject versus
+recipient actor, budget transfer/replay/rollback, nested and zero allocations,
+revocation, concurrency limits and expiry after waits, plus visible consent.
+Existing send tests now exercise actual delegated tasks.
+
+Evidence: `test/evidence/2026-10-27/subtasks/`. A prior frozen run failed only
+Windows TempDir cleanup on instancekey.exe; its log and the successful native
+DELETE-access recovery probe are retained. Unchanged sources passed a fresh
+cluster run including MinIO and 4,800 benchmark operations. The benchmark
+measures root control paths, not delegation cost. Child closeout, cancellation
+propagation and cross-domain execution remain pending.

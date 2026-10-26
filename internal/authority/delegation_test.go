@@ -85,7 +85,7 @@ func TestChainDigestBindsAncestorsAndPreservesRoot(t *testing.T) {
 	}
 }
 func TestChainRejectsUnknownRightsFields(t *testing.T) {
-	if _, err := strictRights([]byte(`{"actions":["read"],"temporal":{"expires_at":"hidden"}}`)); err == nil {
+	if _, err := DecodeRights([]byte(`{"actions":["read"],"temporal":{"expires_at":"hidden"}}`)); err == nil {
 		t.Fatal("unknown constraint silently discarded")
 	}
 }

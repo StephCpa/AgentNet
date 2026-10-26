@@ -1,0 +1,76 @@
+=== RUN   TestRPCMicrobenchmark
+=== RUN   TestRPCMicrobenchmark/gateway_new/c1/r1
+    microbench_test.go:143: gateway_new c=1 n=200 69.2 op/s p50=14017.5us p95=17093.7us p99=19365.3us
+=== RUN   TestRPCMicrobenchmark/gateway_new/c8/r1
+    microbench_test.go:143: gateway_new c=8 n=200 354.0 op/s p50=22125.8us p95=25569.9us p99=27307.8us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c1/r1
+    microbench_test.go:143: gateway_replay c=1 n=200 152.4 op/s p50=6451.8us p95=7674.1us p99=8009.2us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c8/r1
+    microbench_test.go:143: gateway_replay c=8 n=200 897.2 op/s p50=8745.7us p95=10571.3us p99=11084.3us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c1/r1
+    microbench_test.go:143: reserve_shared_account c=1 n=200 268.6 op/s p50=3731.1us p95=4322.3us p99=4684.6us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c8/r1
+    microbench_test.go:143: reserve_shared_account c=8 n=200 369.8 op/s p50=20599.6us p95=26334.3us p99=28522.0us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c1/r1
+    microbench_test.go:143: local_roundtrip c=1 n=200 17.9 op/s p50=55237.3us p95=60595.4us p99=66569.8us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c8/r1
+    microbench_test.go:143: local_roundtrip c=8 n=200 114.5 op/s p50=69378.1us p95=78850.9us p99=83476.9us
+=== RUN   TestRPCMicrobenchmark/gateway_new/c8/r2
+    microbench_test.go:143: gateway_new c=8 n=200 374.2 op/s p50=20834.6us p95=24200.4us p99=26478.4us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c1/r2
+    microbench_test.go:143: gateway_replay c=1 n=200 84.6 op/s p50=6314.5us p95=42005.4us p99=124902.4us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c8/r2
+    microbench_test.go:143: gateway_replay c=8 n=200 975.0 op/s p50=8024.1us p95=10012.5us p99=12055.3us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c1/r2
+    microbench_test.go:143: reserve_shared_account c=1 n=200 275.0 op/s p50=3571.4us p95=4178.7us p99=4414.9us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c8/r2
+    microbench_test.go:143: reserve_shared_account c=8 n=200 369.3 op/s p50=20548.0us p95=26983.8us p99=29243.9us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c1/r2
+    microbench_test.go:143: local_roundtrip c=1 n=200 18.0 op/s p50=55196.5us p95=59848.2us p99=62492.5us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c8/r2
+    microbench_test.go:143: local_roundtrip c=8 n=200 117.9 op/s p50=64413.5us p95=71091.1us p99=135807.5us
+=== RUN   TestRPCMicrobenchmark/gateway_new/c1/r2
+    microbench_test.go:143: gateway_new c=1 n=200 58.2 op/s p50=16706.3us p95=22582.4us p99=26252.3us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c1/r3
+    microbench_test.go:143: gateway_replay c=1 n=200 175.5 op/s p50=5633.4us p95=6524.2us p99=6919.0us
+=== RUN   TestRPCMicrobenchmark/gateway_replay/c8/r3
+    microbench_test.go:143: gateway_replay c=8 n=200 938.5 op/s p50=8103.8us p95=10153.2us p99=11991.8us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c1/r3
+    microbench_test.go:143: reserve_shared_account c=1 n=200 275.2 op/s p50=3574.0us p95=4206.8us p99=4501.2us
+=== RUN   TestRPCMicrobenchmark/reserve_shared_account/c8/r3
+    microbench_test.go:143: reserve_shared_account c=8 n=200 359.4 op/s p50=21580.4us p95=25949.6us p99=29595.0us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c1/r3
+    microbench_test.go:143: local_roundtrip c=1 n=200 17.0 op/s p50=59005.1us p95=61908.6us p99=65220.2us
+=== RUN   TestRPCMicrobenchmark/local_roundtrip/c8/r3
+    microbench_test.go:143: local_roundtrip c=8 n=200 118.8 op/s p50=66713.9us p95=73002.9us p99=75847.8us
+=== RUN   TestRPCMicrobenchmark/gateway_new/c1/r3
+    microbench_test.go:143: gateway_new c=1 n=200 59.1 op/s p50=16651.5us p95=19248.2us p99=20098.0us
+=== RUN   TestRPCMicrobenchmark/gateway_new/c8/r3
+    microbench_test.go:143: gateway_new c=8 n=200 294.4 op/s p50=23184.7us p95=39950.2us p99=93155.6us
+--- PASS: TestRPCMicrobenchmark (92.98s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c1/r1 (3.36s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c8/r1 (0.87s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c1/r1 (5.25s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c8/r1 (4.01s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c1/r1 (1.02s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c8/r1 (0.92s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c1/r1 (12.46s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c8/r1 (2.31s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c8/r2 (0.86s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c1/r2 (6.48s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c8/r2 (4.04s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c1/r2 (0.98s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c8/r2 (0.92s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c1/r2 (12.33s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c8/r2 (2.19s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c1/r2 (3.94s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c1/r3 (4.91s)
+    --- PASS: TestRPCMicrobenchmark/gateway_replay/c8/r3 (3.96s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c1/r3 (0.99s)
+    --- PASS: TestRPCMicrobenchmark/reserve_shared_account/c8/r3 (0.97s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c1/r3 (13.04s)
+    --- PASS: TestRPCMicrobenchmark/local_roundtrip/c8/r3 (2.23s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c1/r3 (3.89s)
+    --- PASS: TestRPCMicrobenchmark/gateway_new/c8/r3 (1.04s)
+PASS
+ok  	github.com/agentnet/agentnet/services/rpc	95.332s

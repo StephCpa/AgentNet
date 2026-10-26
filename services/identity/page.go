@@ -47,7 +47,7 @@ var pageTemplate = template.Must(template.New("control").Parse(`<!doctype html>
 <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>退出登录</button></form>
 <h2>批准新授权</h2><p>每份授权仅适用于所选 Agent。额度是每个任务的上限；有效期内，该 Agent 可据此创建多个任务。</p>
 {{$root:=.}}{{range .Profiles}}<section><h3>{{.Name}}</h3>
-<dl><dt>允许的操作</dt><dd>{{range .Rights.Actions}}<code>{{.}}</code> {{end}}</dd><dt>允许的资源</dt><dd>{{range .Rights.Resources}}<code>{{.}}</code> {{end}}</dd><dt>允许的数据类别</dt><dd>{{range .Rights.DataClasses}}{{.}} {{end}}</dd><dt>执行范围</dt><dd>本域、通过网关执行，不允许向其他 Agent 委托。</dd></dl>
+<dl><dt>允许的操作</dt><dd>{{range .Rights.Actions}}<code>{{.}}</code> {{end}}</dd><dt>允许的资源</dt><dd>{{range .Rights.Resources}}<code>{{.}}</code> {{end}}</dd><dt>允许的数据类别</dt><dd>{{range .Rights.DataClasses}}{{.}} {{end}}</dd><dt>执行范围</dt><dd>本域、通过网关执行。{{if gt .Rights.DepthLeft 0}}允许向其他 Agent 委托，最多 {{.Rights.DepthLeft}} 层；委托类型：{{range .Rights.DelegationScope}}{{.}} {{end}}。{{else}}不允许向其他 Agent 委托。{{end}}</dd></dl>
 <form method="post" action="/consents"><input type="hidden" name="csrf" value="{{$root.CSRF}}"><input type="hidden" name="action" value="create"><input type="hidden" name="profile" value="{{.ID}}">
 <label>Agent <select required name="agent">{{range $root.Agents}}<option value="{{.ID}}">{{.Handle}}</option>{{end}}</select></label>
 <label>限定实例（留空表示该 Agent 的所有已登记实例）<input name="instance" placeholder="实例编号"></label>
@@ -55,7 +55,7 @@ var pageTemplate = template.Must(template.New("control").Parse(`<!doctype html>
 {{range $dim,$amount:=.TaskLimits}}<label>{{$dim}} 每任务额度（最多 {{$amount}}）<input name="{{$dim}}" value="{{$amount}}" inputmode="decimal" required></label>{{end}}
 <button>批准以上权限与额度</button></form></section>{{end}}
 <h2>已有授权</h2>{{range .Consents}}<section><h3><code>{{.ID}}</code></h3><p>Agent：<code>{{.Agent}}</code>{{if .Instance}} · 限定实例：<code>{{.Instance}}</code>{{end}}</p><p>到期：{{.Expires.UTC.Format "2006-01-02 15:04:05 UTC"}}</p>
-<p>操作：{{range .Rights.Actions}}{{.}} {{end}} · 资源：{{range .Rights.Resources}}{{.}} {{end}} · 数据类别：{{range .Rights.DataClasses}}{{.}} {{end}}</p><p>每任务额度：{{range $dim,$amount:=.Limits}}{{$dim}} {{$amount}}　{{end}}</p>
+<p>操作：{{range .Rights.Actions}}{{.}} {{end}} · 资源：{{range .Rights.Resources}}{{.}} {{end}} · 数据类别：{{range .Rights.DataClasses}}{{.}} {{end}}</p><p>委托：{{if gt .Rights.DepthLeft 0}}最多 {{.Rights.DepthLeft}} 层；类型：{{range .Rights.DelegationScope}}{{.}} {{end}}{{else}}不允许{{end}}</p><p>每任务额度：{{range $dim,$amount:=.Limits}}{{$dim}} {{$amount}}　{{end}}</p>
 {{if .Revoked}}<strong>已撤销</strong>{{else}}<form method="post" action="/consents"><input type="hidden" name="csrf" value="{{$root.CSRF}}"><input type="hidden" name="action" value="revoke"><input type="hidden" name="consent" value="{{.ID}}"><input type="hidden" name="version" value="{{.Version}}"><button>撤销授权</button></form>{{end}}</section>{{else}}<p>尚无授权。</p>{{end}}
 <small>撤销会阻止新操作。已发出的业务请求仍需对账；已发生的费用不会被撤销。</small>
 <h2>运行实例</h2><p>实例私钥由运行实例本地保管。登记或轮换时，只提交公钥证书请求（CSR），不要上传私钥。</p>

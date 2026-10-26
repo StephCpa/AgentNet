@@ -165,3 +165,8 @@ service. Other services that check only the CA chain do not inherit this immedia
 revocation behavior. Automatic renewal is provided separately by design 23;
 node attestation, CA rollover and cross-domain revocation remain pending.
 Owner-control evidence: `test/evidence/2026-10-27/credentials/`.
+
+Design 28 permits explicitly configured delegation depth and task-type scopes in
+consent profiles. The approval page and saved-consent view display both before
+and after consent. Existing depth-zero profiles remain non-delegable. A root task
+also needs compatible contract delegation limits before its grant is issued.

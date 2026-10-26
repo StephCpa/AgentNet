@@ -23,7 +23,7 @@ func (r networkResolver) Resolve(ctx context.Context, e tcs.Envelope) (tcs.Effec
 }
 
 func TestRPCExecutionConsentAtSend(t *testing.T) {
-	for _, change := range []string{"live", "revoked", "version", "data-class", "domain", "chain-live", "chain-revoked"} {
+	for _, change := range []string{"live", "revoked", "version", "data-class", "domain", "chain-live", "chain-revoked", "delegated-live", "delegated-subject-revoked"} {
 		t.Run(change, func(t *testing.T) {
 			f := setup(t)
 			var a *tcsv1.AdmissionResult
@@ -32,6 +32,8 @@ func TestRPCExecutionConsentAtSend(t *testing.T) {
 				c := grantChain(t, f)
 				a = c[2]
 				ancestor = c[1].RootGrantId
+			} else if change == "delegated-live" || change == "delegated-subject-revoked" {
+				a, f = createChild(t, f)
 			} else {
 				a = f.submit()
 			}
@@ -73,6 +75,8 @@ func TestRPCExecutionConsentAtSend(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch change {
+			case "delegated-subject-revoked":
+				f.exec("UPDATE principals SET revoked_at=clock_timestamp() WHERE principal_id=(SELECT owner_principal_id FROM tasks WHERE task_id=$1)", a.TaskId)
 			case "chain-revoked":
 				f.exec("UPDATE grants SET revoked_at=clock_timestamp(),status='revoked' WHERE grant_id=$1", ancestor)
 			case "revoked":
@@ -89,7 +93,7 @@ func TestRPCExecutionConsentAtSend(t *testing.T) {
 			}
 			business := f.count(`SELECT count(*) FROM mockbiz.calls WHERE namespace=$1`, f.domain)
 			held := f.count(`SELECT count(*) FROM budget_reservations WHERE effect_id=$1 AND state='HELD'`, proposal.Effect.EffectId)
-			if change == "live" || change == "chain-live" {
+			if change == "live" || change == "chain-live" || change == "delegated-live" {
 				snapshot, err := f.control.GetTask(f.ctx, &tcsv1.GetTaskRequest{TaskId: a.TaskId})
 				if err != nil || business != 1 || held != 0 || len(snapshot.GetEffects()) != 1 || snapshot.Effects[0].State != "COMMITTED" {
 					t.Fatalf("live authorized execution: business=%d held=%d snapshot=%v error=%v", business, held, snapshot, err)

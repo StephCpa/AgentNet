@@ -130,3 +130,7 @@ erDiagram
 ## 归档目录（迁移 012）
 
 `archive_jobs` 记录分区身份、UTC 边界、存储绑定与 DETACHED/EXPORTED/COMPLETE 阶段；`archive_chunks` 记录分片摘要、对象版本、行数及续传游标；`archive_task_index` 将域/任务映射到分片。三者纳入数据库备份，冻结源表与它们共同承担归档恢复。作业使用独立维护角色；不能让普通 worker 获得分区 DDL 权限。冷热查询与失败恢复见 [25](25-partition-archive.md)。
+
+## 单域委托实现增量（28）
+
+迁移 `013_subtasks.sql` 增加 `recipient_policies`（不可改写正文的接收方策略）、`task_delegations`（创建者/接收策略/子 grant 绑定）和 `delegation_allocations`（原预留到父子账户的分配事实）。每任务/维度额外唯一索引覆盖根和子账户；根用户仍为 task owner，子 actor 可以属于其他 principal。创建原子退出父 H、增加父 D 并建立等额子 B；子域结算/归还仍待实现，D 不自动释放。

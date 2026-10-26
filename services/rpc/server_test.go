@@ -456,7 +456,7 @@ func TestRPCLeaseIdentityAndCrossOwner(t *testing.T) {
 	code(t, err, codes.PermissionDenied)
 	_, err = tcsv1.NewTaskControlClient(f.connect(f.adapterCert)).GetTask(f.ctx, &tcsv1.GetTaskRequest{TaskId: a.TaskId})
 	code(t, err, codes.PermissionDenied)
-	if _, err = f.control.CreateSubtask(f.ctx, &tcsv1.CreateSubtaskRequest{ParentTaskId: a.TaskId}); status.Code(err) != codes.Unimplemented {
+	if _, err = f.control.CreateSubtask(f.ctx, &tcsv1.CreateSubtaskRequest{ParentTaskId: a.TaskId}); status.Code(err) != codes.InvalidArgument {
 		t.Fatal(err)
 	}
 }

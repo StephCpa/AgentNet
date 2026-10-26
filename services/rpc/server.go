@@ -450,11 +450,30 @@ func (p *policy) Revoke(ctx context.Context, r *icsv1.RevokeRequest) (*icsv1.Rev
 		return nil, err
 	}
 	if !strict(r) || r.GetGrantId() == "" {
-		return nil, status.Error(codes.Unimplemented, "only owned root-grant revocation is implemented")
+		return nil, status.Error(codes.Unimplemented, "grant revocation requires task-owner or assigned-actor authority")
 	}
 	at, err := p.service.RevokeGrant(ctx, who, r.GetGrantId(), r.Reason)
 	if err != nil {
 		return nil, rpcError(err)
 	}
 	return &icsv1.RevokeResult{EffectiveAt: timestamppb.New(at)}, nil
+}
+
+func (c *control) CreateSubtask(ctx context.Context, r *tcsv1.CreateSubtaskRequest) (*tcsv1.AdmissionResult, error) {
+	who, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !strict(r, 9) {
+		return nil, rpcError(tcs.Invalid)
+	}
+	command, err := envelope(r.SignedCommand)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	a, err := c.store.CreateSubtask(ctx, who, command)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return c.admissionResult(ctx, who, a)
 }

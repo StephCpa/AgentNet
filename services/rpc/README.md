@@ -7,7 +7,7 @@ the registered certificate fingerprint, exact URI, live principal/agent/instance
 and any required role in PostgreSQL. CN, metadata and request body identity are
 not authentication inputs. Existing TLS channels do not bypass revocation checks.
 
-Apply migrations 001–012 and provision the domain, identities, certificate
+Apply migrations 001–013 and provision the domain, identities, certificate
 registrations and standing `root_consents` through a trusted control plane. These
 administrative operations are not exposed to workers. Consent limits are **per
 task**, not aggregate user quotas. A consent update must increase its version.
@@ -58,19 +58,29 @@ require `target_ttl` (a Go duration such as `24h`). There is no plaintext listen
 | InstanceCredentials (optional) | Managed-instance status, two-phase renewal/activation and confirmed abandonment; pending keys can only activate |
 | ICS IssueRootPermit | Signed GW command; exact consent subset and per-task ceilings; short-lived signed permit |
 | TCS SubmitCommand | Only signed command + signed root permit; root grant, task, accounts, receipt and notification commit in T1 |
-| TCS GetTask | Owner-checked consistent task/effects/receipts/four-dimension budget snapshot |
+| TCS CreateSubtask | Only signed `anet.subtask/1` command (request field 9); parent lease/epoch/version, immutable recipient policy, rights and four-dimensional H→D/child B transfer |
+| TCS GetTask | Task owner, assigned Agent or direct creating Agent; consistent task/effects/receipts/four-dimension budget snapshot |
 | TCS AcquireLease / RenewLease | Worker identity comes from mTLS; optional body instance must match |
 | TCS ReserveBudget / ReleaseReservation | Unbound reservations only; no caller-supplied effect/attempt binding or soft TTL |
-| ICS Decide | Authoritative root grant/consent snapshot, configured action/resource/class, signed decision persisted |
+| ICS Decide | Authoritative full grant/consent chain, distinct subject/actor, configured action/resource/class, signed decision persisted |
 | TCS AdmitEffect | Signed ICS decision and proposal bindings; unsigned legacy authorization rejected |
 | TCS CancelTask | Durable cancellation, repeated cancellation returns original version |
 | TCS ReportEffectResult | Live adapter role + signed adapter fact; late settlement remains possible after cancellation |
-| ICS Revoke | Owned root grant via `grant_id`; repeated revocation returns original effective time |
+| ICS Revoke | Task owner or delegated grant actor via `grant_id`; repeated revocation returns original effective time |
 
 Unknown protobuf fields and unsupported legacy request fields are rejected. ANET
 codes use gRPC `ErrorInfo`; database internals are not returned. Other declared
-RPCs return `Unimplemented`, including delegation, registration, event streaming
+RPCs return `Unimplemented`, including registration, event streaming
 and token exchange. DIR bindings are generated but no DIR server is registered.
+
+For child creation, the trusted command issuer signs `tcs.SubtaskSubmission` and
+its `tcs.SubtaskCommand` (see `services/tcs/subtasks.go`). The authenticated caller
+must match that envelope. Root consent and contract explicitly permit delegation;
+`recipient_policies` is trusted operator provisioning, never request-body policy.
+Reserve each positive dimension with purpose `subtask`, then bind its reservation
+and exact amount in the command; zero dimensions use an empty reservation ID.
+Only the same domain is supported. The SDK Gateway subtask signing path, policy
+management UI, budget closeout and task-tree cancellation propagation are pending.
 
 `anetd` runs TCS/ICS and optionally the SDK Gateway (design 22). Outbox delivery and the execution engine remain separate
 components; starting this daemon alone does not execute external business effects.

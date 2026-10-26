@@ -126,7 +126,7 @@ COMMIT;
 
 ## 7. 事务锁序表（v0.2 新增；评审 §十二）
 
-所有预算相关事务按**tasks → grants（T2 全父链共享锁）→ root_consents → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）。27 的实现先发现有界路径，按 grant_id 排序锁住全部祖先，重读后锁根同意；账户等待期间保留这些锁并复核时间窗。下表的委托事务仍属待实现设计。
+所有预算相关事务按**tasks → grants（T2 全父链共享锁）→ root_consents → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）。27 的实现先发现有界路径，按 grant_id 排序锁住全部祖先，重读后锁根同意；账户等待期间保留这些锁并复核时间窗。28 实现单域 CreateSubtask；跨域 tranche 与子账本结清仍待实现。
 
 | 事务 | 锁序 |
 |---|---|
@@ -135,7 +135,8 @@ COMMIT;
 | T3 取消 | `tasks`（单行） |
 | Reserve | `tasks`（FOR UPDATE，deadline/取消检查）→ `budget_accounts` → 新预留 |
 | Settle / Release | 非锁定读取预留定位账户 → `tasks` → `budget_accounts` → `budget_reservations`；锁后复核归属，改变则回滚重试 |
-| Delegate tranche | 父子 `tasks`（已存在者按 ID）→ 父子 `budget_accounts`（按 ID）→ 父预留；新子对象按 FK 顺序插入 |
+| CreateSubtask（单域，28） | 父 `tasks` → 全父链 `grants` → 根 `root_consents` → `recipient_policies` → 父账户按 ID → 父预留按 ID；新子对象按 FK 顺序插入，所有写入后再次复核期限/身份/租约 |
+| Delegate tranche（跨域设计） | 父子 `tasks`（已存在者按 ID）→ 父子 `budget_accounts`（按 ID）→ 父预留；新子对象按 FK 顺序插入 |
 | 子域结算/归还上报 | `tasks` → 父 `budget_accounts` → `budget_reservations`；消息幂等键与账本更新同事务 |
 
 

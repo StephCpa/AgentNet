@@ -174,7 +174,7 @@ func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *Roo
 
 func (s *Store) Reserve(ctx context.Context, c Caller, taskID, d, purpose, a string) (Reservation, error) {
 	out := Reservation{Dimension: d, Amount: a, State: "HELD"}
-	if !dimension(d) || !amount(a, true) || purpose != "tool_call" {
+	if !dimension(d) || !amount(a, true) || (purpose != "tool_call" && purpose != "subtask") {
 		return out, Invalid
 	}
 	tx, err := s.begin(ctx)
@@ -187,7 +187,7 @@ func (s *Store) Reserve(ctx context.Context, c Caller, taskID, d, purpose, a str
 		return out, err
 	}
 	var account string
-	err = tx.QueryRow(ctx, `SELECT account_id FROM budget_accounts WHERE task_id=$1 AND dimension=$2 AND parent_account_id IS NULL FOR UPDATE`, taskID, d).Scan(&account)
+	err = tx.QueryRow(ctx, `SELECT account_id FROM budget_accounts WHERE task_id=$1 AND dimension=$2 FOR UPDATE`, taskID, d).Scan(&account)
 	if err != nil {
 		return out, err
 	}

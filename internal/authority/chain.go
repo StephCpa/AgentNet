@@ -35,8 +35,9 @@ func (c *Chain) ValidAt(now time.Time) bool {
 }
 func (c *Chain) Live(ctx context.Context, tx pgx.Tx) (bool, error) {
 	var now time.Time
-	err := tx.QueryRow(ctx, "SELECT clock_timestamp()").Scan(&now)
-	return err == nil && c.ValidAt(now), err
+	var subjectLive bool
+	err := tx.QueryRow(ctx, "SELECT clock_timestamp(),EXISTS(SELECT 1 FROM principals WHERE principal_id=$1 AND revoked_at IS NULL)", c.Leaf.Subject).Scan(&now, &subjectLive)
+	return err == nil && subjectLive && c.ValidAt(now), err
 }
 func (c *Chain) Digest() (string, error) {
 	// Preserve existing root decision/effect digests across this upgrade.
@@ -52,7 +53,7 @@ func (c *Chain) Digest() (string, error) {
 	}
 	return canonical.Digest(raw)
 }
-func strictRights(raw []byte) (Rights, error) {
+func DecodeRights(raw []byte) (Rights, error) {
 	var r Rights
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
@@ -77,7 +78,7 @@ func node(ctx context.Context, tx pgx.Tx, id string) (chainNode, error) {
 	if err != nil {
 		return n, err
 	}
-	g.Rights, err = strictRights(raw)
+	g.Rights, err = DecodeRights(raw)
 	g.NotBefore, g.ExpiresAt = g.NotBefore.UTC(), g.ExpiresAt.UTC()
 	return n, err
 }
@@ -154,7 +155,7 @@ func LockChain(ctx context.Context, tx pgx.Tx, id string, requireConsent bool) (
 		if err != nil {
 			return nil, err
 		}
-		ceiling, err := strictRights(raw)
+		ceiling, err := DecodeRights(raw)
 		if err != nil {
 			return nil, err
 		}

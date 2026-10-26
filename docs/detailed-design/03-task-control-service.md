@@ -94,6 +94,7 @@ v0.2 接口变更（详见 proto）：
 | 方法 | 变更 |
 |---|---|
 | `SubmitCommand` | 增 `not_after`；返回幂等语义不变 |
+| `CreateSubtask` | 父任务版本 | 签名期限、expected_version、租约/epoch、契约/权限/接收方/预留 | 父版本+1，子版本=1 | 期限内返回原子任务/grant/ACCEPTED 回执 |
 | `AdmitEffect` | 增 `lease_id`、`expected_task_version`、`reservations[]`（按维度）、`authz`（绑定式授权决定，§6.2） |
 | 其余方法 | 不变 |
 
@@ -203,7 +204,8 @@ BEGIN;                                        -- 锁序：tasks → accounts(字
   -- 授权决定绑定（评审 §5.2）：决定必须与本次操作逐字段一致（ICS→TCS 可信通道/签名句柄）
   CheckAuthzBinding(prop.authz, prop):
       authz.allow = TRUE
-      AND authz.subject/actor   == 已验证调用身份
+      AND authz.subject         == 权威 tasks.owner_principal_id（原用户）
+      AND authz.actor          == 已认证调用 Agent/实例（委托时可属于另一 principal）
       AND authz.task_id         == prop.task_id
       AND authz.action/resource == prop.target.action/resource
       AND authz.params_digest   == prop.params_digest
@@ -270,6 +272,7 @@ RETURN {t.cancel_version};
 | API | 读版本 | 检查 | 成功递增 | 重复请求返回 |
 |---|---|---|---|---|
 | `SubmitCommand` | —（新任务） | `not_after`、契约完整性 | `task_version=1` | EXISTING + 原 ACCEPTED 回执 |
+| `CreateSubtask` | 父任务版本 | 签名期限、expected_version、租约/epoch、契约/权限/接收方/预留 | 父版本+1，子版本=1 | 期限内返回原子任务/grant/ACCEPTED 回执 |
 | `AdmitEffect` | `tasks.task_version` | `expected_task_version` 相等 | `task_version+1` | EXISTING + 原 effect 状态 |
 | `UpdateTaskStatus` | `tasks.task_version` | `expected_version` 相等 | `task_version+1` | 幂等（同目标状态）或冲突 |
 | `CancelTask` | — | 终态守卫 | `task_version+1; cancel_version+1` | EXISTING + 原 cancel_version |

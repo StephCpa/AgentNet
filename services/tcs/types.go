@@ -282,10 +282,10 @@ type RootPermit struct {
 }
 
 type task struct {
-	ID, Status        string
-	Version, Epoch    int64
-	Cancelled, Frozen bool
-	Deadline          time.Time
+	ID, Status, Subject string
+	Version, Epoch      int64
+	Cancelled, Frozen   bool
+	Deadline            time.Time
 }
 
 func (s *Store) begin(ctx context.Context) (pgx.Tx, error) {
@@ -306,7 +306,8 @@ func (s *Store) identity(ctx context.Context, tx pgx.Tx, c Caller) error {
 func (s *Store) lockTask(ctx context.Context, tx pgx.Tx, c Caller, taskID string) (task, error) {
 	var t task
 	t.ID = taskID
-	err := tx.QueryRow(ctx, `SELECT status,task_version,current_epoch,cancel_version IS NOT NULL,budget_frozen,deadline FROM tasks WHERE task_id=$1 AND owner_principal_id=$2 AND domain_id=$3 FOR UPDATE`, taskID, c.Principal, s.cfg.Domain).Scan(&t.Status, &t.Version, &t.Epoch, &t.Cancelled, &t.Frozen, &t.Deadline)
+	err := tx.QueryRow(ctx, `SELECT status,task_version,current_epoch,cancel_version IS NOT NULL,budget_frozen,deadline,owner_principal_id FROM tasks t WHERE task_id=$1 AND domain_id=$3 AND
+ (owner_principal_id=$2 OR (parent_task_id IS NOT NULL AND (assignee_agent_id=$4 OR EXISTS(SELECT 1 FROM task_delegations d WHERE d.child_task_id=t.task_id AND d.creator_agent_id=$4)))) FOR UPDATE`, taskID, c.Principal, s.cfg.Domain, c.Agent).Scan(&t.Status, &t.Version, &t.Epoch, &t.Cancelled, &t.Frozen, &t.Deadline, &t.Subject)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return t, Denied
 	}

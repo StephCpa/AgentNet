@@ -1,7 +1,6 @@
 package authority
 
-// The initial root profile uses exact resources/actions and zero delegation.
-// Wildcards are never expanded; later delegation requires a separate chain check.
+// The single-domain profile uses exact rights and explicit delegation ceilings.
 type Rights struct {
 	Actions         []string `json:"actions"`
 	Resources       []string `json:"resources"`
@@ -34,18 +33,8 @@ func set(values []string) bool {
 	return len(values) > 0
 }
 func Valid(r Rights, domain string) bool {
-	return set(r.Actions) && set(r.Resources) && set(r.DataClasses) && len(r.Spatial.Domains) == 1 && r.Spatial.Domains[0] == domain && r.Spatial.EgressOnlyViaGateway && r.DepthLeft == 0 && len(r.DelegationScope) == 0
+	return WellFormed(r) && len(r.Spatial.Domains) == 1 && r.Spatial.Domains[0] == domain
 }
 func Subset(child, parent Rights, domain string) bool {
-	if !Valid(child, domain) || !Valid(parent, domain) {
-		return false
-	}
-	for _, pair := range [][2][]string{{child.Actions, parent.Actions}, {child.Resources, parent.Resources}, {child.DataClasses, parent.DataClasses}} {
-		for _, v := range pair[0] {
-			if !Contains(pair[1], v) {
-				return false
-			}
-		}
-	}
-	return true
+	return Valid(child, domain) && Valid(parent, domain) && Within(child, parent)
 }

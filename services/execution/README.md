@@ -91,3 +91,8 @@ send gate. It locks/reloads all ancestors and root consent before verifying the
 effect's actor/target binding, and rechecks the chain after waiting for the job
 lock. A revoked ancestor fences a fresh send without releasing its holds. This
 does not revoke an already in-flight request or create delegated tasks/tokens.
+
+Design 28 separates the task/grant subject from the executing Agent's principal.
+The final gate checks both identities and the full authority chain. Tests now
+include real RPC-created delegated tasks, with normal mock-target completion and
+zero sends after the original subject is revoked.

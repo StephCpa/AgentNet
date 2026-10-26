@@ -97,6 +97,9 @@ func (s *Service) IssueRoot(ctx context.Context, c tcs.Caller, command tcs.Envel
 	if cmd.Root == nil || cmd.Root.ConsentID == "" || cmd.Audience != s.cfg.Domain || len(cmd.Limits) != 4 || !authority.Valid(cmd.Root.Rights, s.cfg.Domain) {
 		return tcs.Envelope{}, tcs.Denied
 	}
+	if err := tcs.ValidateDelegableContract(cmd.Contract, cmd.Root.Rights); err != nil {
+		return tcs.Envelope{}, err
+	}
 	var contract struct {
 		Deadline time.Time `json:"deadline"`
 	}
@@ -183,8 +186,8 @@ func (s *Service) Decide(ctx context.Context, c tcs.Caller, r Request) (tcs.Enve
 		return tcs.Envelope{}, err
 	}
 	defer tx.Rollback(ctx)
-	var task string
-	err = tx.QueryRow(ctx, `SELECT task_id FROM tasks WHERE task_id=$1 AND domain_id=$2 AND owner_principal_id=$3 AND cancel_version IS NULL AND status NOT IN ('SUCCEEDED','FAILED','CANCELLED') AND NOT budget_frozen AND deadline>=clock_timestamp() FOR SHARE`, r.TaskID, s.cfg.Domain, c.Principal).Scan(&task)
+	var task, subject string
+	err = tx.QueryRow(ctx, `SELECT task_id,owner_principal_id FROM tasks WHERE task_id=$1 AND domain_id=$2 AND (owner_principal_id=$3 OR (parent_task_id IS NOT NULL AND assignee_agent_id=$4)) AND cancel_version IS NULL AND status NOT IN ('SUCCEEDED','FAILED','CANCELLED') AND NOT budget_frozen AND deadline>=clock_timestamp() FOR SHARE`, r.TaskID, s.cfg.Domain, c.Principal, c.Agent).Scan(&task, &subject)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return tcs.Envelope{}, tcs.Denied
 	}
@@ -202,7 +205,7 @@ func (s *Service) Decide(ctx context.Context, c tcs.Caller, r Request) (tcs.Enve
 		return tcs.Envelope{}, err
 	}
 	g := chain.Leaf
-	if g.Task != r.TaskID || g.Subject != c.Principal || g.Agent != c.Agent || g.Instance != c.Instance {
+	if g.Task != r.TaskID || g.Subject != subject || g.Agent != c.Agent || g.Instance != c.Instance {
 		return tcs.Envelope{}, tcs.Denied
 	}
 	now, err := timestamp(ctx, tx)
@@ -226,7 +229,7 @@ func (s *Service) Decide(ctx context.Context, c tcs.Caller, r Request) (tcs.Enve
 	if err = tx.QueryRow(ctx, `SELECT 'dec_'||gen_random_uuid()::text`).Scan(&id); err != nil {
 		return tcs.Envelope{}, err
 	}
-	decision := tcs.Decision{Kind: "anet.authorization/1", ID: id, Allow: true, At: now, ExpiresAt: min(now.Add(s.cfg.DecisionTTL), chain.ExpiresAt), Subject: c.Principal, Agent: c.Agent, Instance: c.Instance, Grant: g.ID, Task: task, Target: r.Target, Action: op.Action, Resource: op.Resource, ParamsDigest: r.ParamsDigest, AuthorityDigest: digest, Audience: s.cfg.Domain, Sensitivity: op.Sensitivity, DataClass: op.DataClass, PolicyVersion: g.Policy}
+	decision := tcs.Decision{Kind: "anet.authorization/1", ID: id, Allow: true, At: now, ExpiresAt: min(now.Add(s.cfg.DecisionTTL), chain.ExpiresAt), Subject: subject, Agent: c.Agent, Instance: c.Instance, Grant: g.ID, Task: task, Target: r.Target, Action: op.Action, Resource: op.Resource, ParamsDigest: r.ParamsDigest, AuthorityDigest: digest, Audience: s.cfg.Domain, Sensitivity: op.Sensitivity, DataClass: op.DataClass, PolicyVersion: g.Policy}
 	out, err := signed.Encode(s.cfg.KeyID, s.cfg.Key, decision)
 	if err != nil {
 		return out, err
@@ -253,7 +256,7 @@ func (s *Service) RevokeGrant(ctx context.Context, c tcs.Caller, id, reason stri
 		return time.Time{}, err
 	}
 	var task string
-	err = tx.QueryRow(ctx, `SELECT t.task_id FROM tasks t JOIN grants g ON g.task_id=t.task_id WHERE g.grant_id=$1 AND t.domain_id=$2 AND t.owner_principal_id=$3 AND g.actor_agent_id=$4 FOR UPDATE OF t`, id, s.cfg.Domain, c.Principal, c.Agent).Scan(&task)
+	err = tx.QueryRow(ctx, `SELECT t.task_id FROM tasks t JOIN grants g ON g.task_id=t.task_id WHERE g.grant_id=$1 AND t.domain_id=$2 AND (t.owner_principal_id=$3 OR (t.parent_task_id IS NOT NULL AND g.actor_agent_id=$4)) FOR UPDATE OF t`, id, s.cfg.Domain, c.Principal, c.Agent).Scan(&task)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return time.Time{}, tcs.Denied
 	}

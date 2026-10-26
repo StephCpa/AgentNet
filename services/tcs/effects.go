@@ -90,7 +90,7 @@ func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	if err = verify(signed, s.cfg.DecisionKeys, &d); err != nil {
 		return out, err
 	}
-	if d.Kind != "anet.authorization/1" || !d.Allow || d.ID == "" || d.Subject != c.Principal || d.Agent != c.Agent || d.Instance != c.Instance || d.Task != p.TaskID || d.Target != p.Target || d.Action != op.Action || d.Resource != op.Resource || d.ParamsDigest != p.ParamsDigest || d.AuthorityDigest != p.AuthorityDigest || d.Audience != s.cfg.Domain || d.Sensitivity != p.Sensitivity {
+	if d.Kind != "anet.authorization/1" || !d.Allow || d.ID == "" || d.Subject != t.Subject || d.Agent != c.Agent || d.Instance != c.Instance || d.Task != p.TaskID || d.Target != p.Target || d.Action != op.Action || d.Resource != op.Resource || d.ParamsDigest != p.ParamsDigest || d.AuthorityDigest != p.AuthorityDigest || d.Audience != s.cfg.Domain || d.Sensitivity != p.Sensitivity {
 		return out, DecisionMismatch
 	}
 	if d.DataClass != p.DataClass {
@@ -106,7 +106,7 @@ func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 		return out, err
 	}
 	g := chain.Leaf
-	if g.Task != p.TaskID || g.Subject != c.Principal || g.Agent != c.Agent || (g.Instance != "" && g.Instance != c.Instance) || !authority.Contains(g.Rights.Actions, op.Action) || !authority.Contains(g.Rights.Resources, op.Resource) {
+	if g.Task != p.TaskID || g.Subject != t.Subject || g.Agent != c.Agent || (g.Instance != "" && g.Instance != c.Instance) || !authority.Contains(g.Rights.Actions, op.Action) || !authority.Contains(g.Rights.Resources, op.Resource) {
 		return out, Denied
 	}
 	if g.ConsentID != "" {
@@ -167,7 +167,11 @@ func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 		if !live {
 			return LeaseInvalid
 		}
-		if !chain.ValidAt(now) {
+		live, err = chain.Live(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if !live {
 			return Denied
 		}
 
