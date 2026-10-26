@@ -1,6 +1,6 @@
 # test/prt —— 协议映射回归用例（M0-C）
 
-状态：v0.1（2026-10-25）｜ 依据：08 §4（A2A 1.0）、08 §5（MCP 2026-07-28）、13 §4 ｜ 用途：适配器每次版本升级 / 对端协议版本变化时的强制回归门（PRT 不过不上线，08 §6）。
+状态：v0.2.2 用例规格（2026-10-27，运行中 PRT 尚未执行）｜ 依据：08 §4（A2A 1.0）、08 §5（MCP 2026-07-28）、13 §4 ｜ 用途：适配器每次版本升级 / 对端协议版本变化时的强制回归门（PRT 不过不上线，08 §6）。
 
 用例编号规则：`PRT-<协议>-<域>-<序号>`。每条用例 = 前置状态 + 操作 + 期望观测（适配器行为 + TCS/账本副作用 + 审计事件）。所有期望观测须同时核对 **I10 六项约束不丢失**：`command_id / payload_digest / 授权作用域 / epoch / 披露标签 / 预算上界`。
 
@@ -10,22 +10,22 @@
 
 | 用例 | 前置 | 操作 | 期望 |
 |---|---|---|---|
-| PRT-A2A-ST-01 | 内部任务 ACCEPTED | GetTask 映射 | 对端查询收到 `submitted`；无回执副作用 |
-| PRT-A2A-ST-02 | RUNNING | 映射 | `working` |
-| PRT-A2A-ST-03 | WAITING（等输入） | 映射 | `input-required` |
-| PRT-A2A-ST-04 | WAITING（等外部/子任务） | 映射 | `working` + 扩展状态注记 `anet.waiting_on` |
-| PRT-A2A-ST-05 | SUCCEEDED | 映射 | `completed`；随后任何对端旧消息不得使状态回退（I4；对照 FI-08） |
-| PRT-A2A-ST-06 | FAILED / CANCELLED | 映射 | `failed` / `canceled`；**禁止**重映射为运行中掩盖本地验收失败（I10） |
+| PRT-A2A-ST-01 | 内部任务 ACCEPTED | GetTask 映射 | 对端查询收到 `TASK_STATE_SUBMITTED`；无回执副作用 |
+| PRT-A2A-ST-02 | RUNNING | 映射 | `TASK_STATE_WORKING` |
+| PRT-A2A-ST-03 | WAITING（等输入） | 映射 | `TASK_STATE_INPUT_REQUIRED` |
+| PRT-A2A-ST-04 | WAITING（等外部/子任务） | 映射 | `TASK_STATE_WORKING` + 扩展状态注记 `anet.waiting_on` |
+| PRT-A2A-ST-05 | SUCCEEDED | 映射 | `TASK_STATE_COMPLETED`；随后任何对端旧消息不得使状态回退（I4；对照 FI-08） |
+| PRT-A2A-ST-06 | FAILED / CANCELLED | 映射 | `TASK_STATE_FAILED` / `TASK_STATE_CANCELED`；**禁止**重映射为运行中掩盖本地验收失败（I10） |
 | PRT-A2A-ST-07 | 对端送来 `TASK_STATE_WORKING` 但本地已 CANCELLED | 入站映射 | 本地保持 CANCELLED；事件 `peer_progress_after_cancel`；在途操作照常对账（04 §7） |
 
 ### A2 命令接纳与可靠接纳扩展（08 §4.3）
 
 | 用例 | 场景 | 期望 |
 |---|---|---|
-| PRT-A2A-RA-01 | 对端声明 `reliable_admission=true`，`SendMessage` 携带 `x-anet-ra/0.1` 元数据 | 接收方持久接纳后回 `ACCEPTED`（issuer=接收域）；`command_id→task_id` 落库 |
+| PRT-A2A-RA-01 | 对端通过 `capabilities.extensions[].uri` 声明并协商可靠接纳扩展，`SendMessage` 携带 `x-anet-ra/0.1` 元数据 | 接收方持久接纳后回 `ACCEPTED`（issuer=接收域）；`command_id→task_id` 落库 |
 | PRT-A2A-RA-02 | 同 command_id 重复 `SendMessage` | 幂等返回既有 task 与原回执；无第二个任务（I1；同 FI-01） |
 | PRT-A2A-RA-03 | 同 command_id 不同 `payload_digest` | 显式冲突（I3；同 FI-07） |
-| PRT-A2A-RA-04 | `GetTask?by_command=` 查询 | 返回既有映射（支持 FI-02 句柄丢失恢复） |
+| PRT-A2A-RA-04 | 协商后的 command 查询扩展（接口待定；不能伪装为标准 GetTask 参数） | 返回既有映射（支持 FI-02 句柄丢失恢复） |
 | PRT-A2A-RA-05 | 对端未声明扩展（纯 A2A 对端） | 副作用任务不自动路由：路由器加人工确认门（07 §4 G2）；适配器标记 `admission_risk=high` |
 | PRT-A2A-RA-06 | 对端声明扩展但实测不去重（恶意对端仿真） | 探测请求识别重复创建 → 目录 `quality_alert` + 07 §5 降权（13 §4） |
 
@@ -92,5 +92,5 @@
 - 运行环境：devnet（12 §2），mockbiz 三型目标（幂等键/可查询/不透明）+ 恶意对端仿真器（13 §3）。
 - 断言层次：① 线上可观测（响应/状态）② TCS 账本副作用（tasks/effects/receipts）③ 审计事件 ④ I10 字段保全。
 - 结果记录：每次回归输出 `test/prt/results/<date>-<adapter-version>.md`（通过率、失败用例、修复关联）。
-- **[核对项]**（08 标注）：A2A 1.0 的 JSON-RPC 方法字符串与 HTTP 路径以官方规范 tag 固定（`adapters/a2a/wire-format.md`）；MCP Tasks 状态词表与任务元数据字段名，须在 M0 拿规范原文核对后修订期望列。
+- A2A 已固定官方 v1.0.1 commit，方法/路径见 `adapters/a2a/wire-format.md`，`python test/prt/check_wire.py` 只检查静态契约。官方 SubscribeToTask GET/POST 差异须由独立对端核验；可靠接纳扩展查询操作、MCP Tasks 元数据保留/可检索保证仍待冻结。
 - **外部参照纪律（评审 §十三）**：协议测试必须包含官方规范样例/独立参考实现作为对照；**禁止 adapter 与 mock 同源生成即判定通过**。

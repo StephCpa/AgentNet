@@ -1,0 +1,114 @@
+[
+  {
+    "case": "MCTaskMachine",
+    "passed": true,
+    "returncode": 0,
+    "expected": null,
+    "observed": null
+  },
+  {
+    "case": "MCCmdExpiry",
+    "passed": true,
+    "returncode": 0,
+    "expected": null,
+    "observed": null
+  },
+  {
+    "case": "MCBudgetLedger",
+    "passed": true,
+    "returncode": 0,
+    "expected": null,
+    "observed": null
+  },
+  {
+    "case": "MCAuthzShrink",
+    "passed": true,
+    "returncode": 0,
+    "expected": null,
+    "observed": null
+  },
+  {
+    "case": "M1-budget-guard",
+    "passed": true,
+    "returncode": 12,
+    "expected": "Inv5",
+    "observed": "Inv5"
+  },
+  {
+    "case": "M2-lease-holder",
+    "passed": true,
+    "returncode": 13,
+    "expected": "NoLeaseFence",
+    "observed": "NoLeaseFence"
+  },
+  {
+    "case": "M3-epoch-claim",
+    "passed": true,
+    "returncode": 13,
+    "expected": "EpochFence",
+    "observed": "EpochFence"
+  },
+  {
+    "case": "M4-unknown-redo",
+    "passed": true,
+    "returncode": 13,
+    "expected": "UnknownPreserved",
+    "observed": "UnknownPreserved"
+  },
+  {
+    "case": "M5-conflict-overwrite",
+    "passed": true,
+    "returncode": 13,
+    "expected": "BindingImmutable",
+    "observed": "BindingImmutable"
+  },
+  {
+    "case": "M6-early-reclaim",
+    "passed": true,
+    "returncode": 12,
+    "expected": "InvLedger",
+    "observed": "InvLedger"
+  },
+  {
+    "case": "M7-authz-guard",
+    "passed": true,
+    "returncode": 13,
+    "expected": "ChainMonotone",
+    "observed": "ChainMonotone"
+  },
+  {
+    "case": "M8-expiry-guard",
+    "passed": true,
+    "returncode": 13,
+    "expected": "NoCreateAfterExpiry",
+    "observed": "NoCreateAfterExpiry"
+  },
+  {
+    "case": "M3b-stale-proposal",
+    "passed": true,
+    "returncode": 13,
+    "expected": "EpochFence",
+    "observed": "EpochFence"
+  },
+  {
+    "case": "M2b-spoof-current-epoch",
+    "passed": true,
+    "returncode": 13,
+    "expected": "NoLeaseFence",
+    "observed": "NoLeaseFence"
+  },
+  {
+    "case": "M9-early-inbox-cleanup",
+    "passed": true,
+    "returncode": 12,
+    "expected": "InvSingleTask",
+    "observed": "InvSingleTask"
+  },
+  {
+    "case": "M10-submit-without-dedup",
+    "passed": true,
+    "returncode": 12,
+    "expected": "InvSingleTask",
+    "observed": "InvSingleTask"
+  }
+]

@@ -44,14 +44,14 @@ flowchart LR
 
 | 内部操作 | A2A **1.0** 方法 | 线格式 |
 |---|---|---|
-| `SubmitCommand` | `SendMessage` | JSON-RPC 绑定的方法字符串与 HTTP 路径以官方规范 tag 固定 **[核对项]**（固定官方 `a2aproject/A2A` 仓库 proto tag/commit 于 M0 评审时登记） |
+| `SubmitCommand` | `SendMessage` | 官方 v1.0.1 / commit `3303592588e388e62e0f69f701af531d2f4e3991`；方法/路径见 `adapters/a2a/wire-format.md` |
 | 流式提交/订阅进展 | `SendStreamingMessage` | 断流后转 `SubscribeToTask`；中间消息缺失不视为失败 |
 | `GetTask` | `GetTask` | 恢复与轮询；扩展查询 `by_command` 见 §4.3 |
 | 重订阅任务 | `SubscribeToTask` | 替代旧 `tasks/resubscribe` 语义 |
 | `CancelTask` | `CancelTask` | 协作式；回执语义见 §4.5 |
 | 推送通知 | 官方 notification 机制 | 可选优化，不作正确性依赖 |
 
-内部方法名（`SendMessage` 等）与 JSON-RPC 方法字符串、HTTP 路径**分列登记**于 `adapters/a2a/wire-format.md`（M1 交付），禁止混用；PRT 用例引用该登记而非本表。
+内部方法名（`SendMessage` 等）与 JSON-RPC 方法字符串、HTTP 路径**分列登记**于 `adapters/a2a/wire-format.md`（已登记；静态检查通过，独立对端 PRT 待做），禁止混用；PRT 用例引用该登记而非本表。
 
 ### 4.2 状态映射（v0.2：1.0 枚举）
 
@@ -65,15 +65,15 @@ flowchart LR
 
 ### 4.3 可靠接纳扩展规范 `x-anet-ra/0.1`（v0.2：升级为版本化扩展；评审 §十二）
 
-A2A 的发送幂等是可选行为（总体方案 §8.4），因此对等域间以**独立版本化规范**协商更强语义：
+本节仍是扩展草案；URI、查询操作和协商线格式未冻结，不能计为协议互操作通过。A2A 的发送幂等是可选行为（总体方案 §8.4），因此对等域间以**独立版本化规范**协商更强语义：
 
 | 规范要素 | 内容 |
 |---|---|
 | 扩展标识 | `x-anet-ra/0.1`（reliable admission） |
-| 协商 | Agent Card `protocols.anet_extensions` 声明 + 对等握手时版本交集；协商失败 ⇒ 副作用任务 G2 门控（07 §4） |
-| 请求元数据 | `SendMessage` params 附 `{profile:"agent-network/0.1", command_id, payload_digest, not_after, expected_task_version}` |
+| 协商 | Agent Card `capabilities.extensions[].uri` 声明 + 对等握手时版本交集（扩展 URI 待最终定稿）；协商失败 ⇒ 副作用任务 G2 门控（07 §4） |
+| 请求元数据 | `SendMessage.params.metadata` 携带命名空间对象，内含 `{profile:"agent-network/0.1", command_id, payload_digest, not_after, expected_task_version}` |
 | 接收方义务 | 持久接纳后返回 `ACCEPTED` 回执（issuer=接收域）；`command_id→task_id` 映射落库；映射保留至 `max(保留期, not_after)` |
-| 查询接口 | `GetTask` 扩展参数 `by_command=<command_id>`（授权：仅命令原始签发方可查） |
+| 查询接口 | 待定义独立的扩展查询操作（授权：仅命令原始签发方可查）；官方 GetTaskRequest 不含 by_command，不得当作标准字段发送 |
 | 去重范围 | `(command_id, audience_domain)`；参数摘要不一致 ⇒ 冲突拒绝响应（不改写原绑定） |
 | 降级 | 任一方不支持 ⇒ 未协商，不得发送副作用创建类命令（除非人工确认） |
 

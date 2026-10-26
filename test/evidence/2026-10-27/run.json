@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-27",
+  "reviewed_commit": "d6b219c0ef5cd1a997c43f5d7461fde19baa48fb",
+  "java": "Eclipse Temurin 17.0.20.1",
+  "tlc": "TLC2 2.19 / tla2tools 1.7.4",
+  "postgresql": "16.15 with pgcrypto",
+  "a2a_tag": "v1.0.1",
+  "a2a_commit": "3303592588e388e62e0f69f701af531d2f4e3991",
+  "scope": "bounded models, isolated schema transactions, static protocol registry; no live TCS or peer interop"
+}

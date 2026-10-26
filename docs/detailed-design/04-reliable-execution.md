@@ -40,7 +40,7 @@
 ### 3.2 重试窗口与去重保留期（v0.2：命令时效自包含）
 
 - 命令封装携带可信 `not_after`（GW 签名绑定）；T1 **无条件**检查 `now() ≤ not_after`——该检查不依赖去重记录是否存在。
-- `command_inbox.expires_at = max(tcs.dedup_retention, not_after)`；清理任务只删 `expires_at < now()` 的行。因此**时效未过的命令不可能失去去重记录**（评审 §6.1 修复：清理后重放会被 not_after 检查拒绝，无法创建第二个任务）。
+- `command_inbox.expires_at = max(received_at + tcs.dedup_retention, not_after)`；清理任务只删 `expires_at < now()` 的行。因此**遵守该清理规则时，时效未过的命令不会失去去重记录**（评审 §6.1 修复：清理后重放会被 not_after 检查拒绝，无法创建第二个任务）。
 - 超窗重放：`ANET-CMD-EXPIRED` 拒绝 + 恢复事件；任务 deadline ≠ 命令时效，二者独立判定。
 
 ### 3.3 危险窗口：对端已创建任务、句柄丢失

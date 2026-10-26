@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
-"""守卫变异测试（评审 §7.3 / §十三-2）：删除关键守卫后 TLC 必须报错。
+"""Run clean baselines, then require a named safety violation for each mutation.
 
-每个变异 = (模块, 原文, 替换文, 期望失败的检查项)。运行方式：
-    python mutations.py [--tlc-jar PATH --java PATH]
-在临时副本上执行，不改动正式规格文件。退出码 0 = 全部变异被检出。
+Usage: python test/tla/mutations.py --java JAVA --tlc-jar JAR --output DIR
+Syntax errors, timeouts, wrong properties, and tool failures never count as kills.
 """
-import os, shutil, subprocess, sys, tempfile
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-JAVA = r"C:/Users/76790/AppData/Local/Temp/tla/jre/jdk-17.0.20.1+1-jre/bin/java"
-JAR  = r"C:/Users/76790/AppData/Local/Temp/tla/tla2tools.jar"
+HERE = Path(__file__).resolve().parent
+MODELS = ("MCTaskMachine", "MCCmdExpiry", "MCBudgetLedger", "MCAuthzShrink")
 
 MUTATIONS = [
   dict(id="M1-budget-guard", module="MCTaskMachine", cfg="MCTaskMachine.cfg",
@@ -26,15 +31,12 @@ MUTATIONS = [
        file="TaskMachine.tla",
        old="  /\\ ce = epoch                           \\* I2：代次一致（防旧提案；非凭证）",
        new="  \\* MUTATED: epoch claim check removed（接受任意声称代次）",
-       expect="REDUNDANT"),
-  # M3 为预期冗余变异：leaseHolder 绑定已独立阻断旧执行者（M2 检出），
-  # 代次检查是纵深防御，单独删除不产生可攻击行为（03 §6.2 保留两道检查）。
-  # 若未来移除持有者绑定，M3 将变为可检出。
+       expect="EpochFence"),
   dict(id="M4-unknown-redo", module="MCTaskMachine", cfg="MCTaskMachine.cfg",
        file="TaskMachine.tla",
        old="  /\\ eff[e] = \"none\"                      \\* I7：含 unknown 不得重做",
        new="  /\\ eff[e] \\in {\"none\",\"unknown\"}        \\* MUTATED: unknown redo allowed",
-       expect="UnknownPreserved|Inv5"),
+       expect="UnknownPreserved"),
   dict(id="M5-conflict-overwrite", module="MCTaskMachine", cfg="MCTaskMachine.cfg",
        file="TaskMachine.tla",
        old="""AdmitConflict(e, d) ==                    \\* 评审 §四：换参 = 拒绝响应；
@@ -44,7 +46,7 @@ MUTATIONS = [
   /\\ eff[e] # "none" /\\ effParams[e] # d
   /\\ effParams' = [effParams EXCEPT ![e] = d]
   /\\ UNCHANGED << taskState, taskVersion, epoch, cancelVersion, leaseHolder,
-                  inbox, inboxParams, acked, eff, settled, reserved, workerEpoch >>""",
+                  inbox, inboxParams, acked, eff, settled, reserved, workerEpoch, lastAdmission >>""",
        expect="BindingImmutable"),
   dict(id="M6-early-reclaim", module="MCBudgetLedger", cfg="MCBudgetLedger.cfg",
        file="BudgetLedger.tla",
@@ -67,51 +69,101 @@ Next ==
        file="CmdExpiry.tla",
        old="  /\\ curTime <= NotAfter                     \\* I11 守卫（变异目标）",
        new="  \\* MUTATED: expiry guard removed",
-       expect="NoCreateAfterExpiry|InvSingleTask"),
+       expect="NoCreateAfterExpiry"),
 ]
 
-def run_tlc(tmp, module, cfg):
-    cmd = [JAVA, "-XX:+UseParallelGC", "-Dfile.encoding=UTF-8", "-cp", JAR,
-           "tlc2.TLC", "-cleanup", "-config", cfg, module]
-    r = subprocess.run(cmd, cwd=tmp, capture_output=True, text=True, timeout=600)
-    return r.stdout + r.stderr
+MUTATIONS += [
+    dict(id="M3b-stale-proposal", module="MCTaskMachine", cfg="MCTaskMachine.cfg",
+         file="TaskMachine.tla", old=MUTATIONS[2]["old"],
+         new='  /\\ ce < epoch', expect="EpochFence"),
+    dict(id="M2b-spoof-current-epoch", module="MCTaskMachine", cfg="MCTaskMachine.cfg",
+         file="TaskMachine.tla", old=MUTATIONS[1]["old"],
+         new='  /\\ leaseHolder \\in Workers /\\ leaseHolder # w /\\ workerEpoch[w] > 0 /\\ workerEpoch[w] # epoch', expect="NoLeaseFence"),
+    dict(id="M9-early-inbox-cleanup", module="MCCmdExpiry", cfg="MCCmdExpiry.cfg",
+         file="CmdExpiry.tla",
+         old='  /\\ inbox /\\ curTime > NotAfter', new='  /\\ inbox', expect="InvSingleTask"),
+    dict(id="M10-submit-without-dedup", module="MCCmdExpiry", cfg="MCCmdExpiry.cfg",
+         file="CmdExpiry.tla",
+         old='  /\\ inbox = FALSE', new='  /\\ TRUE', expect="InvSingleTask"),
+]
+
+
+def violation_name(output):
+    match = re.search(r"(?:Invariant|Action property|Temporal property) ([\w!]+) is violated", output)
+    return match.group(1).split("!")[-1] if match else None
+
+
+def classify(returncode, output, expected=None):
+    if expected:
+        # TLC 1.7.4: 12 = invariant violation, 13 = temporal/action violation.
+        return returncode in (12, 13) and violation_name(output) == expected
+    return (returncode == 0 and "Model checking completed. No error has been found." in output
+            and "Error:" not in output)
+
+
+def run_case(args, module, mutation=None):
+    with tempfile.TemporaryDirectory(prefix="anet-tlc-") as temp:
+        root = Path(temp)
+        for source in HERE.iterdir():
+            if source.suffix in (".tla", ".cfg"):
+                shutil.copy2(source, root / source.name)
+        case = mutation["id"] if mutation else module
+        if mutation:
+            path = root / mutation["file"]
+            source = path.read_text(encoding="utf-8")
+            if source.count(mutation["old"]) != 1:
+                return dict(case=case, passed=False, error="mutation must match exactly once")
+            path.write_text(source.replace(mutation["old"], mutation["new"], 1), encoding="utf-8")
+            cfg = root / (module + ".cfg")
+            lines = [line for line in cfg.read_text().splitlines()
+                     if not line.startswith(("INVARIANT", "PROPERTY"))]
+            kind = "INVARIANT" if mutation["expect"].startswith("Inv") else "PROPERTY"
+            lines.append(kind + " " + mutation["expect"])
+            cfg.write_text("\n".join(lines) + "\n")
+        cmd = [args.java, "-XX:+UseParallelGC", "-Dfile.encoding=UTF-8", "-cp", str(args.tlc_jar),
+               "tlc2.TLC", "-cleanup", "-workers", str(args.workers), "-config", module + ".cfg", module]
+        try:
+            run = subprocess.run(cmd, cwd=root, capture_output=True, text=True,
+                                 encoding="utf-8", errors="replace", timeout=args.timeout)
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            return dict(case=case, passed=False, error=str(exc))
+        output = run.stdout + run.stderr
+        (args.output / (case + ".log")).write_text(output, encoding="utf-8")
+        expected = mutation["expect"] if mutation else None
+        return dict(case=case, passed=classify(run.returncode, output, expected),
+                    returncode=run.returncode, expected=expected, observed=violation_name(output))
+
 
 def main():
-    failures = []
-    for m in MUTATIONS:
-        tmp = tempfile.mkdtemp(prefix="anet-mut-")
-        shutil.copytree(HERE, tmp, dirs_exist_ok=True)
-        shutil.rmtree(os.path.join(tmp, "states"), ignore_errors=True)
-        p = os.path.join(tmp, m["file"])
-        s = open(p, encoding="utf-8").read()
-        if m["old"] not in s:
-            print("[%-24s] SKIP-ORIG-NOT-FOUND" % m["id"]); failures.append(m["id"]); continue
-        open(p, "w", encoding="utf-8", newline="\n").write(s.replace(m["old"], m["new"], 1))
-        try:
-            out = run_tlc(tmp, m["module"], m["cfg"])
-        except subprocess.TimeoutExpired:
-            print("[%-24s] DETECTED (timeout=不可判定，按未检出计)" % m["id"]); failures.append(m["id"])
-            shutil.rmtree(tmp, ignore_errors=True); continue
-        detected = ("is violated" in out) or ("Error:" in out)
-        if m.get("expect") == "REDUNDANT":
-            print("[%-24s] %s（预期冗余：由 M2 所在防线覆盖）"
-                  % (m["id"], "NOT-DETECTED" if not detected else "DETECTED(意外，请复核)"))
-            if detected:
-                failures.append(m["id"])   # 冗余守卫被检出说明防线关系变化，需人工复核
-            continue
-        which = ""
-        for line in out.splitlines():
-            if "violated" in line or ("Error:" in line and ("Invariant" in line or "property" in line)):
-                which = line.strip(); break
-        print("[%-24s] %s %s" % (m["id"], "DETECTED" if detected else "!!!MISSED!!!", "- " + which[:90] if which else ""))
-        if not detected:
-            failures.append(m["id"])
-        shutil.rmtree(tmp, ignore_errors=True)
-    print()
-    if failures:
-        print("RESULT: %d mutation(s) NOT detected: %s" % (len(failures), ", ".join(failures)))
-        sys.exit(1)
-    print("RESULT: all %d mutations detected." % len(MUTATIONS))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--java", default=os.environ.get("JAVA", "java"))
+    parser.add_argument("--tlc-jar", type=Path, default=os.environ.get("TLC_JAR"))
+    parser.add_argument("--output", type=Path, default=HERE.parents[1] / ".local" / "tlc")
+    parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument("--workers", type=int, default=2)
+    args = parser.parse_args()
+    if not args.tlc_jar or not args.tlc_jar.is_file():
+        parser.error("provide an existing --tlc-jar or TLC_JAR")
+    args.tlc_jar = args.tlc_jar.resolve()
+    args.output = args.output.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    results = []
+    for model in MODELS:
+        result = run_case(args, model)
+        results.append(result)
+        print(json.dumps(result, ensure_ascii=False), flush=True)
+        if not result["passed"]:
+            break
+    if len(results) == len(MODELS) and all(r["passed"] for r in results):
+        for mutation in MUTATIONS:
+            result = run_case(args, mutation["module"], mutation)
+            results.append(result)
+            print(json.dumps(result, ensure_ascii=False), flush=True)
+    (args.output / "summary.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
+    passed = len(results) == len(MODELS) + len(MUTATIONS) and all(r["passed"] for r in results)
+    print("PASS" if passed else "FAIL", "-", sum(r["passed"] for r in results), "/", len(MODELS) + len(MUTATIONS))
+    return 0 if passed else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

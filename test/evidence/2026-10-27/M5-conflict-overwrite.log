@@ -1,0 +1,101 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 86 and seed -1541516877478395275 with 2 workers on 16 cores with 5328MB heap and 64MB offheap memory [pid: 66276] (Windows 11 10.0 amd64, Eclipse Adoptium 17.0.20.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-6zu07bl4\MCTaskMachine.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Naturals.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-6zu07bl4\TaskMachine.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\FiniteSets.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TaskMachine
+Semantic processing of module MCTaskMachine
+Starting... (2026-10-27 00:05:43)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-27 00:05:43.
+Error: Action property TM!BindingImmutable is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ epoch = 1
+/\ effParams = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ workerEpoch = [w1 |-> 0, w2 |-> 0]
+/\ taskState = "idle"
+/\ leaseHolder = "none"
+/\ cancelVersion = 0
+/\ settled = 0
+/\ reserved = 0
+/\ lastAdmission = [actor |-> "none", claim |-> 0, holder |-> "none", generation |-> 0]
+/\ taskVersion = 0
+/\ acked = [c1 |-> FALSE, c2 |-> FALSE]
+/\ inboxParams = [c1 |-> "none", c2 |-> "none"]
+/\ eff = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ inbox = [c1 |-> "none", c2 |-> "none"]
+
+State 2: <Action line 17, col 1 to line 26, col 66 of module MCTaskMachine>
+/\ epoch = 1
+/\ effParams = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ workerEpoch = [w1 |-> 0, w2 |-> 0]
+/\ taskState = "accepted"
+/\ leaseHolder = "none"
+/\ cancelVersion = 0
+/\ settled = 0
+/\ reserved = 0
+/\ lastAdmission = [actor |-> "none", claim |-> 0, holder |-> "none", generation |-> 0]
+/\ taskVersion = 1
+/\ acked = [c1 |-> FALSE, c2 |-> FALSE]
+/\ inboxParams = [c1 |-> "d1", c2 |-> "none"]
+/\ eff = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ inbox = [c1 |-> "accepted", c2 |-> "none"]
+
+State 3: <Action line 17, col 1 to line 26, col 66 of module MCTaskMachine>
+/\ epoch = 1
+/\ effParams = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ workerEpoch = [w1 |-> 1, w2 |-> 0]
+/\ taskState = "accepted"
+/\ leaseHolder = "w1"
+/\ cancelVersion = 0
+/\ settled = 0
+/\ reserved = 0
+/\ lastAdmission = [actor |-> "none", claim |-> 0, holder |-> "none", generation |-> 0]
+/\ taskVersion = 1
+/\ acked = [c1 |-> FALSE, c2 |-> FALSE]
+/\ inboxParams = [c1 |-> "d1", c2 |-> "none"]
+/\ eff = [e1 |-> "none", e2 |-> "none", e3 |-> "none"]
+/\ inbox = [c1 |-> "accepted", c2 |-> "none"]
+
+State 4: <Action line 17, col 1 to line 26, col 66 of module MCTaskMachine>
+/\ epoch = 1
+/\ effParams = [e1 |-> "d1", e2 |-> "none", e3 |-> "none"]
+/\ workerEpoch = [w1 |-> 1, w2 |-> 0]
+/\ taskState = "accepted"
+/\ leaseHolder = "w1"
+/\ cancelVersion = 0
+/\ settled = 0
+/\ reserved = 1
+/\ lastAdmission = [actor |-> "w1", claim |-> 1, holder |-> "w1", generation |-> 1]
+/\ taskVersion = 2
+/\ acked = [c1 |-> FALSE, c2 |-> FALSE]
+/\ inboxParams = [c1 |-> "d1", c2 |-> "none"]
+/\ eff = [e1 |-> "admitted", e2 |-> "none", e3 |-> "none"]
+/\ inbox = [c1 |-> "accepted", c2 |-> "none"]
+
+State 5: <Action line 17, col 1 to line 26, col 66 of module MCTaskMachine>
+/\ epoch = 1
+/\ effParams = [e1 |-> "d2", e2 |-> "none", e3 |-> "none"]
+/\ workerEpoch = [w1 |-> 1, w2 |-> 0]
+/\ taskState = "accepted"
+/\ leaseHolder = "w1"
+/\ cancelVersion = 0
+/\ settled = 0
+/\ reserved = 1
+/\ lastAdmission = [actor |-> "w1", claim |-> 1, holder |-> "w1", generation |-> 1]
+/\ taskVersion = 2
+/\ acked = [c1 |-> FALSE, c2 |-> FALSE]
+/\ inboxParams = [c1 |-> "d1", c2 |-> "none"]
+/\ eff = [e1 |-> "admitted", e2 |-> "none", e3 |-> "none"]
+/\ inbox = [c1 |-> "accepted", c2 |-> "none"]
+
+243 states generated, 171 distinct states found, 135 states left on queue.
+The depth of the complete state graph search is 5.
+The average outdegree of the complete state graph is 5 (minimum is 0, the maximum 10 and the 95th percentile is 9).
+Finished in 00s at (2026-10-27 00:05:43)

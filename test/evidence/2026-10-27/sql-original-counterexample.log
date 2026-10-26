@@ -1,0 +1,18 @@
+migration-001 PASS
+version PASS
+seed PASS
+partial-settlement-commits PASS
+delegated-blocks-reserve PASS
+account-update-checked PASS
+four-dimensions-one-effect FAIL
+Traceback (most recent call last):
+  File "E:\AgentNet\test\schema\run.py", line 183, in <module>
+    main()
+  File "E:\AgentNet\test\schema\run.py", line 112, in main
+    probe("four-dimensions-one-effect", """
+  File "E:\AgentNet\test\schema\run.py", line 74, in probe
+    raise AssertionError(name + ": " + output)
+AssertionError: four-dimensions-one-effect: BEGIN
+INSERT 0 1
+ERROR:  duplicate key value violates unique constraint "uq_reservation_effect"
+DETAIL:  Key (effect_id)=(e) already exists.

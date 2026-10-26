@@ -1,58 +1,66 @@
-# test/tla —— TLA+ 模型与 TLC 运行手册（M0）
+# TLA+ 模型与可复现门禁
 
-## 模块（v0.2，2026-10-26 评审整改后）
+复审版本 v0.2.2，2026-10-27。TaskMachine 不含时间或 effConflict 变量；时效单独由 CmdExpiry 检查。
 
-| 文件 | 内容 | MC 包装 + cfg |
-|---|---|---|
-| `TaskMachine.tla` | 任务状态机 + T1/T2/T3 + 租约持有者绑定 + 冲突=拒绝响应 + 预算联动（13 §2） | `MCTaskMachine.*` |
-| `CmdExpiry.tla` | I11 命令时效：去重清理后重放不得建第二个任务（评审 §6.1） | `MCCmdExpiry.*` |
-| `BudgetLedger.tla` | **双域**预算模型：S+H+D + tranche 下放/消费/上报/归还（05 §1/§8） | `MCBudgetLedger.*` |
-| `AuthzShrink.tla` | 真实父链上的权限单调收缩（06 §3） | `MCAuthzShrink.*` |
-| `mutations.py` | 守卫变异测试（评审 §7.3/§十三-2）：删守卫必须被检出 | — |
+## 运行
 
-## 工具链（便携，无需安装）
+需要 Java 17 和 tla2tools 1.7.4（TLC2 2.19）。从仓库根目录执行：
 
-```bash
-# JRE 17（Temurin zip 解压即用）+ tla2tools.jar（本项目用 1.7.4）
-J=<jre>/bin/java
-CP=<path-to>/tla2tools.jar
-"$J" -XX:+UseParallelGC -Dfile.encoding=UTF-8 -cp "$CP" tlc2.TLC \
-    -cleanup -config MCTaskMachine.cfg MCTaskMachine
-# -Dfile.encoding=UTF-8 必须（GBK 环境解析 UTF-8 注释失败）。
-python mutations.py   # 变异测试（8 项：7 检出 + 1 预期冗余）
+```text
+python test/tla/mutations.py --java <java路径> --tlc-jar <tla2tools.jar路径> --output .local/tlc
+python -m unittest discover -s test/tla -p test_mutations.py
 ```
 
-## 2026-10-26 v0.2 运行结果（TLC2 2.19 / tla2tools 1.7.4）
+也可通过 JAVA/TLC_JAR 环境变量配置路径。脚本在临时目录复制模型，先跑四个未变异基线，再跑变异；每次保存完整日志与 summary.json。只有对应命名性质违反且 TLC 退出码为 12/13 才计为检出；解析错误、运行错误、超时、错性质均失败。`--timeout` 默认每项 600s，`--workers` 默认 2。
 
-| 模块 | 检查项 | 结果 | 规模 |
-|---|---|---|---|
-| MCTaskMachine | INV `Inv` + 5 条独立动作性质（UnknownPreserved/CommittedPreserved/BindingImmutable/TerminalStable/NoLeaseFence） | **通过** | 939,292 生成 / 81,386 distinct / 深度 13 |
-| MCCmdExpiry | INV + `NoCreateAfterExpiry` | **通过** | 10 states |
-| MCBudgetLedger | INV（TypeOK + InvI5 + **InvLedger 双域守恒**） | **通过** | 77,793 / 8,008 / 深度 17 |
-| MCAuthzShrink | INV + `ChainMonotone`（沿父链单调） | **通过** | 740 / 33 / 深度 3 |
+## 本次结果
 
-### 变异测试（`python mutations.py`）
+| 模型 | 检查 | 生成 / 不同状态 / 深度 |
+|---|---|---|
+| TaskMachine | Inv + UnknownPreserved、CommittedPreserved、BindingImmutable、TerminalStable、NoLeaseFence、EpochFence 六条动作性质 | 4,080,889 / 383,593 / 15 |
+| CmdExpiry | Inv + NoCreateAfterExpiry | 10 / 10 / 5 |
+| BudgetLedger | TypeOK + InvI5 + InvLedger | 77,793 / 8,008 / 17 |
+| AuthzShrink | TypeOK + Inv6 + ChainMonotone | 740 / 33 / 3 |
 
-| 变异 | 结果 |
+全部通过。TaskMachine 界为两 worker、两命令、三个 effect、两参数摘要、BudgetMax=2、epoch≤3、taskVersion≤30。CONSTRAINT 仅限制枚举；不是实现的 epoch 上限。旧版 13,290/81,386 状态属于不同模型快照，不能作为本版结果。
+
+TaskMachine 新增 lastAdmission，保存实际接纳的 actor、claim、holder、generation；持有者性质观察实际提交者，代次性质观察实际提案。Takeover 保留旧 worker 的旧凭据。未接纳任务不能领租约或接纳操作。观察变量不是授权凭证。
+
+## 变异结果：12/12 检出
+
+| 变异 | 指定失败性质 |
 |---|---|
-| M1 删预算守卫 | **DETECTED**（Inv5） |
-| M2 删租约持有者绑定（= 评审 §5.1 攻击面） | **DETECTED**（NoLeaseFence） |
-| M3 删代次检查 | NOT-DETECTED（**预期冗余**：M2 防线覆盖；纵深防御单独删除无可攻击行为） |
-| M4 允许对 UNKNOWN 重做 | **DETECTED**（UnknownPreserved） |
-| M5 冲突覆盖绑定（v0.1 行为） | **DETECTED**（BindingImmutable） |
-| M6 未确认归还即收回 | **DETECTED**（InvLedger） |
-| M7 删权限收缩守卫 | **DETECTED**（ChainMonotone） |
-| M8 删命令时效守卫 | **DETECTED**（NoCreateAfterExpiry） |
+| M1 删预算守卫 | Inv5 |
+| M2 删持有者绑定 | NoLeaseFence |
+| M3 删提案代次检查 | EpochFence |
+| M4 允许 UNKNOWN 重做 | UnknownPreserved |
+| M5 冲突覆盖参数绑定 | BindingImmutable |
+| M6 提前回收子域额度 | InvLedger |
+| M7 删授权收缩检查 | ChainMonotone |
+| M8 删命令时效检查 | NoCreateAfterExpiry |
+| M3b 当前 holder 提交旧代次 | EpochFence |
+| M2b 旧 worker 保留旧凭据、声称当前代次且另有 holder | NoLeaseFence |
+| M9 时效内清理 inbox | InvSingleTask |
+| M10 Submit 缺去重前置 | InvSingleTask |
 
-## v0.2 变更与 TLC 再立新功的证据
+撤回 v0.2 的“M3 预期冗余”结论：旧模型未记录 ce，无法区分不同代次提案造成的同一个状态迁移。新反例：holder=w1、epoch=2，接纳 claim=1。M2b 独立给出 actor=w1、旧凭据=1、claim=2、holder=w2、epoch=2 的反例。
 
-1. **动作性质形式（评审 §7.4 采纳）**：`[][~(坏条件)]_Vars`。含 `=>` 的直接形式在 SANY 1.7.4 不解析（2026-10-26 实证），采用等价否定合取式。
-2. **TLC 在整改中又抓出两个模型缺陷**（v0.2 开发期）：
-   - CmdExpiry 初版允许"时效内清理去重记录后再提交"——违反 `expires_at ≥ not_after` 语义；已加 ClearInbox 守卫（对应 SQL CHECK）。
-   - CmdExpiry 初版 Submit 漏去重前置（inbox=FALSE），同刻可建两个任务；已修。
-3. **模型-规格映射**（评审 §十三-3）：
-   - TLA `leaseHolder` ↔ `leases.worker_instance_id` + T2 的已认证实例校验（03 §6.2）；
-   - TLA `reserved/settled` ↔ `budget_reservations(HELD).amount` 之和 / `budget_accounts.settled`；
-   - TLA `DelegateTranche/DeliverRet` ↔ 05 §8 事务对（delegated 转移 / 确认归还释放）；
-   - TLA `Admit` 的授权检查 ↔ ICS Decision 绑定字段校验（06 §4、proto AuthorizationDecision）。
-4. 规格 ASCII 运算符；状态目录 `states/` 已 gitignore。
+动作性质使用标准 `[][P]_Vars`。本版 NoLeaseFence/EpochFence 直接使用 `=>`，同一工具链解析并检查通过；旧文档“不支持蕴含式”的解释不成立。
+
+## 模型与实现规格的对应及边界
+
+| 模型对象 | 对应规格 | 已覆盖范围 |
+|---|---|---|
+| inbox/acked | T1 inbox 与提交后回执 | 原子接纳/回执抽象；不含崩溃相位 |
+| leaseHolder/workerEpoch/lastAdmission | leases.worker_instance_id、提案 epoch、可信调用身份 | 身份/代次；不含租约时钟、lease_id 复用或授权决定验签 |
+| reserved/settled | HELD 总额 / account.settled | 单成本聚合；没有 reservation_id/attempt_id，不能证明多维预留独占 |
+| eff/effParams | effects.state/params_digest | 原状态和参数不可覆盖；不含真实外部系统 |
+| BudgetLedger pD | 子域可用、已消费、在途额度 | 双域守恒；无重复消息标识，尚不证明消息去重 |
+| AuthzShrink currentRights | 授权链上一层的权限集 | 连续收缩；不含 ICS Decision 绑定/签名/撤销传播 |
+| CmdExpiry curTime | T1 在串行化点读取的可信时刻 | 去重与时效；不含时钟回拨/偏差或数据库锁等待 |
+
+CmdExpiry 的 ClearInbox 需严格 `curTime > NotAfter`；数据库 CHECK(expires_at>=not_after) 只限制字段，清理程序还必须只删 expires_at<当前时刻的行。SQL CHECK 本身不能阻止任意 DELETE。
+
+崩溃恢复、验收证据、预留归属、子任务树、重复返还消息、I9 独立动作性质仍待扩展。当前四模型通过不等于完整实现已验证。
+
+本次持久证据见 `test/evidence/2026-10-27/`；数据库探针见 `test/schema/run.py`。

@@ -1,0 +1,23 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 92 and seed -3385684547675969921 with 2 workers on 16 cores with 5328MB heap and 64MB offheap memory [pid: 70808] (Windows 11 10.0 amd64, Eclipse Adoptium 17.0.20.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-wmimcvwg\MCAuthzShrink.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Naturals.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-wmimcvwg\AuthzShrink.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\FiniteSets.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module AuthzShrink
+Semantic processing of module MCAuthzShrink
+Starting... (2026-10-27 00:05:36)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-27 00:05:36.
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 1.3E-15
+740 states generated, 33 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 3.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 16 and the 95th percentile is 1).
+Finished in 00s at (2026-10-27 00:05:36)

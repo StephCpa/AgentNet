@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/a2aproject/A2A",
+  "tag": "v1.0.1",
+  "commit": "3303592588e388e62e0f69f701af531d2f4e3991",
+  "retrieved": "2026-10-27",
+  "a2a.proto": "specification/a2a.proto",
+  "get-task.json": "docs/specification.md section 9.4.3 GetTask (request copied verbatim except whitespace)",
+  "license": "Apache-2.0; see LICENSE.a2a",
+  "scope": "Static reference only. No AgentNet adapter or live peer test has run."
+}

@@ -15,6 +15,7 @@ BL == INSTANCE BudgetLedger WITH
         cAvail <- cAvail, cSpent <- cSpent,
         inSpend <- inSpend, inRet <- inRet
 
+InvLedger == BL!InvLedger
 Spec    == BL!Spec
 Inv     == BL!TypeOK /\ BL!InvI5 /\ BL!InvLedger
 =============================================================================

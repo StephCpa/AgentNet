@@ -1,4 +1,4 @@
-# AgentNet 详细设计（v0.1）
+# AgentNet 详细设计（v0.2.2）
 
 本目录是《Agent 网络系统总体设计方案》（2026-10-24，下称**总体方案**）的详细设计（Detailed Design）。总体方案回答"系统应该是什么样、为什么这样"；本目录回答"具体怎么做"：模块边界、数据模型与 DDL、状态机与事务边界、接口定义、协议适配规则、故障恢复流程、验证计划与实施步骤。
 
@@ -19,21 +19,23 @@
 | 10 | [可观测性与审计设计](10-observability-audit.md) | OTel 模型、审计事件、内容采集最小化 | §12.2 |
 | 11 | [披露控制与差分隐私设计](11-privacy-and-dp.md) | 披露执行点、DP 管道、隐私预算记账 | §12 |
 | 12 | [部署拓扑与容量设计](12-deployment-capacity.md) | 域内拓扑、高可用、环境、保留与归档 | §13 |
-| 13 | [验证与测试设计](13-verification-and-testing.md) | 不变量 I1–I10 落地、TLA+ 模型、故障注入矩阵、基准 | §14 |
+| 13 | [验证与测试设计](13-verification-and-testing.md) | 不变量 I1–I11 落地、TLA+ 模型、故障注入矩阵、基准 | §14 |
 | 14 | [MVP 实施计划](14-mvp-plan.md) | 仓库结构、技术选型、M0–M4 分解与退出条件 | §13.1、§14.5 |
-| 15 | [评审整改记录](15-review-remediation.md) | v0.2：评审发现 → 整改位置 → 验证方式 的复审导航表 | 评审 2026-10-26 |
+| 15 | [评审整改记录](15-review-remediation.md) | v0.2.2：复审发现、实测证据、剩余门槛 | 复审 2026-10-27 |
 | 附录 | [OQ-1 agentgateway 复用度评估](appendix-oq1-agentgateway.md) | 官方事实清单、08 §7 逐项判定、B3 定档依据 | §2.1、08 §7 |
 
 配套工件：
 
 - [`schema/001_core.sql`](../../schema/001_core.sql)——PostgreSQL DDL，权威来源为该文件，文档 02 中的片段是节选说明；
 - [`proto/anet/{tcs,ics,dir}/v1/*.proto`](../../proto/)——gRPC 接口定义（03 §4 / 06 / 07 的具体化）；
-- [`test/tla/*.tla`](../../test/tla/)——TLA+ 模型 M0 初稿（13 §2 的具体化：TaskMachine / BudgetLedger / AuthzShrink）。
+- [`test/tla/`](../../test/tla/)——四个有界模型及 12 项严格判定的变异门禁。
+- [`test/schema/`](../../test/schema/)——PG16 隔离迁移与事务探针；[`schema/002_reservation_cardinality.sql`](../../schema/002_reservation_cardinality.sql) 修复旧库的多维预留索引。
+- [`adapters/a2a/wire-format.md`](../../adapters/a2a/wire-format.md)——固定官方 v1.0.1 的方法、路径和上游差异登记。
 
 ## 阅读路径
 
 - **实现者**：00 → 02 → 03 → 04 → 05 → 06 → 08，按里程碑回查 13、14。
-- **评审者**：00 的映射表 → 03 §3（三个提交时点）→ 04 §6（危险窗口）→ 13 §1（不变量映射）。
+- **评审者**：15（复审证据）→ 03 §6（三个提交时点）→ 04 §6（恢复）→ 13 §1（不变量映射）。
 - **运维者**：12 → 10 → 04 §7（对账手册）。
 
 ## 设计基线声明

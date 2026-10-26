@@ -64,7 +64,7 @@ erDiagram
 ### 3.2 `command_inbox`：去重键、时效与保留期（v0.2）
 
 - 主键 `(command_id, audience_domain_id)`：同一逻辑命令发往不同域是不同接纳。
-- `not_after`（可信绑定）：T1 **无条件**检查 `now() ≤ not_after`（自包含，不依赖去重记录存在）；`expires_at = max(保留期, not_after)` 且 `CHECK (expires_at >= not_after)`——时效未过的命令不可能失去去重记录，清理后重放被时效检查拒绝（评审 §6.1 / FI-13）。
+- `not_after`（可信绑定）：T1 **无条件**检查 `now() ≤ not_after`（自包含，不依赖去重记录存在）；`expires_at = max(received_at + 保留期, not_after)` 且 `CHECK (expires_at >= not_after)`——遵守该清理规则时，时效未过的命令不会失去去重记录，清理后重放被时效检查拒绝（评审 §6.1 / FI-13）。
 - 默认保留 168h；超窗重放进入显式恢复流程，不静默重执行。
 
 ### 3.3 `effects`：I3 绑定与冲突（v0.2）
@@ -74,7 +74,7 @@ erDiagram
 ### 3.4 `budget_accounts` / `budget_reservations`：S+H+D（v0.2）
 
 - 不变量：`settled(S) + SUM(HELD 预留)(H) + delegated(D) ≤ budget_limit(B)`。SETTLED/RELEASED 预留是历史记录不计入 H（结算先退出 H 再进入 S，同事务）。
-- 权威执行：TCS 行锁 + **预留独占绑定**（部分唯一索引 `uq_reservation_effect/attempt` + 绑定不可改写触发器）；延迟约束触发器 `trg_budget_invariant_res/_acc`（预留表与账户表变更都触发）兜底实现缺陷。
+- 权威执行：TCS 行锁 + **预留独占绑定**（单行单目标 CHECK + 绑定不可改写触发器；非唯一索引允许同一 effect/attempt 的多维预留）；延迟约束触发器 `trg_budget_invariant_res/_acc`（预留表与账户表变更都触发）兜底实现缺陷。
 - 根账户唯一性：`UNIQUE NULLS NOT DISTINCT`（防同任务同维度双根账户，评审 §9.3）。
 
 ### 3.5 `task_events` / `audit_log`：分区与仅追加
@@ -101,7 +101,7 @@ erDiagram
 | `task_events` | ≈ 控制消息数的 50%（≈100/s） | ~1.5 KiB | ≈ 860 万行 / **13 GiB**（含索引） | 180 天热（≈3.5 TiB），之后 detach 归档（12 §5） |
 | `audit_log` | ≈ 每接纳/决策 1 行（≈150/s） | ~0.6 KiB | ≈ 1,300 万行 / **12 GiB**（含索引） | 365 天热（≈4.4 TiB） |
 | `outbox`（终态行） | ≈ 消息数 | ~1 KiB | ≈ 1,700 万行 / ~17 GiB | DONE 行保留 7 天后清理 |
-| `command_inbox` | ≈ 命令数 | ~0.2 KiB | 按 `expires_at` 滚动清理 | ≤168h 且 ≥ not_after |
+| `command_inbox` | ≈ 命令数 | ~0.2 KiB | 按 `expires_at` 滚动清理 | expires_at ≥ not_after；默认至少保留 168h |
 | `receipts` / `effects` | 命令/操作数 | ~0.5 KiB | 与任务量线性 | 随任务归档 |
 
 热存合计 ≈ 8 TiB，与 12 §6 主库配置（16 TiB，含 2× 安全系数）自洽（评审 §十二修复了 v0.1 的 4 TiB 矛盾）。**带宽不是第一瓶颈，长期记录积累才是**：事件与产物分离、分区+归档是 M1 必须项、大载荷一律走 ART 引用。

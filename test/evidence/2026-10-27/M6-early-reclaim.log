@@ -1,0 +1,57 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 43 and seed 3246295270115841744 with 2 workers on 16 cores with 5328MB heap and 64MB offheap memory [pid: 67024] (Windows 11 10.0 amd64, Eclipse Adoptium 17.0.20.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-8tt3w9zs\MCBudgetLedger.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Naturals.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-8tt3w9zs\BudgetLedger.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\FiniteSets.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module BudgetLedger
+Semantic processing of module MCBudgetLedger
+Starting... (2026-10-27 00:05:44)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-27 00:05:45.
+Error: Invariant InvLedger is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ cAvail = [s1 |-> 0]
+/\ inRet = [s1 |-> 0]
+/\ pD = 0
+/\ pH = 0
+/\ pS = 0
+/\ inSpend = [s1 |-> 0]
+/\ cSpent = [s1 |-> 0]
+
+State 2: <Action line 12, col 1 to line 16, col 42 of module MCBudgetLedger>
+/\ cAvail = [s1 |-> 0]
+/\ inRet = [s1 |-> 0]
+/\ pD = 0
+/\ pH = 1
+/\ pS = 0
+/\ inSpend = [s1 |-> 0]
+/\ cSpent = [s1 |-> 0]
+
+State 3: <Action line 12, col 1 to line 16, col 42 of module MCBudgetLedger>
+/\ cAvail = [s1 |-> 1]
+/\ inRet = [s1 |-> 0]
+/\ pD = 1
+/\ pH = 0
+/\ pS = 0
+/\ inSpend = [s1 |-> 0]
+/\ cSpent = [s1 |-> 0]
+
+State 4: <Action line 12, col 1 to line 16, col 42 of module MCBudgetLedger>
+/\ cAvail = [s1 |-> 1]
+/\ inRet = [s1 |-> 0]
+/\ pD = 0
+/\ pH = 0
+/\ pS = 0
+/\ inSpend = [s1 |-> 0]
+/\ cSpent = [s1 |-> 0]
+
+72 states generated, 44 distinct states found, 29 states left on queue.
+The depth of the complete state graph search is 5.
+The average outdegree of the complete state graph is 4 (minimum is 1, the maximum 7 and the 95th percentile is 7).
+Finished in 00s at (2026-10-27 00:05:45)

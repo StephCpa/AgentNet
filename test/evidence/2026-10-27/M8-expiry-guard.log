@@ -1,0 +1,41 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 83 and seed -2604264100360474609 with 2 workers on 16 cores with 5328MB heap and 64MB offheap memory [pid: 32184] (Windows 11 10.0 amd64, Eclipse Adoptium 17.0.20.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-lagq_d11\MCCmdExpiry.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Naturals.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-lagq_d11\CmdExpiry.tla
+Semantic processing of module Naturals
+Semantic processing of module CmdExpiry
+Semantic processing of module MCCmdExpiry
+Starting... (2026-10-27 00:05:47)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-27 00:05:47.
+Error: Action property CE!NoCreateAfterExpiry is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ taskCount = 0
+/\ curTime = 0
+/\ inbox = FALSE
+/\ createdAt = 0
+
+State 2: <Action line 9, col 1 to line 12, col 50 of module MCCmdExpiry>
+/\ taskCount = 0
+/\ curTime = 1
+/\ inbox = FALSE
+/\ createdAt = 0
+
+State 3: <Action line 9, col 1 to line 12, col 50 of module MCCmdExpiry>
+/\ taskCount = 0
+/\ curTime = 2
+/\ inbox = FALSE
+/\ createdAt = 0
+
+State 4: <Action line 9, col 1 to line 12, col 50 of module MCCmdExpiry>
+/\ taskCount = 1
+/\ curTime = 2
+/\ inbox = TRUE
+/\ createdAt = 2
+
+12 states generated, 12 distinct states found, 1 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 1 (minimum is 1, the maximum 2 and the 95th percentile is 2).
+Finished in 00s at (2026-10-27 00:05:47)

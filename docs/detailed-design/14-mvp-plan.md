@@ -38,7 +38,7 @@ agentnet/
 ├─ sdk/agentnet/                # Python SDK：提议-校验循环、恢复重放、证据封装
 ├─ test/
 │  ├─ faultlab/                 # FI 注入工具（崩溃钩子/丢弃/乱序/分区/恶意对端）
-│  ├─ tla/                      # TaskMachine / BudgetLedger / AuthzShrink
+│  ├─ tla/                      # TaskMachine / CmdExpiry / BudgetLedger / AuthzShrink
 │  ├─ prt/                      # 协议映射回归
 │  └─ bench/                    # BM 任务集与跑批框架
 └─ deploy/                      # devnet compose（三域）、staging、试点清单
@@ -48,14 +48,14 @@ agentnet/
 
 ### M0（设计收敛，~3 周）
 1. 本设计评审 + 修订冻结；
-2. ~~`tla/` 三模块建模并通过界内枚举（13 §2）~~ **✅ 2026-10-25 完成**（详见 `test/tla/README.md`；首轮发现并修正 I1 相关建模缺陷；守卫变异测试排入 M1）；
+2. 四个有界模型与 12 项变异门禁已通过（2026-10-27）；未建模范围见 13 §6，不能据此认定完整 M0 已退出；
 3. `proto/` 接口定稿评审（TCS/ICS/DIR）——初稿已就位（`proto/anet/`），待评审；
 4. OQ-1：agentgateway 覆盖度评估报告（08 §7 清单）——**✅ 2026-10-25 完成**（`appendix-oq1-agentgateway.md` v1.0：底座成立，特有控制语义经 ExtAuth/ExtProc 注入；遗留 OQ-7 两个 devnet 实测项）；
 5. B3 基线选型（现成组件组合）确定——**✅ 2026-10-25 定档 B3-α**（agentgateway 1.6.x + AGNTCY 目录；`test/bench/b3-baseline-selection.md` §5），patch 版本号 M0 评审时冻结；
 6. PRT 用例成文（13 §4）——**✅ 2026-10-25 完成**（`test/prt/cases.md`，38 条用例）。
 
 ### M1（单域闭环，~6 周）
-1. `schema/` 迁移 + TCS（T1/T2/T3、状态机、租约/epoch、outbox 投递器）；
+1. `schema/` 的 PG16 迁移/升级与事务探针已通过（2026-10-27）；继续实现 TCS（T1/T2/T3、状态机、租约/epoch、outbox 投递器）；
 2. ICS（OIDC 接入、令牌交换、checkShrink、撤销推送）；
 3. GW 最小流水线（认证/去重/授权/审计四级）+ `adapters/local` + `mockbiz`；
 4. 预算账本与预留-结算（05 §3–§5）；

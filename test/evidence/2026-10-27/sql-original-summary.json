@@ -1,0 +1,44 @@
+[
+  {
+    "case": "migration-001",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "version",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "seed",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "partial-settlement-commits",
+    "passed": true,
+    "expected_error": null,
+    "returncode": 0
+  },
+  {
+    "case": "delegated-blocks-reserve",
+    "passed": true,
+    "expected_error": "ANET-BUD-INVARIANT",
+    "returncode": 3
+  },
+  {
+    "case": "account-update-checked",
+    "passed": true,
+    "expected_error": "ANET-BUD-INVARIANT",
+    "returncode": 3
+  },
+  {
+    "case": "four-dimensions-one-effect",
+    "passed": false,
+    "expected_error": null,
+    "returncode": 3
+  }
+]

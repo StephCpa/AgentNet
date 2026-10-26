@@ -1,0 +1,33 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 17 and seed -7581206505298895180 with 2 workers on 16 cores with 5328MB heap and 64MB offheap memory [pid: 63336] (Windows 11 10.0 amd64, Eclipse Adoptium 17.0.20.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-6h92nyhg\MCAuthzShrink.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Naturals.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\anet-tlc-6h92nyhg\AuthzShrink.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\FiniteSets.tla
+Parsing file C:\Users\76790\AppData\Local\Temp\Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module AuthzShrink
+Semantic processing of module MCAuthzShrink
+Starting... (2026-10-27 00:05:46)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-27 00:05:46.
+Error: Action property AS!ChainMonotone is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ depthLeft = 2
+/\ currentRights = {"read", "compute", "write", "delegate"}
+
+State 2: <Action line 11, col 1 to line 14, col 30 of module MCAuthzShrink>
+/\ depthLeft = 1
+/\ currentRights = {}
+
+State 3: <Action line 11, col 1 to line 14, col 30 of module MCAuthzShrink>
+/\ depthLeft = 0
+/\ currentRights = {"read"}
+
+263 states generated, 20 distinct states found, 15 states left on queue.
+The depth of the complete state graph search is 3.
+The average outdegree of the complete state graph is 16 (minimum is 16, the maximum 16 and the 95th percentile is 16).
+Finished in 00s at (2026-10-27 00:05:46)

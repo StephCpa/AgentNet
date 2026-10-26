@@ -7,7 +7,7 @@
 -- 修订记录：
 --   rev 2026-10-26（评审整改包 A/F，见 docs/detailed-design/15-review-remediation.md）：
 --     1) 账本不变量改为 S+H+D ≤ B（H 仅计 HELD；delegated 计入；账户表变更也触发兜底）
---     2) 预留独占绑定：部分唯一索引（effect_id / attempt_id 不可重复绑定）
+--     2) 预留独占绑定：单行单目标 + 绑定不可改写；一个目标允许多维预留
 --     3) effect 状态移除 CONFLICT；冲突尝试改记 effect_conflict_attempts（仅追加）
 --     4) command_inbox 增可信 not_after（命令时效自包含判定，防清理后重放）
 --     5) dp_purposes.window → privacy_window（WINDOW 为 PG 保留字，修复迁移失败）
@@ -189,7 +189,7 @@ CREATE INDEX ON grants (task_id);
 CREATE INDEX ON grants (root_grant_id);
 
 -- ----------------------------------------------------------------------------
--- 预算账本（细节见 05；S+R≤B 由 TCS 行锁 + 延迟约束触发器双层保证）
+-- 预算账本（细节见 05；S+H+D≤B 由 TCS 行锁 + 延迟约束触发器双层保证）
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE budget_accounts (
@@ -212,7 +212,7 @@ CREATE TABLE budget_reservations (
   account_id     TEXT NOT NULL REFERENCES budget_accounts,
   holder_task_id TEXT NOT NULL REFERENCES tasks,
   command_id     TEXT,
-  effect_id      TEXT,                                -- 绑定后不可改写（独占；见下方部分唯一索引）
+  effect_id      TEXT,                                -- 绑定后不可改写；一个 effect 可有多维预留
   attempt_id     TEXT,                                -- 每次计费尝试的预留按 attempt 绑定（05 §2.3）
   purpose        TEXT NOT NULL CHECK (purpose IN ('model_call','tool_call','subtask','message','delegate_tranche')),
   amount         NUMERIC(20,6) NOT NULL CHECK (amount > 0),
@@ -228,10 +228,11 @@ CREATE TABLE budget_reservations (
 );
 CREATE INDEX ON budget_reservations (account_id, state);
 CREATE INDEX ON budget_reservations (holder_task_id, state);
--- 预留独占绑定（评审 §三）：一个预留最多绑定一个 effect / 一个 attempt；绑定不可重复使用
-CREATE UNIQUE INDEX uq_reservation_effect
+-- 独占方向是 reservation -> effect/attempt，而非 effect -> reservation。
+-- 单行 CHECK + 不可改写触发器保证独占；非唯一索引允许四维预留绑定同一目标。
+CREATE INDEX ix_reservation_effect
   ON budget_reservations (effect_id) WHERE effect_id IS NOT NULL;
-CREATE UNIQUE INDEX uq_reservation_attempt
+CREATE INDEX ix_reservation_attempt
   ON budget_reservations (attempt_id) WHERE attempt_id IS NOT NULL;
 -- 绑定不可改写：effect/attempt 绑定后禁止再指向其他对象（TCS 事务内校验 + 触发器兜底）
 CREATE OR REPLACE FUNCTION anet_reservation_binding_guard() RETURNS trigger AS $$

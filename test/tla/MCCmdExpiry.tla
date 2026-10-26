@@ -11,6 +11,7 @@ CE == INSTANCE CmdExpiry WITH
         taskCount <- taskCount, inbox <- inbox,
         createdAt <- createdAt, curTime <- curTime
 
+InvSingleTask      == CE!InvSingleTask
 Spec               == CE!Spec
 Inv                == CE!TypeOK /\ CE!InvSingleTask
 NoCreateAfterExpiry == CE!NoCreateAfterExpiry

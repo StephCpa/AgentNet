@@ -2,3 +2,5 @@ test/tla/states/
 *.tmp
 Thumbs.db
 .DS_Store
+.local/
+__pycache__/

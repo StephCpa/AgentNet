@@ -1,6 +1,6 @@
 --------------------------- MODULE TaskMachine ---------------------------
 (***************************************************************************)
-(* AgentNet · TaskMachine —— TLA+ 模型 v0.2.1（13 §2；评审 §四/§五/§七）    *)
+(* AgentNet · TaskMachine —— TLA+ 模型 v0.2.2（13 §2；评审 §四/§五/§七）    *)
 (*                                                                         *)
 (* v0.2 变更（相对 v0.1）：                                                *)
 (*  1) 冲突 = 拒绝响应：AdmitConflict 只置拒绝结果，原 effect 状态不变；    *)
@@ -8,10 +8,10 @@
 (*  2) 租约持有者绑定：leaseHolder 变量，Admit 需 leaseHolder=w；           *)
 (*     epoch 相等不是执行权（评审 §5.1）                                   *)
 (*  3) BudgetMax=2：预算守卫在界内可命中（变异可检出，评审 §7.3）          *)
-(*  4) 独立动作性质 [][][~(坏条件)]_Vars 形式（评审 §7.4；含 => 的形式      *)
-(*     在 SANY 1.7.4 不解析，2026-10-26 实证后采用等价否定合取式）          *)
+(*  4) 独立动作性质 [][P]_Vars；lastAdmission 记录实际接纳的身份与代次。   *)
+(*     性质同时支持蕴含式与否定合取式，不以守卫存在代替观察。               *)
 (*  5) I11 命令时效独立建模于 CmdExpiry.tla（控制本模块状态空间）          *)
-(* 界：Workers={w1,w2}, Cmds={c1,c2}, Effects={e1,e2},                     *)
+(* 界：Workers={w1,w2}, Cmds={c1,c2}, Effects={e1,e2,e3},                     *)
 (*     ParamDigests={d1,d2}, BudgetMax=2。                                 *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
@@ -35,6 +35,7 @@ VARIABLES taskState,     \* "idle"|"accepted"|"running"|"succeeded"|"failed"|"ca
           effParams,     \* [e |-> 参数摘要绑定]（I3）
           settled,       \* S（I5）
           reserved,      \* H：HELD 总额；UNKNOWN 的占用不自动释放（I7）
+          lastAdmission, \* 最近接纳的 actor/claim/holder/epoch 快照（观察变量）
           workerEpoch    \* [w |-> 租约 epoch；0 = 无]
 
 NONE == "none"
@@ -43,7 +44,7 @@ Cost == 1
 
 Vars == << taskState, taskVersion, epoch, cancelVersion, leaseHolder,
            inbox, inboxParams, acked, eff, effParams,
-           settled, reserved, workerEpoch >>
+           settled, reserved, workerEpoch, lastAdmission >>
 
 TypeOK ==
   /\ taskState \in {"idle","accepted","running"} \cup Terminal
@@ -63,6 +64,7 @@ Init ==
   /\ eff = [e \in Effects |-> "none"] /\ effParams = [e \in Effects |-> "none"]
   /\ settled = 0 /\ reserved = 0
   /\ workerEpoch = [w \in Workers |-> 0]
+  /\ lastAdmission = [actor |-> NONE, claim |-> 0, holder |-> NONE, generation |-> 0]
 
 (*************************************************************************)
 (* T1 任务接纳（03 §6.1）：去重 -> 同参幂等 / 换参拒绝（均不改写绑定）。   *)
@@ -73,14 +75,14 @@ Submit(c, d) ==
   /\ inbox' = [inbox EXCEPT ![c] = "accepted"]
   /\ inboxParams' = [inboxParams EXCEPT ![c] = d]
   /\ UNCHANGED << epoch, cancelVersion, leaseHolder, acked, eff, effParams,
-                  settled, reserved, workerEpoch >>
+                  settled, reserved, workerEpoch, lastAdmission >>
 
 RetrySame(c, d) ==                        \* 提交后回执前崩溃，同参重试：幂等（FI-01）
   /\ inbox[c] = "accepted" /\ inboxParams[c] = d /\ ~acked[c]
   /\ acked' = [acked EXCEPT ![c] = TRUE]
   /\ UNCHANGED << taskState, taskVersion, epoch, cancelVersion, leaseHolder,
                   inbox, inboxParams, eff, effParams, settled, reserved,
-                  workerEpoch >>
+                  workerEpoch, lastAdmission >>
 
 RetryChangedParams(c, d) ==               \* 换参重试 = 拒绝响应（K2/I3）：
   /\ inbox[c] = "accepted" /\ inboxParams[c] # d  \* 绑定与回执资格不变
@@ -90,19 +92,21 @@ RetryChangedParams(c, d) ==               \* 换参重试 = 拒绝响应（K2/I3
 (* T2 业务操作接纳（03 §6.2 v0.2）                                        *)
 (*************************************************************************)
 Lease(w) ==                               \* 领取租约：成为唯一持有者
+  /\ taskState \in {"accepted","running"}
   /\ leaseHolder = NONE
   /\ workerEpoch[w] # epoch
   /\ leaseHolder' = w /\ workerEpoch' = [workerEpoch EXCEPT ![w] = epoch]
   /\ UNCHANGED << taskState, taskVersion, epoch, cancelVersion, inbox,
-                  inboxParams, acked, eff, effParams, settled, reserved >>
+                  inboxParams, acked, eff, effParams, settled, reserved, lastAdmission >>
 
 Admit(e, w, d, ce) ==                     \* ce = 提案声称的 epoch（可经任务查询获得，
-  /\ taskState \notin Terminal            \* 评审 §5.1：epoch 是代次不是执行权）
+  /\ taskState \in {"accepted","running"} \* 评审 §5.1：epoch 是代次不是执行权）
   /\ cancelVersion = 0                    \* I9
   /\ ce = epoch                           \* I2：代次一致（防旧提案；非凭证）
   /\ leaseHolder = w                      \* 执行权：已认证实例 == 当前租约持有者
   /\ eff[e] = "none"                      \* I7：含 unknown 不得重做
   /\ settled + reserved + Cost <= BudgetMax   \* I5
+  /\ lastAdmission' = [actor |-> w, claim |-> ce, holder |-> leaseHolder, generation |-> epoch]
   /\ eff' = [eff EXCEPT ![e] = "admitted"]
   /\ effParams' = [effParams EXCEPT ![e] = d]
   /\ reserved' = reserved + Cost
@@ -139,36 +143,37 @@ ExtResult(e, outcome) ==
      ELSE IF outcome = "rejected" THEN ExtRejected(e)
      ELSE ExtUnknown(e)
   /\ UNCHANGED << taskState, taskVersion, epoch, cancelVersion, leaseHolder,
-                  inbox, inboxParams, acked, effParams, workerEpoch >>
+                  inbox, inboxParams, acked, effParams, workerEpoch, lastAdmission >>
 
 Reconcile(e, outcome) ==                  \* 对账（04 §6）：UNKNOWN -> 终态
   /\ eff[e] = "unknown"
   /\ IF outcome = "committed" THEN ExtCommitted(e) ELSE ExtRejected(e)
   /\ UNCHANGED << taskState, taskVersion, epoch, cancelVersion, leaseHolder,
-                  inbox, inboxParams, acked, effParams, workerEpoch >>
+                  inbox, inboxParams, acked, effParams, workerEpoch, lastAdmission >>
 
 Cancel ==                                 \* T3（03 §6.3）
-  /\ taskState \notin Terminal
+  /\ taskState \in {"accepted","running"}
   /\ taskState' = "cancelled"
   /\ cancelVersion' = cancelVersion + 1
   /\ taskVersion' = taskVersion + 1
   /\ UNCHANGED << epoch, leaseHolder, inbox, inboxParams, acked, eff,
-                  effParams, settled, reserved, workerEpoch >>
+                  effParams, settled, reserved, workerEpoch, lastAdmission >>
 
 Takeover ==                               \* 接管（04 §5）：epoch+1，租约失效
+  /\ taskState \in {"accepted","running"}
   /\ epoch' = epoch + 1
   /\ leaseHolder' = NONE
-  /\ workerEpoch' = [w \in Workers |-> 0]
+  \* 旧 worker 保留旧凭据；接管不能擦掉远端记忆。
   /\ taskVersion' = taskVersion + 1
   /\ UNCHANGED << taskState, cancelVersion, inbox, inboxParams, acked, eff,
-                  effParams, settled, reserved >>
+                  effParams, settled, reserved, lastAdmission, workerEpoch >>
 
 Finish ==                                 \* 无悬空 UNKNOWN 方可成功（04 §6.4）
   /\ taskState \in {"accepted","running"}
   /\ \A e \in Effects : eff[e] \in {"none","committed","rejected"}
   /\ taskState' = "succeeded" /\ taskVersion' = taskVersion + 1
   /\ UNCHANGED << epoch, cancelVersion, leaseHolder, inbox, inboxParams, acked,
-                  eff, effParams, settled, reserved, workerEpoch >>
+                  eff, effParams, settled, reserved, workerEpoch, lastAdmission >>
 
 Next ==
   \/ \E c \in Cmds, d \in ParamDigests :
@@ -217,10 +222,12 @@ TerminalStable ==
   [][~( taskState \in Terminal /\ taskState' \notin Terminal )]_Vars
 
 NoLeaseFence ==
-  [][ ~( /\ \E e \in Effects : eff[e] = "none" /\ eff'[e] = "admitted"
-         /\ \A w \in Workers :
-              ~( /\ leaseHolder = w /\ leaseHolder' = w
-                 /\ workerEpoch[w] = epoch /\ workerEpoch'[w] = epoch' ) ) ]_Vars
-   \* 任何新接纳发生时，必存在"当步前后均持有有效租约"的执行者
-   \*（I2 + 评审 §5.1 合并语义；旧 worker 伪装 epoch、无租约者均被排除）
+  [][(\E e \in Effects : eff[e] = "none" /\ eff'[e] = "admitted")
+       => (lastAdmission'.actor = lastAdmission'.holder
+           /\ lastAdmission'.actor \in Workers)]_Vars
+
+EpochFence ==
+  [][(\E e \in Effects : eff[e] = "none" /\ eff'[e] = "admitted")
+       => lastAdmission'.claim = lastAdmission'.generation]_Vars
+  \* 当前持有者也可能重放旧代次提案；持有者绑定不能替代代次检查。
 =============================================================================

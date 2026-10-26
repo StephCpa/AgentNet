@@ -32,19 +32,22 @@ v0.1 的错误（已在 SQL 与本文件同步修复）：SETTLED 预留仍计�
 - **预留两类**（评审 §三）：
   - **effect 预留**：绑定一次业务操作（`effect_id`），覆盖该操作的可执行上界；
   - **attempt 预留**：每次实际计费尝试（模型重试、重调）独立预留（`attempt_id`）——"每次可能计费的尝试独立预留"的落地形态。
-- **独占绑定**：一个预留至多绑定一个 effect 或一个 attempt（SQL 部分唯一索引），且绑定后不可改写（触发器 `anet_reservation_binding_guard`）。T2 接纳必须校验 `effect_id IS NULL` 后再绑定。
+- **独占绑定**：一个预留至多绑定一个 effect 或一个 attempt（单行字段 + 二选一 CHECK），且绑定后不可改写（触发器 `anet_reservation_binding_guard`）。同一 effect/attempt 可以绑定四个维度的不同预留；不能对 effect_id/attempt_id 单列建唯一索引。T2 接纳必须校验两个绑定字段均为空后再绑定。
 
 ## 3. 预留（Reserve）协议
 
 ```text
 ReserveBudget(account, dimension, purpose, upper_bound, holder_task, soft_ttl):
 BEGIN;                                        -- 锁序见 §7 表
-  IF now() > task.deadline: ABORT ANET-TSK-DEADLINE;          -- deadline 守卫（评审 §十二）
+  task := SELECT * FROM tasks WHERE task_id=holder_task FOR UPDATE;
+  IF clock_timestamp() > task.deadline: ABORT ANET-TSK-DEADLINE;          -- deadline 守卫（评审 §十二）
   acc := SELECT * FROM budget_accounts WHERE account_id FOR UPDATE;
   h := SELECT COALESCE(SUM(amount),0) FROM budget_reservations
        WHERE account_id=acc AND state='HELD';
   IF acc.settled + h + acc.delegated + upper_bound > acc.budget_limit:
       ABORT ANET-BUD-EXHAUSTED;               -- I5：S+H+D+新增 ≤ B
+  校验 acc.task_id=holder_task 且 acc.dimension=dimension;
+  锁等待后再次检查 clock_timestamp() <= task.deadline 且任务未取消/终态;
   res := INSERT budget_reservations(state='HELD', amount=upper_bound, ...);
   INSERT audit_log(budget.reserve, cost=upper_bound);
 COMMIT; RETURN res;
@@ -61,12 +64,12 @@ COMMIT; RETURN res;
 `AdmitEffect` 在接纳事务内校验**按维度组织的预留集合**（`EffectProposal.reservations[]`）：
 
 ```text
-对每个维度 d ∈ {money, tokens, calls, messages}（操作声明需要者）:
+对每个维度 d ∈ {money, tokens, calls, messages}（由服务端操作定义确定，提案不得省略）:
   res_d := SELECT * FROM budget_reservations WHERE reservation_id FOR UPDATE;
   校验： res_d.state='HELD'
      AND res_d.effect_id IS NULL AND res_d.attempt_id IS NULL   -- 未绑定（独占）
      AND res_d.holder_task_id = prop.task_id                    -- 归属任务匹配
-     AND res_d.dimension = d AND res_d.purpose ∈ prop.allowed_purposes
+     AND 所属 budget_accounts.dimension = d AND res_d.purpose ∈ prop.allowed_purposes
      AND res_d.amount ≥ prop.upper_bound[d]                     -- 金额覆盖
   任一维度失败 ⇒ 整体拒绝（ANET-BUD-RESERVATION-INVALID），不部分绑定
 全部通过后：UPDATE 各 res_d SET effect_id=prop.effect_id（绑定不可再改）
@@ -88,10 +91,13 @@ COMMIT; RETURN res;
 
 ```text
 SettleReservation(res, actual):
-BEGIN;  lock res; lock 所属账户行（锁序 §7）;
+BEGIN;  lock task; lock 所属账户行; lock res（锁序 §7，锁后复核归属）;
   IF res.state ≠ 'HELD': ABORT ANET-BUD-RESERVATION-STATE;
-  actual := min(actual, res.amount);          -- 正常路径：执行器已强制上界
-  IF actual > res.amount: 已由 min 吸收，另记 budget_violation 审计（不得静默）
+  IF actual < 0: ABORT ANET-BUD-RESERVATION-INVALID;
+  IF actual > res.amount:
+      保留原始 usage 与 provider 证据，追加 budget_violation 审计；
+      保持 HELD、冻结该任务新支出；COMMIT; RETURN ANET-BUD-VIOLATION-RECORDED;
+      -- 不得截断真实支出；转人工对账处理实际负债与预算调整，此时不宣称实际支出仍满足 I5。
   UPDATE res SET state='SETTLED', settled_at=now();           -- 退出 H
   UPDATE budget_accounts SET settled = settled + actual;      -- 进入 S（同事务）
 COMMIT;
@@ -120,17 +126,18 @@ COMMIT;
 
 ## 7. 事务锁序表（v0.2 新增；评审 §十二）
 
-所有预算相关事务按**固定全局锁序**加锁，防死锁（`db.lock_timeout=2s` 兜底）：
+所有预算相关事务按**tasks → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）：
 
 | 事务 | 锁序 |
 |---|---|
-| T1 任务接纳 | `command_inbox` → `tasks` → `grants` → `budget_accounts` |
-| T2 业务操作接纳 | `tasks` → `budget_reservations`（按 reservation_id 字典序）→ `effects` |
+| T1 任务接纳 | 新任务按 FK 顺序 INSERT；inbox 唯一键冲突时完整回滚并重读 |
+| T2 业务操作接纳 | `tasks` → 所有 `budget_accounts` → 所有 `budget_reservations` → `effects` |
 | T3 取消 | `tasks`（单行） |
-| Reserve | `tasks`（deadline 检查，共享读）→ `budget_accounts`（按 account_id 字典序）→ `budget_reservations` |
-| Settle / Release | `budget_reservations`（单行）→ `budget_accounts`（单行） |
-| Delegate tranche | 父 `budget_accounts` → 父预留行 → 子 `budget_accounts` |
-| 子域结算/归还上报 | `tasks` → 父 `budget_accounts` → `budget_reservations`（attempt 行） |
+| Reserve | `tasks`（FOR UPDATE，deadline/取消检查）→ `budget_accounts` → 新预留 |
+| Settle / Release | 非锁定读取预留定位账户 → `tasks` → `budget_accounts` → `budget_reservations`；锁后复核归属，改变则回滚重试 |
+| Delegate tranche | 父子 `tasks`（已存在者按 ID）→ 父子 `budget_accounts`（按 ID）→ 父预留；新子对象按 FK 顺序插入 |
+| 子域结算/归还上报 | `tasks` → 父 `budget_accounts` → `budget_reservations`；消息幂等键与账本更新同事务 |
+
 
 违反锁序的实现视为缺陷（code review 门禁 + 并发测试 13 §3 FI-06 扩展）。
 
@@ -142,7 +149,7 @@ COMMIT;
 
 ## 9. 拥塞控制与消息优先级
 
-（v0.1 原文保留：撤销/取消/预算耗尽走高优先级独立限流通道；关键状态与收据持久化；普通推理按任务+租户配额；高频进度 latest-wins；大产物走 ART。接收侧按"预计上下文 token、排队任务数、执行槽位"三重背压，超限回 `ANET-NET-BACKPRESSURE`+建议重试时间。）
+撤销/取消/预算耗尽走高优先级独立限流通道；关键状态与收据持久化；普通推理按任务+租户配额；高频进度 latest-wins；大产物走 ART。接收侧按"预计上下文 token、排队任务数、执行槽位"三重背压，超限回 `ANET-NET-BACKPRESSURE`+建议重试时间。
 
 ## 10. 配置参数（初始值）
 
@@ -151,7 +158,7 @@ COMMIT;
 | `budget.soft_ttl_default` | 15m | 未绑定预留软过期 |
 | `budget.untrusted_usage_policy` | conservative | 自报用量全额结算或保持占用（§5.1） |
 | `budget.violation_policy` | record_and_alert | 记录+告警 |
-| `limits.*` | 见 03 §9 | 根任务默认快照 |
+| `limits.*` | 见 03 §10 | 根任务默认快照 |
 | `gw.backpressure.*` | 见 12 §7 | 入口配额 |
 
 ## 11. 错误码
