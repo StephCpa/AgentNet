@@ -27,3 +27,9 @@ SubmitCommand requires the GW command and ICS root permit; AdmitEffect requires
 the ICS decision; ReportEffectResult requires the adapter fact. Legacy unsigned
 fields retain their wire numbers for compatibility review, but are rejected by
 the implemented server profile. Caller identity is derived from mTLS registration.
+
+The separately configured `anet.gw.v1.Gateway/SubmitCommand` accepts unsigned
+`anet.intent/1` JSON, assigns trusted identity/audience/expiry, durably signs once,
+and invokes ICS/TCS internally. It returns the same `AdmissionResult` as TCS.
+See [`services/gateway/README.md`](../services/gateway/README.md) for exact fields,
+retry rules and scope. This internal SDK RPC is not an A2A/MCP wire mapping.

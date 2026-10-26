@@ -64,6 +64,7 @@ func (a Authenticator) authenticate(ctx context.Context) (identity, error) {
 		return id, status.Error(codes.Unauthenticated, "registered URI mismatch")
 	}
 	id.caller.CredentialHash = Fingerprint(leaf)
+	id.caller.CredentialExpiresAt = &leaf.NotAfter
 	u := leaf.URIs[0]
 	if u.Scheme != "spiffe" || u.Host != a.TrustDomain || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.RawPath != "" || u.Opaque != "" || u.Path != "/agent-instance/"+id.caller.Instance {
 		return id, status.Error(codes.Unauthenticated, "instance URI mismatch")
@@ -85,12 +86,16 @@ func restrict(id identity, method string) error {
 func (a Authenticator) Unary(ctx context.Context, request any, info *grpc.UnaryServerInfo, next grpc.UnaryHandler) (any, error) {
 	id, err := a.authenticate(ctx)
 	if err != nil {
-		return nil, err
+		return nil, a.auditFailure(ctx, identity{}, info.FullMethod, err)
 	}
 	if err = restrict(id, info.FullMethod); err != nil {
-		return nil, err
+		return nil, a.auditFailure(ctx, id, info.FullMethod, err)
 	}
-	return next(context.WithValue(ctx, authKey{}, id), request)
+	response, err := next(context.WithValue(ctx, authKey{}, id), request)
+	if err != nil {
+		return nil, a.auditFailure(ctx, id, info.FullMethod, err)
+	}
+	return response, nil
 }
 
 type authenticatedStream struct {
@@ -102,12 +107,16 @@ func (s *authenticatedStream) Context() context.Context { return s.ctx }
 func (a Authenticator) Stream(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, next grpc.StreamHandler) error {
 	id, err := a.authenticate(stream.Context())
 	if err != nil {
-		return err
+		return a.auditFailure(stream.Context(), identity{}, info.FullMethod, err)
 	}
 	if err = restrict(id, info.FullMethod); err != nil {
-		return err
+		return a.auditFailure(stream.Context(), id, info.FullMethod, err)
 	}
-	return next(srv, &authenticatedStream{stream, context.WithValue(stream.Context(), authKey{}, id)})
+	err = next(srv, &authenticatedStream{stream, context.WithValue(stream.Context(), authKey{}, id)})
+	if err != nil {
+		return a.auditFailure(stream.Context(), id, info.FullMethod, err)
+	}
+	return nil
 }
 func caller(ctx context.Context) (tcs.Caller, error) {
 	id, ok := ctx.Value(authKey{}).(identity)

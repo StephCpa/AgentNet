@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/agentnet/agentnet/internal/canonical"
+	"github.com/agentnet/agentnet/services/gateway"
 	"github.com/agentnet/agentnet/services/ics"
 	"github.com/agentnet/agentnet/services/tcs"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,6 +44,9 @@ type FileConfig struct {
 	ResultKeys          map[string]ed25519.PublicKey `json:"result_keys"`
 	ICSVerificationKeys map[string]ed25519.PublicKey `json:"ics_verification_keys,omitempty"`
 	Operations          map[string]OperationConfig   `json:"operations"`
+	GWKeyID             string                       `json:"gw_key_id,omitempty"`
+	GWSigningKeyFile    string                       `json:"gw_signing_key_file,omitempty"`
+	GWCommandTTL        string                       `json:"gw_command_ttl,omitempty"`
 }
 
 // OpenRuntime loads explicit configuration. It never enrolls identities, creates
@@ -130,6 +134,9 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.
 	if _, err = db.Exec(ctx, `SELECT consent_id FROM root_consents LIMIT 0`); err != nil {
 		return fail(fmt.Errorf("database unavailable or migrations incomplete"))
 	}
+	if _, err = db.Exec(ctx, `SELECT rpc_method,reason_code FROM audit_log LIMIT 0`); err != nil {
+		return fail(fmt.Errorf("request audit migration incomplete"))
+	}
 	store, err := tcs.New(db, tcs.Config{Domain: c.Domain, CommandKeys: c.CommandKeys, RootKeys: c.ICSVerificationKeys, DecisionKeys: c.ICSVerificationKeys, ResultKeys: c.ResultKeys, Operations: ops})
 	if err != nil {
 		return fail(err)
@@ -138,7 +145,47 @@ func OpenRuntime(ctx context.Context, path, dsn string) (*grpc.Server, *pgxpool.
 	if err != nil {
 		return fail(err)
 	}
-	server, err := New(db, store, policy, Config{Domain: c.Domain, TrustDomain: c.TrustDomain, Certificate: cert, ClientCAs: roots, Operations: ops})
+	var ingress *gateway.Service
+	if c.GWKeyID != "" || c.GWSigningKeyFile != "" || c.GWCommandTTL != "" {
+		if c.GWKeyID == "" || c.GWSigningKeyFile == "" {
+			return fail(fmt.Errorf("GW key ID and signing key are required together"))
+		}
+		raw, e := os.ReadFile(resolve(c.GWSigningKeyFile))
+		if e != nil {
+			return fail(fmt.Errorf("cannot load GW signing key"))
+		}
+		block, rest := pem.Decode(raw)
+		if block == nil || block.Type != "PRIVATE KEY" || len(strings.TrimSpace(string(rest))) != 0 {
+			return fail(fmt.Errorf("GW key must be one PKCS8 PEM private key"))
+		}
+		parsed, e := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if e != nil {
+			return fail(fmt.Errorf("invalid GW signing key"))
+		}
+		gwKey, ok := parsed.(ed25519.PrivateKey)
+		if !ok {
+			return fail(fmt.Errorf("GW requires Ed25519"))
+		}
+		trusted, ok := c.CommandKeys[c.GWKeyID]
+		if !ok || !trusted.Equal(gwKey.Public()) || trusted.Equal(public) {
+			return fail(fmt.Errorf("GW signing key must match its command trust entry and differ from ICS"))
+		}
+		var ttl time.Duration
+		if c.GWCommandTTL != "" {
+			ttl, e = time.ParseDuration(c.GWCommandTTL)
+			if e != nil || ttl <= 0 {
+				return fail(fmt.Errorf("invalid GW command TTL"))
+			}
+		}
+		if _, e = db.Exec(ctx, `SELECT signed_command FROM gateway_commands LIMIT 0`); e != nil {
+			return fail(fmt.Errorf("gateway migrations incomplete"))
+		}
+		ingress, e = gateway.New(db, store, policy, gateway.Config{Domain: c.Domain, KeyID: c.GWKeyID, Key: gwKey, CommandTTL: ttl})
+		if e != nil {
+			return fail(e)
+		}
+	}
+	server, err := New(db, store, policy, Config{Domain: c.Domain, TrustDomain: c.TrustDomain, Certificate: cert, ClientCAs: roots, Operations: ops, Gateway: ingress})
 	if err != nil {
 		return fail(err)
 	}

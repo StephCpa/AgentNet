@@ -162,6 +162,10 @@ func (s *Store) submit(ctx context.Context, c Caller, signed Envelope, root *Roo
 	if err != nil {
 		return out, err
 	}
+	_, err = tx.Exec(ctx, `INSERT INTO audit_log(domain_id,principal_id,agent_instance_id,task_id,command_id,action,decision,detail_digest) VALUES($1,$2,$3,$4,$5,'tcs.command_accepted','allow',$6)`, s.cfg.Domain, c.Principal, c.Instance, out.TaskID, cmd.ID, digest)
+	if err != nil {
+		return Admission{}, err
+	}
 	if err = commit(ctx, tx); err != nil {
 		return Admission{}, err
 	}

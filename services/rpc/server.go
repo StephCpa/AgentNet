@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 
+	gwv1 "github.com/agentnet/agentnet/proto/gen/anet/gw/v1"
+	"github.com/agentnet/agentnet/services/gateway"
+
 	commonv1 "github.com/agentnet/agentnet/proto/gen/anet/common/v1"
 	icsv1 "github.com/agentnet/agentnet/proto/gen/anet/ics/v1"
 	tcsv1 "github.com/agentnet/agentnet/proto/gen/anet/tcs/v1"
@@ -29,6 +32,7 @@ type Config struct {
 	Certificate         tls.Certificate
 	ClientCAs           *x509.CertPool
 	Operations          map[string]tcs.Operation
+	Gateway             *gateway.Service
 }
 type control struct {
 	tcsv1.UnimplementedTaskControlServer
@@ -58,6 +62,9 @@ func New(db *pgxpool.Pool, store *tcs.Store, icsService *ics.Service, c Config) 
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.ChainUnaryInterceptor(auth.Unary), grpc.ChainStreamInterceptor(auth.Stream), grpc.MaxRecvMsgSize(2<<20), grpc.MaxSendMsgSize(4<<20))
 	tcsv1.RegisterTaskControlServer(server, &control{store: store, domain: c.Domain, ops: ops})
 	icsv1.RegisterIdentityPolicyServer(server, &policy{service: icsService, ops: ops})
+	if c.Gateway != nil {
+		gwv1.RegisterGatewayServer(server, &ingress{service: c.Gateway, control: &control{store: store, domain: c.Domain, ops: ops}})
+	}
 	return server, nil
 }
 func rpcError(err error) error {
@@ -164,9 +171,14 @@ func (c *control) SubmitCommand(ctx context.Context, r *tcsv1.SubmitCommandReque
 	if err != nil {
 		return nil, rpcError(err)
 	}
+	return c.admissionResult(ctx, who, a)
+}
+func (c *control) admissionResult(ctx context.Context, who tcs.Caller, a tcs.Admission) (*tcsv1.AdmissionResult, error) {
 	d, err := c.store.Details(ctx, who, a.TaskID)
 	if err != nil {
-		return nil, rpcError(err)
+		// T1 is already committed. A revoked identity or lost DB connection now
+		// prevents delivering the receipt, not the accepted operation itself.
+		return nil, status.Error(codes.Unavailable, "accepted command response unavailable; recover by command ID")
 	}
 	result := &tcsv1.AdmissionResult{TaskId: a.TaskID, RootGrantId: a.RootGrantID}
 	if a.Existing {
@@ -176,6 +188,9 @@ func (c *control) SubmitCommand(ctx context.Context, r *tcsv1.SubmitCommandReque
 		if receipt.ID == a.ReceiptID {
 			result.AcceptedReceipt = receiptPB(receipt)
 		}
+	}
+	if result.AcceptedReceipt == nil {
+		return nil, status.Error(codes.Unavailable, "accepted receipt unavailable; recover by command ID")
 	}
 	return result, nil
 }

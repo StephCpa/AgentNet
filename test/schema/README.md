@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–008 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions and credentials) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–009 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials and gateway bindings) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -82,3 +82,11 @@ session expiry during locks, old-credential fencing after TCS/ICS lock waits and
 the actual instancekey/identityd executables. Evidence:
 `test/evidence/2026-10-27/credentials/`. This implements owner-controlled enrollment,
 rotation and revocation; unattended renewal and complete GW/DPoP remain pending.
+
+SDK gateway increment (design 22): migration 009, 32 runner checks, 92 database
+tests (25 TCS, 8 delivery, 17 execution, 27 RPC, 15 identity) and 6 unit tests.
+Evidence: `test/evidence/2026-10-27/gateway/`. Cases include first-signature/expiry
+persistence, concurrent submission, original receipt recovery, interrupted permit
+flow, atomic signing/acceptance audits, failure audit, three certificate-expiry
+lock waits and anetd kill/restart recovery. External protocol/agentgateway hooks,
+OAuth/DPoP, quotas and complete M1 exit remain pending.

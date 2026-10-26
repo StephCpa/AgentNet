@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"bufio"
+	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	gwv1 "github.com/agentnet/agentnet/proto/gen/anet/gw/v1"
 	icsv1 "github.com/agentnet/agentnet/proto/gen/anet/ics/v1"
 	tcsv1 "github.com/agentnet/agentnet/proto/gen/anet/tcs/v1"
 	service "github.com/agentnet/agentnet/services/rpc"
@@ -41,7 +43,15 @@ func TestRPCDaemonProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	write("ics.key", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: icsKey}))
+	gwKey, err := x509.MarshalPKCS8PrivateKey(f.gwKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write("gw.key", pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: gwKey}))
 	c := service.FileConfig{Domain: f.domain, TrustDomain: "test.agentnet", Listen: "127.0.0.1:0", CertificateFile: "server.pem", PrivateKeyFile: "server.key", ClientCAFile: "ca.pem", ICSKeyID: "ics", ICSSigningKeyFile: "ics.key", CommandKeys: f.cfg.CommandKeys, ResultKeys: f.cfg.ResultKeys, Operations: map[string]service.OperationConfig{}}
+	c.GWKeyID = "gateway"
+	c.GWSigningKeyFile = "gw.key"
+	c.GWCommandTTL = "5m"
 	for target, op := range f.cfg.Operations {
 		c.Operations[target] = service.OperationConfig{Action: op.Action, Resource: op.Resource, Capability: op.Capability, Purpose: op.Purpose, Dimensions: op.Dimensions, Sensitivity: op.Sensitivity, DataClass: op.DataClass}
 	}
@@ -50,41 +60,86 @@ func TestRPCDaemonProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	write("config.json", raw)
+	for _, name := range []string{"missing-key", "untrusted-key", "same-ics-key", "zero-ttl", "long-ttl"} {
+		t.Run(name, func(t *testing.T) {
+			bad := c
+			switch name {
+			case "missing-key":
+				bad.GWSigningKeyFile = ""
+			case "untrusted-key":
+				bad.GWKeyID = "untrusted"
+			case "same-ics-key":
+				bad.GWSigningKeyFile = "ics.key"
+				bad.CommandKeys = map[string]ed25519.PublicKey{"gateway": f.icsKey.Public().(ed25519.PublicKey)}
+			case "zero-ttl":
+				bad.GWCommandTTL = "0s"
+			case "long-ttl":
+				bad.GWCommandTTL = "6m"
+			}
+			badRaw, e := json.Marshal(bad)
+			if e != nil {
+				t.Fatal(e)
+			}
+			write("bad-config.json", badRaw)
+			server, db, _, e := service.OpenRuntime(f.ctx, filepath.Join(dir, "bad-config.json"), os.Getenv("ANET_TEST_DSN"))
+			if server != nil {
+				server.Stop()
+			}
+			if db != nil {
+				db.Close()
+			}
+			if e == nil {
+				t.Fatal("invalid GW configuration accepted")
+			}
+		})
+	}
 	binary := filepath.Join(dir, "anetd.exe")
 	build := exec.CommandContext(f.ctx, "go", "build", "-o", binary, "../../cmd/anetd")
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, output)
 	}
-	child := exec.CommandContext(f.ctx, binary, "-config", filepath.Join(dir, "config.json"))
-	child.Env = append(os.Environ(), "ANET_DATABASE_URL="+os.Getenv("ANET_TEST_DSN"))
-	pipe, err := child.StdoutPipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	child.Stderr = child.Stdout
-	if err = child.Start(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = child.Process.Kill(); _ = child.Wait() })
-	ready := make(chan string, 1)
-	go func() {
-		scanner := bufio.NewScanner(pipe)
-		for scanner.Scan() {
-			if _, address, ok := strings.Cut(scanner.Text(), "LISTEN "); ok {
-				ready <- address
-				return
+	start := func() func() {
+		child := exec.CommandContext(f.ctx, binary, "-config", filepath.Join(dir, "config.json"))
+		child.Env = append(os.Environ(), "ANET_DATABASE_URL="+os.Getenv("ANET_TEST_DSN"))
+		pipe, err := child.StdoutPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		child.Stderr = child.Stdout
+		if err = child.Start(); err != nil {
+			t.Fatal(err)
+		}
+		stopped := false
+		stop := func() {
+			if !stopped {
+				stopped = true
+				_ = child.Process.Kill()
+				_ = child.Wait()
 			}
 		}
-		ready <- ""
-	}()
-	select {
-	case f.address = <-ready:
-		if f.address == "" {
-			t.Fatal("daemon exited before listening")
+		t.Cleanup(stop)
+		ready := make(chan string, 1)
+		go func() {
+			scanner := bufio.NewScanner(pipe)
+			for scanner.Scan() {
+				if _, address, ok := strings.Cut(scanner.Text(), "LISTEN "); ok {
+					ready <- address
+					return
+				}
+			}
+			ready <- ""
+		}()
+		select {
+		case f.address = <-ready:
+			if f.address == "" {
+				t.Fatal("daemon exited before listening")
+			}
+		case <-time.After(15 * time.Second):
+			t.Fatal("daemon startup timed out")
 		}
-	case <-time.After(15 * time.Second):
-		t.Fatal("daemon startup timed out")
+		return stop
 	}
+	stop := start()
 	conn := f.connect(f.workerCert)
 	f.control = tcsv1.NewTaskControlClient(conn)
 	f.policy = icsv1.NewIdentityPolicyClient(conn)
@@ -96,5 +151,24 @@ func TestRPCDaemonProcess(t *testing.T) {
 	proposal, _ := f.proposal(a)
 	if _, err = f.control.AdmitEffect(f.ctx, proposal); err != nil {
 		t.Fatal(err)
+	}
+	f.command.ID += "-gateway"
+	f.command.ContractID += "-gateway"
+	r := intent(f)
+	g := gwv1.NewGatewayClient(conn)
+	first, err := g.SubmitCommand(f.ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saved := storedCommand(f)
+	stop()
+	_ = start()
+	g = gwv1.NewGatewayClient(f.connect(f.workerCert))
+	again, err := g.SubmitCommand(f.ctx, r)
+	if err != nil || again.GetTaskId() != first.TaskId || again.GetOutcome() != tcsv1.AdmissionResult_EXISTING {
+		t.Fatalf("gateway daemon restart: %v %v", again, err)
+	}
+	if string(saved.Payload) != string(storedCommand(f).Payload) {
+		t.Fatal("daemon restart re-signed command")
 	}
 }

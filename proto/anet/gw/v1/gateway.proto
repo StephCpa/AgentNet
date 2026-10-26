@@ -1,0 +1,16 @@
+syntax = "proto3";
+package anet.gw.v1;
+option go_package = "github.com/agentnet/agentnet/proto/gen/anet/gw/v1;gwv1";
+
+import "anet/tcs/v1/tcs.proto";
+
+// Internal authenticated SDK ingress, not an A2A/MCP wire binding.
+service Gateway {
+  rpc SubmitCommand(SubmitCommandRequest) returns (anet.tcs.v1.AdmissionResult);
+}
+message SubmitCommandRequest {
+  // Strict JCS-compatible JSON of services/gateway.Intent (anet.intent/1).
+  // Identity, audience, trusted expiry and signatures are assigned server-side.
+  // No Caller, not_after, envelope or root-permit fields are accepted here.
+  bytes intent_json = 1;
+}

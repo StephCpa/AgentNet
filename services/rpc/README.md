@@ -7,7 +7,7 @@ the registered certificate fingerprint, exact URI, live principal/agent/instance
 and any required role in PostgreSQL. CN, metadata and request body identity are
 not authentication inputs. Existing TLS channels do not bypass revocation checks.
 
-Apply migrations 001–008 and provision the domain, identities, certificate
+Apply migrations 001–009 and provision the domain, identities, certificate
 registrations and standing `root_consents` through a trusted control plane. These
 administrative operations are not exposed to workers. Consent limits are **per
 task**, not aggregate user quotas. A consent update must increase its version.
@@ -54,6 +54,7 @@ require `target_ttl` (a Go duration such as `24h`). There is no plaintext listen
 
 | RPC | Accepted input and behavior |
 |---|---|
+| GW SubmitCommand (optional) | Unsigned strict intent; durable server signature/expiry, ICS authorization, TCS acceptance and exact receipt recovery |
 | ICS IssueRootPermit | Signed GW command; exact consent subset and per-task ceilings; short-lived signed permit |
 | TCS SubmitCommand | Only signed command + signed root permit; root grant, task, accounts, receipt and notification commit in T1 |
 | TCS GetTask | Owner-checked consistent task/effects/receipts/four-dimension budget snapshot |
@@ -70,13 +71,16 @@ codes use gRPC `ErrorInfo`; database internals are not returned. Other declared
 RPCs return `Unimplemented`, including delegation, registration, event streaming
 and token exchange. DIR bindings are generated but no DIR server is registered.
 
-`anetd` runs TCS/ICS only. Outbox delivery and the execution engine remain separate
+`anetd` runs TCS/ICS and optionally the SDK Gateway (design 22). Outbox delivery and the execution engine remain separate
 components; starting this daemon alone does not execute external business effects.
 `services/identity` now supplies OIDC browser login and user consent (design 20).
 Owner-controlled certificate enrollment/rotation/revocation is now provided by
-design 21; transport fingerprints are rechecked inside ICS/TCS after lock waits.
-DPoP, unattended renewal, general revocation/push, RPC denied-request
-audit, production target transport and ART classification remain unfinished.
+design 21; fingerprints and certificate expiry are rechecked inside GW/ICS/TCS
+after lock waits. Design 22 adds durable command signing and intercepted RPC
+failure audit, distinguishing definite denials from unknown outcomes. See
+[`services/gateway`](../gateway/README.md) for configuration and coverage limits.
+DPoP, unattended renewal, general revocation/push, production target transport
+and ART classification remain unfinished.
 
 ## Verification
 

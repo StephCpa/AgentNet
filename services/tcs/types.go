@@ -48,7 +48,8 @@ type Caller struct {
 	Principal, Agent, Instance string
 	// CredentialHash is supplied only by authenticated transport. It is never
 	// accepted from signed/body identity and lets lock-wait rechecks fence rotation.
-	CredentialHash string `json:"-"`
+	CredentialHash      string     `json:"-"`
+	CredentialExpiresAt *time.Time `json:"-"`
 }
 
 func (c Caller) SameIdentity(other Caller) bool {
@@ -277,7 +278,7 @@ func (s *Store) begin(ctx context.Context) (pgx.Tx, error) {
 func (s *Store) identity(ctx context.Context, tx pgx.Tx, c Caller) error {
 	var ok bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM principals p JOIN agents a ON a.owner_principal_id=p.principal_id JOIN agent_instances i ON i.agent_id=a.agent_id
- WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active' AND ($5='' OR i.cred_hash=$5))`, c.Principal, c.Agent, c.Instance, s.cfg.Domain, c.CredentialHash).Scan(&ok)
+ WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active' AND ($5='' OR i.cred_hash=$5) AND ($6::timestamptz IS NULL OR clock_timestamp()<$6))`, c.Principal, c.Agent, c.Instance, s.cfg.Domain, c.CredentialHash, c.CredentialExpiresAt).Scan(&ok)
 	if err != nil {
 		return err
 	}

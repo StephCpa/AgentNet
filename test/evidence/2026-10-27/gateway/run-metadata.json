@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "4e6750e",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "commands": [
+    "go vet ./...",
+    "python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/gateway-complete --kernel-tests"
+  ],
+  "environment": {
+    "GOFLAGS": "-p=1"
+  },
+  "runner_checks": 32,
+  "database_integration_tests_excluding_process_helpers": {
+    "TestKernel": 25,
+    "TestDelivery": 8,
+    "TestExecution": 17,
+    "TestRPC": 27,
+    "TestIdentity": 15
+  },
+  "database_test_total": 92,
+  "canonical_unit_tests": 2,
+  "parameter_store_unit_tests": 1,
+  "pki_unit_tests": 3,
+  "go_vet_exit_code": 0,
+  "generated_binding_files_verified": 9,
+  "isolated_postgres_stopped": true,
+  "actual_process_proof": "anetd loads GW private key, accepts unsigned SDK intent, is killed and restarted, returns original task and signature on replay",
+  "expiry_proof": "Original gateway command expiry survives restart and TCS inbox cleanup; real GW/ICS/TCS lock waits crossing client-certificate expiry reject the request",
+  "audit_proof": "Signing audit and T1 acceptance audit failures roll back their own transaction; denial audit failure returns Unavailable; client cancellation audited independently; post-commit receipt-read failure is unknown, not definite denial",
+  "scope": "Single-domain authenticated SDK ingress; not A2A/MCP, agentgateway ExtProc, OAuth/DPoP, disclosure classification, tenant quotas, all transport-level failure audit or full M1 exit",
+  "development_correction": "First run had an incorrect streaming-RPC test assertion before Recv; corrected to consume the refusal from the stream. Final run had no assertion retry."
+}
