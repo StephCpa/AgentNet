@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--schema", type=Path, default=ROOT / "schema/001_core.sql")
     parser.add_argument("--upgrade", type=Path, help="Apply a forward migration after --schema")
+    parser.add_argument("--kernel-tests", action="store_true", help="Apply 003 and test the Go transaction kernel against this cluster")
     args = parser.parse_args()
     args.pg_bin = args.pg_bin.resolve()
     work = args.work_dir.resolve()
@@ -172,6 +173,19 @@ COMMIT;
 DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LIKE 'concurrent-%') <> 1
  THEN RAISE EXCEPTION 'expected exactly one reserve'; END IF; END $$;
 """)
+        if args.kernel_tests:
+            probe("migration-003", (ROOT / "schema/003_tcs_kernel.sql").read_text(encoding="utf-8"))
+            test_env = env.copy()
+            test_env["ANET_TEST_DSN"] = f"postgresql://postgres@127.0.0.1:{port}/postgres?sslmode=disable"
+            run = subprocess.run(["go", "test", "./...", "-count=1", "-v"], cwd=ROOT,
+                                 capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                 env=test_env, creationflags=flags, timeout=180)
+            (work / "go-tests.log").write_text(run.stdout + run.stderr, encoding="utf-8")
+            passed = run.returncode == 0 and "--- SKIP:" not in run.stdout and "TestKernel" in run.stdout
+            results.append(dict(case="go-kernel-integration", passed=passed, returncode=run.returncode))
+            if not passed:
+                raise AssertionError(run.stdout + run.stderr)
+            print("go-kernel-integration PASS", flush=True)
     finally:
         (work / "summary.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
         if started:

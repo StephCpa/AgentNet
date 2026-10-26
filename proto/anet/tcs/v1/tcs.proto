@@ -49,7 +49,7 @@ message EffectState {                   // 04 §4
   string command_id = 3;
   string target_ref = 4;
   string capability = 5;                // local-tx | idempotent-key | queryable | opaque
-  string state = 6;   // PREPARED | ADMITTED | COMMITTED | REJECTED | UNKNOWN | CONFLICT
+  string state = 6;   // PREPARED | ADMITTED | COMMITTED | REJECTED | UNKNOWN (冲突是响应，不是状态)
   string params_digest = 7;             // I3 绑定
   string authority_digest = 8;
   int64 epoch = 9;                      // I2 fencing
@@ -61,7 +61,7 @@ message BudgetAccountView {             // 05 §2
   string dimension = 2;                 // money | tokens | calls | messages
   string budget_limit = 3;              // B
   string settled = 4;                   // S
-  string held = 5;                      // R 中 HELD 部分
+  string held = 5;                      // H：仅 HELD 占用
   string delegated = 6;
 }
 

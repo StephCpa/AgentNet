@@ -24,8 +24,24 @@ trust-authenticated cluster beyond loopback.
   existing binding is rejected. Legal partial settlement commits; delegated and
   account changes cannot bypass S+H+D; duplicate roots and negative balances fail.
 - Two psql sessions each request 7 units with 8 available under an account row lock;
-  exactly one reservation commits. This checks the documented transaction pattern,
-  not the absent TCS implementation or every cross-table lock interleaving.
+  exactly one reservation commits. This checks the documented SQL transaction pattern;
+  the separate kernel gate below exercises the Go implementation.
 
 Evidence: `test/evidence/2026-10-27/sql-*-summary.json` and the original failure log.
 These are DDL/transaction probes, not service FI or command-signature verification.
+
+## Go kernel gate
+
+```text
+python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --kernel-tests
+```
+
+Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
+applies migration 003 and runs `go test ./... -count=1 -v` against the isolated
+database. A skipped test or nonzero exit fails the gate. The 22 runner checks
+include one aggregate Go gate; they are not the Go test count.
+
+2026-10-27: 22 top-level Go kernel integration tests, 10 decision-binding subcases
+and two canonicalization unit tests passed. See `services/tcs/README.md` for scope
+and `test/evidence/2026-10-27/kernel/` for retained output. Full process-failure and
+external-peer testing remains pending.

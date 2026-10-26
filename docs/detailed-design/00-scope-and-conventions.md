@@ -124,3 +124,5 @@
 | OQ-5 | 跨域权限映射表的首批对端语义集 | M2 | 开放 |
 | OQ-6 | DP 发布机制的隐私参数初始值 | M4 前，依 11 §5 | 开放 |
 | OQ-7 | agentgateway 入站 mTLS 与 MCP Tasks 透传实测（OQ-1 遗留验证项） | M1 首周 devnet | 开放（2026-10-25 新增） |
+
+2026-10-27：JCS 三语言可执行门禁已补齐（Python/Node/Go 各 20 个正反例），运行入口见 `test/vectors/README.md`；Go 内核在签名与摘要计算前调用 `internal/canonical`。

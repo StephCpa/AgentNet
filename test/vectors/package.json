@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Independent Node JCS interoperability runner",
+  "dependencies": {"canonicalize": "5.1.0"}
+}

@@ -1,0 +1,77 @@
+{
+  "go": {
+    "passed": 20,
+    "cases": [
+      "vec-00",
+      "vec-01",
+      "vec-02",
+      "vec-03",
+      "vec-04",
+      "vec-05",
+      "utf16-order",
+      "small-exponent",
+      "fraction-rounding",
+      "root-scalar",
+      "root-array",
+      "duplicate",
+      "escaped-duplicate",
+      "nested-duplicate",
+      "large-integer",
+      "infinity",
+      "nan",
+      "high-surrogate",
+      "low-surrogate",
+      "trailing-json"
+    ]
+  },
+  "node": {
+    "passed": 20,
+    "cases": [
+      "vec-00",
+      "vec-01",
+      "vec-02",
+      "vec-03",
+      "vec-04",
+      "vec-05",
+      "utf16-order",
+      "small-exponent",
+      "fraction-rounding",
+      "root-scalar",
+      "root-array",
+      "duplicate",
+      "escaped-duplicate",
+      "nested-duplicate",
+      "large-integer",
+      "infinity",
+      "nan",
+      "high-surrogate",
+      "low-surrogate",
+      "trailing-json"
+    ]
+  },
+  "python": {
+    "passed": 20,
+    "cases": [
+      "vec-00",
+      "vec-01",
+      "vec-02",
+      "vec-03",
+      "vec-04",
+      "vec-05",
+      "utf16-order",
+      "small-exponent",
+      "fraction-rounding",
+      "root-scalar",
+      "root-array",
+      "duplicate",
+      "escaped-duplicate",
+      "nested-duplicate",
+      "large-integer",
+      "infinity",
+      "nan",
+      "high-surrogate",
+      "low-surrogate",
+      "trailing-json"
+    ]
+  }
+}

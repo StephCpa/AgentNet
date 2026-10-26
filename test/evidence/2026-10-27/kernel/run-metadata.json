@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "88dead1",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "node": "v22.20.0",
+  "python": "Python 3.10.11",
+  "platform": "Windows amd64",
+  "commands": [
+    "go vet ./...",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/kernel-release --kernel-tests",
+    "python test/vectors/run.py --python-deps .local/jcs-deps --output .local/jcs-final.json"
+  ],
+  "go_vet_exit_code": 0,
+  "kernel_top_level_tests": 22,
+  "decision_binding_subcases": 10,
+  "canonical_unit_tests": 2,
+  "schema_runner_checks_including_aggregate_go_gate": 22,
+  "jcs_cases_per_language": 20,
+  "isolated_postgres_stopped": true,
+  "scope": "Real library-level PostgreSQL transactions; no network service, process kill or external peer interoperation."
+}

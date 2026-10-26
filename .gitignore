@@ -4,3 +4,4 @@ Thumbs.db
 .DS_Store
 .local/
 __pycache__/
+node_modules/

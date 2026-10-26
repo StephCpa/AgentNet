@@ -75,7 +75,7 @@ checkShrink(parent P, child C, recipientPolicy R): Boolean
 | 目标 | 机制 | 明确不承担 |
 |---|---|---|
 | 凭证防盗用 | mTLS（服务间）/ DPoP（SDK），每次传输尝试新证明（`jti` + 新鲜 nonce） | 不等于正文完整性 |
-| 消息完整性 | 对命令封装的**规范化字段集**签名（`profile, command_id, task_id, audience, contract_ref, expected_task_version, payload_digest`）；存储转发中介不得改写已签名字段，跨中介时声明受保护字段清单 | 不等于业务幂等 |
+| 消息完整性 | 对命令封装的**规范化字段集**签名（`profile, command_id, not_after, task_id, audience, contract_ref, expected_task_version, payload_digest`，并绑定 caller/actor 与预算限额）；存储转发中介不得改写已签名字段，跨中介时声明受保护字段清单 | 不等于业务幂等 |
 | 业务幂等 | `command_id/effect_id` 持久去重（04） | 不由签名承担 |
 
 其余硬规则：正文自述的用户/租户/管理员身份一律不采信（01 §5）；MCP 安全最佳实践进 GW 实现——禁止 token passthrough（每跳换发）、URL 参数 SSRF 校验、句柄与持有者绑定（08 §6）。
