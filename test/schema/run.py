@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import signal
 import subprocess
 import time
 
@@ -23,7 +24,12 @@ def main():
     parser.add_argument("--schema", type=Path, default=ROOT / "schema/001_core.sql")
     parser.add_argument("--upgrade", type=Path, help="Apply a forward migration after --schema")
     parser.add_argument("--kernel-tests", action="store_true", help="Apply implementation migrations and test the Go kernels against this cluster")
+    parser.add_argument("--minio-bin", type=Path, help="Run the additional real MinIO archive gate with this prebuilt binary")
     args = parser.parse_args()
+    if args.minio_bin and not args.kernel_tests:
+        parser.error("--minio-bin requires --kernel-tests")
+    if args.minio_bin:
+        args.minio_bin = args.minio_bin.resolve(strict=True)
     args.pg_bin = args.pg_bin.resolve()
     work = args.work_dir.resolve()
     work.mkdir(parents=True, exist_ok=False)
@@ -185,6 +191,7 @@ DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LI
             probe("migration-009", (ROOT / "schema/009_gateway_commands.sql").read_text(encoding="utf-8"))
             probe("migration-010", (ROOT / "schema/010_credential_renewals.sql").read_text(encoding="utf-8"))
             probe("migration-011", (ROOT / "schema/011_local_transactions.sql").read_text(encoding="utf-8"))
+            probe("migration-012", (ROOT / "schema/012_archive.sql").read_text(encoding="utf-8"))
             probe("legacy-effect-never-assumed-unsent", """
 DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM effect_execution WHERE effect_id='e' AND escalated AND send_count=0)
  THEN RAISE EXCEPTION 'legacy effect was not isolated for manual recovery'; END IF; END $$;
@@ -196,15 +203,37 @@ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
 """)
             test_env = env.copy()
             test_env["ANET_TEST_DSN"] = f"postgresql://postgres@127.0.0.1:{port}/postgres?sslmode=disable"
-            run = subprocess.run(["go", "test", "./...", "-count=1", "-v"], cwd=ROOT,
-                                 capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                 env=test_env, creationflags=flags, timeout=180)
-            (work / "go-tests.log").write_text(run.stdout + run.stderr, encoding="utf-8")
-            passed = run.returncode == 0 and "--- SKIP:" not in run.stdout and "TestKernel" in run.stdout
-            results.append(dict(case="go-kernel-integration", passed=passed, returncode=run.returncode))
-            if not passed:
-                raise AssertionError(run.stdout + run.stderr)
-            print("go-kernel-integration PASS", flush=True)
+            def go_gate(name, command, marker, filename):
+                # Preserve partial evidence and stop descendants on a timeout.
+                with (work / filename).open("w", encoding="utf-8") as test_log:
+                    run = subprocess.Popen(command, cwd=ROOT, stdout=test_log,
+                                           stderr=subprocess.STDOUT, env=test_env,
+                                           creationflags=flags, start_new_session=os.name != "nt")
+                    try:
+                        run.wait(timeout=360)
+                    except subprocess.TimeoutExpired:
+                        if os.name == "nt":
+                            subprocess.run(["taskkill", "/PID", str(run.pid), "/T", "/F"],
+                                           stdout=test_log, stderr=subprocess.STDOUT, creationflags=flags)
+                        else:
+                            os.killpg(run.pid, signal.SIGKILL)
+                        run.wait(timeout=15)
+                        results.append(dict(case=name, passed=False, timeout_seconds=360))
+                        raise AssertionError("Go gate timed out; partial evidence in " + filename)
+                output = (work / filename).read_text(encoding="utf-8", errors="replace")
+                passed = run.returncode == 0 and "--- SKIP:" not in output and marker in output
+                results.append(dict(case=name, passed=passed, returncode=run.returncode))
+                if not passed:
+                    raise AssertionError(output)
+                print(name + " PASS", flush=True)
+
+            go_gate("go-kernel-integration", ["go", "test", "./...", "-count=1", "-v"],
+                    "TestKernel", "go-tests.log")
+            if args.minio_bin:
+                test_env["ANET_MINIO_BINARY"] = str(args.minio_bin)
+                go_gate("archive-minio-integration", ["go", "test", "./services/archive",
+                        "-tags=minio_integration", "-run=^TestArchiveMinIO$", "-count=1", "-v"],
+                        "TestArchiveMinIO", "minio-tests.log")
             # Exercise the real executable with the migrated legacy rows. All
             # credentials and data belong to this disposable loopback cluster.
             binary = work / ("outboxd.exe" if os.name == "nt" else "outboxd")

@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–011 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings, renewals and local transactions) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–012 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings, renewals, local transactions and archive catalog) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -103,3 +103,22 @@ Local transaction increment (design 24): 34 runner checks, 111 database tests an
 atomic business/ledger writes, replay, CAS, expiry/revocation, cancellation and
 actual commit-boundary process kills. RPC and the shipped daemon exercise the
 compiled handler and restart recovery. Evidence: `test/evidence/2026-10-27/localtx/`.
+
+## Real object-store gate
+
+Add `--minio-bin <fixed-minio-executable>` to the kernel command to run the
+separate `minio_integration` build-tag gate. It fails if the supplied binary cannot
+start; ordinary HTTP fault-fixture tests do not stand in for this gate. The runner
+binds PostgreSQL and the tests bind MinIO only on loopback with isolated data.
+
+The Go gate now retains partial logs on timeout and stops the process tree. Its
+cold-build limit is 360 seconds; this does not retry failed tests. Resolve modules
+with a working network/proxy before running. No global proxy configuration is
+changed by the driver. The repository now requires Go 1.24.9+ (Parquet dependency).
+
+Archive increment (design 25): 36 runner checks including the real MinIO gate,
+123 database tests and 8 unit tests passed; four process helpers are excluded.
+The default command without MinIO has 35 runner checks and 122 database tests.
+Evidence: `test/evidence/2026-10-27/archive/`. It includes archive/lookup recovery,
+bounded cleanup and signed replay after expiry (FI-13), not full M1/M4 exit or
+capacity evidence. Commands and development failures are recorded with the logs.

@@ -6,7 +6,7 @@
 
 | 项 | 选择 | 说明 |
 |---|---|---|
-| 核心服务语言 | Go 1.24（TCS/ICS/GW/DIR/ADP） | 强类型、pgx、gRPC 生态成熟 |
+| 核心服务语言 | Go 1.24.9+（TCS/ICS/GW/DIR/ADP） | 强类型、pgx、gRPC；Parquet 依赖的最低版本，实测 Go 1.25.1 |
 | SDK | Python 3.12（`sdk/agentnet`） | Agent 运行时集成（RUN 侧） |
 | RPC | gRPC + protobuf（`anet.*.v1`）；SDK 边缘 HTTPS/JSON | 03 §4 |
 | 权威存储 | PostgreSQL 16（02/`schema/`） | 单一权威状态源 |
@@ -60,7 +60,7 @@ agentnet/
 3. GW 认证/去重/授权/审计四级的单域 SDK 入口已实现（22），首次签名与原期限持久化，衔接 ICS/TCS 并恢复原回执；继续 agentgateway 挂接、OAuth/DPoP、入口配额/披露检查与真实协议；`adapters/local` 的 record.put/v1 同事务业务/结算与进程恢复已实现（24）；`mockbiz` 恢复见 18；
 4. 预算账本与预留-结算（05 §3–§5）；
 5. `faultlab` 首批钩子；FI-01/03/04/05/06/07/08 通过；
-6. 归档作业上线（12 §5）。
+6. 分区摘除/冻结、Parquet/S3 导出、校验后删除、持久恢复/冷热查询与过期清理已实现（25）；真实 MinIO 互操作已验证，继续部署对象保留策略、容量测试与运维演练（12 §5）。
 
 ### M2（三域联邦，~6 周）
 1. `adapters/a2a` + `adapters/mcp`（含扩展协商、断流策略、Tasks 映射）；

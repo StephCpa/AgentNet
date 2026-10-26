@@ -126,3 +126,7 @@ erDiagram
 ## local-tx 实现表（迁移 011）
 
 `local_records` 以 `(domain_id, resource, record_key)` 为主键，保存版本、JSONB 业务值及最后写入 effect；`local_effect_results` 以 effect_id 为主键保存原结果和服务计量。两者与 effect 终态、预算结算在同一事务提交（24），没有独立的异步派发作业。归档必须保留 effect 与业务结果的关联；该迁移的回退说明见 adapters/local/README.md。
+
+## 归档目录（迁移 012）
+
+`archive_jobs` 记录分区身份、UTC 边界、存储绑定与 DETACHED/EXPORTED/COMPLETE 阶段；`archive_chunks` 记录分片摘要、对象版本、行数及续传游标；`archive_task_index` 将域/任务映射到分片。三者纳入数据库备份，冻结源表与它们共同承担归档恢复。作业使用独立维护角色；不能让普通 worker 获得分区 DDL 权限。冷热查询与失败恢复见 [25](25-partition-archive.md)。

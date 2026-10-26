@@ -1,0 +1,4 @@
+=== RUN   TestArchiveMinIO
+--- PASS: TestArchiveMinIO (11.92s)
+PASS
+ok  	github.com/agentnet/agentnet/services/archive	14.156s
