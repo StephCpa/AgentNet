@@ -99,3 +99,7 @@ checkShrink(parent P, child C, recipientPolicy R): Boolean
 ## 9. 错误码
 
 `ANET-AUT-DENIED / SHRINK-VIOLATED / REVOKED / STALE / OFFLINE-FAIL-CLOSED / MAPPING-UNDEFINED`。
+
+## 10. 实现进展（2026-10-27）
+
+[27](27-authority-chain-validation.md) 实现共享的权威父链校验及权限收缩/接收方交集原语，接入 ICS 决定、T2/local-tx 和执行器发送前守卫。完整路径在锁后重读，逐层验证权限、时间、深度、任务边与同意版本；子决定绑定祖先摘要，祖先撤销阻止新执行。公共根授权仍为 depth=0，三层测试链通过可信 fixture 导入。实际 CreateSubtask、接收方策略持久绑定、跨 owner 的 subject/actor 分离、预算转移、撤销推送与 token exchange 尚未完成；本节进展不替代前文完整设计。

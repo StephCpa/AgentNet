@@ -133,3 +133,10 @@ and commits the compiled handler, terminal effect, saved result, settlement and
 audit together. New local effects cannot use asynchronous Admit. Exact replay
 returns the saved result; failures roll back business writes too. See
 `adapters/local/README.md` for configuration, metering and handler constraints.
+
+Authority-chain increment (design 27): T2 loads and locks the complete parent
+grant path, validates each link and root consent, and binds the complete chain
+digest for child grants. It rechecks validity after budget/business lock waits.
+Exact effect replay still returns the original fact after ancestor revocation.
+Public child creation, recipient-policy storage and budget transfer remain pending;
+network identity access still requires the caller principal to own the task.

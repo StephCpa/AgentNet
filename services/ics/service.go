@@ -194,37 +194,28 @@ func (s *Service) Decide(ctx context.Context, c tcs.Caller, r Request) (tcs.Enve
 	if err = s.identity(ctx, tx, c); err != nil {
 		return tcs.Envelope{}, err
 	}
-	var grant string
-	err = tx.QueryRow(ctx, `SELECT grant_id FROM grants WHERE grant_id=$1 AND task_id=$2 AND subject_principal_id=$3 AND actor_agent_id=$4 AND actor_instance_id=$5 AND parent_grant_id IS NULL AND root_grant_id=grant_id AND status='active' AND revoked_at IS NULL AND consent_id IS NOT NULL FOR SHARE`, r.GrantID, r.TaskID, c.Principal, c.Agent, c.Instance).Scan(&grant)
-	if errors.Is(err, pgx.ErrNoRows) {
+	chain, err := authority.LockChain(ctx, tx, r.GrantID, true)
+	if errors.Is(err, authority.ErrInvalidChain) {
 		return tcs.Envelope{}, tcs.Denied
 	}
 	if err != nil {
 		return tcs.Envelope{}, err
 	}
-	g, err := authority.LoadGrant(ctx, tx, grant)
-	if err != nil {
-		return tcs.Envelope{}, err
-	}
-	var consentEnd time.Time
-	err = tx.QueryRow(ctx, `SELECT expires_at FROM root_consents WHERE consent_id=$1 AND version=$2 AND revoked_at IS NULL AND not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FOR SHARE`, g.ConsentID, g.ConsentVersion).Scan(&consentEnd)
-	if errors.Is(err, pgx.ErrNoRows) {
+	g := chain.Leaf
+	if g.Task != r.TaskID || g.Subject != c.Principal || g.Agent != c.Agent || g.Instance != c.Instance {
 		return tcs.Envelope{}, tcs.Denied
-	}
-	if err != nil {
-		return tcs.Envelope{}, err
 	}
 	now, err := timestamp(ctx, tx)
 	if err != nil {
 		return tcs.Envelope{}, err
 	}
-	if now.Before(g.NotBefore) || !now.Before(g.ExpiresAt) || !authority.Contains(g.Rights.Actions, op.Action) || !authority.Contains(g.Rights.Resources, op.Resource) || !authority.Contains(g.Rights.DataClasses, op.DataClass) || !authority.Contains(g.Rights.Spatial.Domains, s.cfg.Domain) {
+	if !chain.ValidAt(now) || !authority.Contains(g.Rights.Actions, op.Action) || !authority.Contains(g.Rights.Resources, op.Resource) || !authority.Contains(g.Rights.DataClasses, op.DataClass) || !authority.Contains(g.Rights.Spatial.Domains, s.cfg.Domain) {
 		return tcs.Envelope{}, tcs.Denied
 	}
 	if err = s.identity(ctx, tx, c); err != nil {
 		return tcs.Envelope{}, err
 	}
-	digest, err := g.Digest()
+	digest, err := chain.Digest()
 	if err != nil {
 		return tcs.Envelope{}, err
 	}
@@ -235,7 +226,7 @@ func (s *Service) Decide(ctx context.Context, c tcs.Caller, r Request) (tcs.Enve
 	if err = tx.QueryRow(ctx, `SELECT 'dec_'||gen_random_uuid()::text`).Scan(&id); err != nil {
 		return tcs.Envelope{}, err
 	}
-	decision := tcs.Decision{Kind: "anet.authorization/1", ID: id, Allow: true, At: now, ExpiresAt: min(now.Add(s.cfg.DecisionTTL), min(g.ExpiresAt, consentEnd)), Subject: c.Principal, Agent: c.Agent, Instance: c.Instance, Grant: g.ID, Task: task, Target: r.Target, Action: op.Action, Resource: op.Resource, ParamsDigest: r.ParamsDigest, AuthorityDigest: digest, Audience: s.cfg.Domain, Sensitivity: op.Sensitivity, DataClass: op.DataClass, PolicyVersion: g.Policy}
+	decision := tcs.Decision{Kind: "anet.authorization/1", ID: id, Allow: true, At: now, ExpiresAt: min(now.Add(s.cfg.DecisionTTL), chain.ExpiresAt), Subject: c.Principal, Agent: c.Agent, Instance: c.Instance, Grant: g.ID, Task: task, Target: r.Target, Action: op.Action, Resource: op.Resource, ParamsDigest: r.ParamsDigest, AuthorityDigest: digest, Audience: s.cfg.Domain, Sensitivity: op.Sensitivity, DataClass: op.DataClass, PolicyVersion: g.Policy}
 	out, err := signed.Encode(s.cfg.KeyID, s.cfg.Key, decision)
 	if err != nil {
 		return out, err

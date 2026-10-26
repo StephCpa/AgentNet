@@ -85,3 +85,9 @@ TTL, final-proof tombstones, send fencing, receipt replay and payload integrity.
 
 Evidence: `test/evidence/2026-10-27/execution/`. This is mock-target FI-03 evidence;
 it does not establish production payment semantics or the complete M1 exit gate.
+
+Design 27 adds the shared authoritative parent-chain check to the last durable
+send gate. It locks/reloads all ancestors and root consent before verifying the
+effect's actor/target binding, and rechecks the chain after waiting for the job
+lock. A revoked ancestor fences a fresh send without releasing its holds. This
+does not revoke an already in-flight request or create delegated tasks/tokens.

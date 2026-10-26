@@ -23,10 +23,18 @@ func (r networkResolver) Resolve(ctx context.Context, e tcs.Envelope) (tcs.Effec
 }
 
 func TestRPCExecutionConsentAtSend(t *testing.T) {
-	for _, change := range []string{"live", "revoked", "version", "data-class", "domain"} {
+	for _, change := range []string{"live", "revoked", "version", "data-class", "domain", "chain-live", "chain-revoked"} {
 		t.Run(change, func(t *testing.T) {
 			f := setup(t)
-			a := f.submit()
+			var a *tcsv1.AdmissionResult
+			var ancestor string
+			if change == "chain-live" || change == "chain-revoked" {
+				c := grantChain(t, f)
+				a = c[2]
+				ancestor = c[1].RootGrantId
+			} else {
+				a = f.submit()
+			}
 			proposal, _ := f.proposal(a)
 			if _, err := f.control.AdmitEffect(f.ctx, proposal); err != nil {
 				t.Fatal(err)
@@ -65,6 +73,8 @@ func TestRPCExecutionConsentAtSend(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch change {
+			case "chain-revoked":
+				f.exec("UPDATE grants SET revoked_at=clock_timestamp(),status='revoked' WHERE grant_id=$1", ancestor)
 			case "revoked":
 				f.exec(`UPDATE root_consents SET revoked_at=clock_timestamp(),version=version+1 WHERE consent_id=$1`, f.consent)
 			case "version":
@@ -79,7 +89,7 @@ func TestRPCExecutionConsentAtSend(t *testing.T) {
 			}
 			business := f.count(`SELECT count(*) FROM mockbiz.calls WHERE namespace=$1`, f.domain)
 			held := f.count(`SELECT count(*) FROM budget_reservations WHERE effect_id=$1 AND state='HELD'`, proposal.Effect.EffectId)
-			if change == "live" {
+			if change == "live" || change == "chain-live" {
 				snapshot, err := f.control.GetTask(f.ctx, &tcsv1.GetTaskRequest{TaskId: a.TaskId})
 				if err != nil || business != 1 || held != 0 || len(snapshot.GetEffects()) != 1 || snapshot.Effects[0].State != "COMMITTED" {
 					t.Fatalf("live authorized execution: business=%d held=%d snapshot=%v error=%v", business, held, snapshot, err)

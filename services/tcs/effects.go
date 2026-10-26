@@ -98,31 +98,19 @@ func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	}
 	// The persisted grant must also be live. Its rights cannot be replaced by a
 	// caller-supplied decision; the signature only authenticates the ICS issuer.
-	var grant string
-	err = tx.QueryRow(ctx, `SELECT grant_id FROM grants WHERE grant_id=$1 AND task_id=$2 AND subject_principal_id=$3 AND actor_agent_id=$4
- AND (actor_instance_id IS NULL OR actor_instance_id=$5) AND status='active' AND revoked_at IS NULL
- AND parent_grant_id IS NULL AND root_grant_id=grant_id
- AND rights->'actions' ? $6 AND rights->'resources' ? $7 FOR SHARE`, d.Grant, p.TaskID, c.Principal, c.Agent, c.Instance, op.Action, op.Resource).Scan(&grant)
-	if errors.Is(err, pgx.ErrNoRows) {
+	chain, err := authority.LockChain(ctx, tx, d.Grant, false)
+	if errors.Is(err, authority.ErrInvalidChain) {
 		return out, Denied
 	}
 	if err != nil {
 		return out, err
 	}
-	g, err := authority.LoadGrant(ctx, tx, grant)
-	if err != nil {
-		return out, err
+	g := chain.Leaf
+	if g.Task != p.TaskID || g.Subject != c.Principal || g.Agent != c.Agent || (g.Instance != "" && g.Instance != c.Instance) || !authority.Contains(g.Rights.Actions, op.Action) || !authority.Contains(g.Rights.Resources, op.Resource) {
+		return out, Denied
 	}
 	if g.ConsentID != "" {
-		var consent string
-		err = tx.QueryRow(ctx, `SELECT consent_id FROM root_consents WHERE consent_id=$1 AND version=$2 AND revoked_at IS NULL AND not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FOR SHARE`, g.ConsentID, g.ConsentVersion).Scan(&consent)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return out, Denied
-		}
-		if err != nil {
-			return out, err
-		}
-		digest, err := g.Digest()
+		digest, err := chain.Digest()
 		if err != nil {
 			return out, err
 		}
@@ -179,22 +167,10 @@ func (s *Store) admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 		if !live {
 			return LeaseInvalid
 		}
-		err = tx.QueryRow(ctx, "SELECT not_before<=clock_timestamp() AND expires_at>=clock_timestamp() FROM grants WHERE grant_id=$1", grant).Scan(&live)
-		if err != nil {
-			return err
-		}
-		if !live {
+		if !chain.ValidAt(now) {
 			return Denied
 		}
-		if g.ConsentID != "" {
-			err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM root_consents WHERE consent_id=$1 AND version=$2 AND revoked_at IS NULL AND not_before<=clock_timestamp() AND expires_at>=clock_timestamp())", g.ConsentID, g.ConsentVersion).Scan(&live)
-			if err != nil {
-				return err
-			}
-			if !live {
-				return Denied
-			}
-		}
+
 		return nil
 	}
 	if err = recheck(); err != nil {

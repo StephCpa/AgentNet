@@ -126,12 +126,12 @@ COMMIT;
 
 ## 7. 事务锁序表（v0.2 新增；评审 §十二）
 
-所有预算相关事务按**tasks → grants（T2 共享锁）→ budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）：
+所有预算相关事务按**tasks → grants（T2 全父链共享锁）→ root_consents → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）。27 的实现先发现有界路径，按 grant_id 排序锁住全部祖先，重读后锁根同意；账户等待期间保留这些锁并复核时间窗。下表的委托事务仍属待实现设计。
 
 | 事务 | 锁序 |
 |---|---|
 | T1 任务接纳 | 新任务按 FK 顺序 INSERT；inbox 唯一键冲突时完整回滚并重读 |
-| T2 业务操作接纳 | `tasks` → `grants`（共享锁）→ 所有 `budget_accounts` → 所有 `budget_reservations` → `effects` |
+| T2 业务操作接纳 | `tasks` → 全父链 `grants`（共享锁）→ 根 `root_consents`（共享锁）→ 所有 `budget_accounts` → 所有 `budget_reservations` → `effects` |
 | T3 取消 | `tasks`（单行） |
 | Reserve | `tasks`（FOR UPDATE，deadline/取消检查）→ `budget_accounts` → 新预留 |
 | Settle / Release | 非锁定读取预留定位账户 → `tasks` → `budget_accounts` → `budget_reservations`；锁后复核归属，改变则回滚重试 |

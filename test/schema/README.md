@@ -125,6 +125,14 @@ capacity evidence. Commands and development failures are recorded with the logs.
 
 ## Control-path microbenchmark
 
+Latest authority-chain increment (design 27): 38 runner checks, 128 database
+tests (33 TCS, 8 delivery, 17 execution, 44 RPC, 15 identity, 10 archive and
+1 separate MinIO test), and 13 Go unit tests passed. Four process helpers are
+excluded. Evidence: `test/evidence/2026-10-27/authority-chain/`. The retained
+4,800-operation benchmark also passed. Three-level grant chains are imported
+fixtures; public subtask creation, cross-owner delegation and budget transfer
+remain pending. The design 26 numbers below describe its earlier snapshot.
+
 Add `--microbench --bench-samples 200 --bench-repetitions 3` to the kernel command.
 This runs the separate `microbench` build tag after correctness tests, retains
 every measured sample, validates raw metrics/facts and renders a report. Its
