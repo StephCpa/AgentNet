@@ -2,6 +2,8 @@
 
 状态：2026-10-27，继续推进 M1；总体目标及 M0–M4 退出条件不变。
 
+后续进展：本页保留 `81dc3fd` 的投递器快照；业务执行与 mock-target FI-03 的最新进度见 [18](18-effect-execution-and-fi03.md)。
+
 ## 实现
 
 - `schema/004_delivery.sql`：outbox 目标、领取令牌/期限、失败分类；持久收件箱和死信告警记录。旧 IN_FLIGHT 无租约行迁移回 PENDING，保留既有尝试计数。

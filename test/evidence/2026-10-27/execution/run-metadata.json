@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "81dc3fd",
+  "source_revision": "The commit containing this evidence directory",
+  "go": "go version go1.25.1 windows/amd64",
+  "postgres": "16.15, Windows amd64, pgcrypto",
+  "commands": [
+    "go vet ./...",
+    "python test/schema/run.py --pg-bin .local/review/pg16/pgsql/bin --work-dir .local/execution-final --kernel-tests"
+  ],
+  "runner_checks": 28,
+  "database_integration_tests_excluding_process_helpers": {
+    "TestKernel": 25,
+    "TestDelivery": 8,
+    "TestExecution": 17
+  },
+  "canonical_unit_tests": 2,
+  "parameter_store_unit_tests": 1,
+  "all_process_kill_windows": 7,
+  "new_external_commit_kill_capabilities": [
+    "queryable",
+    "idempotent-key",
+    "opaque"
+  ],
+  "external_business_transport": "Loopback HTTP server with independent PostgreSQL transactions in the same isolated database service",
+  "go_vet_exit_code": 0,
+  "isolated_postgres_stopped": true,
+  "scope": "Mock-target FI-03 and local send/recovery guards; not production target authentication or full M1 completion.",
+  "final_proof_scope_regression": "Two in-flight attempts: latest-attempt tombstone insufficient; effect-key tombstone blocks both."
+}

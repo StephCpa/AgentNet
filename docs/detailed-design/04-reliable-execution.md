@@ -113,7 +113,8 @@ ADP.Execute(effect):                     # 在 T2 COMMIT 之后
                     → 重试窗口耗尽仍不明: ReportEffectResult(UNKNOWN)
     queryable:      Q := Query(by business_id)
                     Q 已存在: ReportEffectResult(COMMITTED, Q.usage)
-                    否则执行 → 超时: 进入对账循环（§6）
+                    仅首次、无既有发送标记且 Q=ABSENT 时执行；否则按 §6 五分类处理
+                    → 超时: 进入对账循环（§6）
     opaque:         单次调用 → 超时: ReportEffectResult(UNKNOWN)
 ```
 
@@ -169,7 +170,7 @@ AdmitEffect(e) ⇒ e.epoch = CurrentEpoch(e.task)。检查发生在真正接纳�
 | `NOT_EXECUTED_FINAL` | 已证明原尝试不会再生效（目标提供终局保证） | 才允许重新发起 |
 | `UNKNOWN` | 无法确定 | 继续对账 / 升级人工 |
 
-**只有 `NOT_EXECUTED_FINAL`，或目标自身提供唯一业务键/幂等机制，才允许非幂等重做。** 强一致查询的"此刻 ABSENT"不构成重做依据（反例：请求 A 已被接收未提交 → 调用方超时 → 查询 ABSENT → 发送 B → A、B 都提交）。
+**只有 `NOT_EXECUTED_FINAL`，或目标自身提供唯一业务键/幂等机制，才允许非幂等重做。** 终局证明须明确作用域：一次 attempt 的证明不能终结同 effect 的其他在途尝试；多次幂等键尝试只有获得覆盖整个业务键、能阻止全部迟到请求的证明，才可将整个 effect 记 REJECTED 并释放占用。 强一致查询的"此刻 ABSENT"不构成重做依据（反例：请求 A 已被接收未提交 → 调用方超时 → 查询 ABSENT → 发送 B → A、B 都提交）。
 
 方法选择：
 
@@ -238,3 +239,7 @@ AdmitEffect(e) ⇒ e.epoch = CurrentEpoch(e.task)。检查发生在真正接纳�
 ## 10. 错误码（EFF 续 03 §10）
 
 `ANET-EFF-UNKNOWN-PERSISTED`（UNKNOWN 已持久化，等待对账）／`ANET-EFF-CAPABILITY-MISMATCH`（适配器能力类与目标声明不符）／`ANET-EFF-TARGET-TTL-EXCEEDED`（幂等键超过目标有效期仍不明）／`ANET-EFF-RECON-ESCALATED`（对账升级人工）。
+
+## 实现进展（2026-10-27）
+
+18 已实现三类远程目标的发送标记、时效内同键恢复、五分类对账和真实进程终止验证。当前 queryable 的终局未执行证据将原 effect 记 REJECTED；业务重做走新提议。local-tx 尚待业务变更与预算同事务实现，现阶段配置即拒绝；不能复用后置适配器路径。完整网络认证、尝试成本计费与 PRODUCED/VERIFIED 链仍待实现。

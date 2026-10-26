@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–004 (including legacy IN_FLIGHT recovery) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–005 (including legacy IN_FLIGHT and effect provenance handling) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -51,3 +51,9 @@ The delivery increment adds eight delivery tests and two kernel tests (notificat
 flow and T1 process kill), with four real child-process crash windows in total.
 The current isolated runner has 26 checks. Latest evidence is in
 `test/evidence/2026-10-27/delivery/`; older kernel evidence remains an immutable snapshot.
+
+Execution increment: the current runner has 28 checks. It includes 25 TCS, 8 delivery
+and 17 execution database integration tests, plus two JCS and one parameter-store
+unit tests. Real OS-kill windows total seven, including three mock-target FI-03
+capabilities. See `test/evidence/2026-10-27/execution/`; 26 above describes the prior
+delivery snapshot. Production authenticated target interoperation remains pending.

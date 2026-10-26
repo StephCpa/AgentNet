@@ -2,7 +2,7 @@
 
 跨组织 Agent 网络系统：联邦信任域架构、任务契约、可靠执行、预算与授权控制、可核查证据链。
 
-- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–17，含复审与实现证据导航）
+- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–18，含复审与实现证据导航）
 - **数据库 Schema**：[schema/001_core.sql](schema/001_core.sql)（PostgreSQL 16+，权威 DDL）
 - **接口定义**：[proto/anet/](proto/anet/)（`anet.tcs.v1` / `anet.ics.v1` / `anet.dir.v1`）
 - **形式模型**：[test/tla/](test/tla/)（TaskMachine / CmdExpiry / BudgetLedger / AuthzShrink，四基线 + 12 变异通过）
@@ -11,6 +11,7 @@
 - **单域事务内核**：[services/tcs](services/tcs/)；[本轮实现与证据](docs/detailed-design/16-single-domain-kernel.md)。
 - **JCS 三语言门禁**：[test/vectors](test/vectors/)（Python/Node/Go 各 20 个正反例通过）。
 - **持久投递与进程恢复**：[services/delivery](services/delivery/)；[实现与验证](docs/detailed-design/17-delivery-and-process-recovery.md)。
-- 状态：v0.2.2 复审后已实现事务内核、本域通知投递及四个进程崩溃窗口验证（2026-10-27）；M0/M1 尚未整体退出，认证网络服务、业务适配器与完整 FI 待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
+- **业务执行与恢复**：[services/execution](services/execution/)；[mockbiz 与 FI-03 证据](docs/detailed-design/18-effect-execution-and-fi03.md)。
+- 状态：v0.2.2 复审后已实现事务内核、本域通知投递、三类业务目标恢复及七个进程崩溃窗口验证（2026-10-27）；M0/M1 尚未整体退出，认证网络服务、真实协议目标与完整 FI 待完成；实施计划见 [docs/detailed-design/14-mvp-plan.md](docs/detailed-design/14-mvp-plan.md)。
 
 第一版目标闭环：**三个信任域、两种 Agent 协议（A2A 1.0 / MCP 2026-07-28）、围绕同一长期任务完成发现、委托、预算分配、执行、证据回传、故障恢复与验收。**

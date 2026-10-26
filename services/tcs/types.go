@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"time"
 
+	decimal "github.com/agentnet/agentnet/internal/amount"
 	"github.com/agentnet/agentnet/internal/canonical"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -47,6 +48,7 @@ type Caller struct{ Principal, Agent, Instance string }
 type Operation struct {
 	Action, Resource, Capability, Purpose string
 	Dimensions                            []string
+	TargetTTL                             time.Duration // required for idempotent-key targets
 }
 type Config struct {
 	Domain                               string
@@ -105,7 +107,10 @@ func New(db *pgxpool.Pool, c Config) (*Store, error) {
 		if target == "" || op.Action == "" || op.Resource == "" || op.Purpose != "tool_call" || len(op.Dimensions) == 0 {
 			return nil, Invalid
 		}
-		if op.Capability != "opaque" && op.Capability != "queryable" && op.Capability != "idempotent-key" && op.Capability != "local-tx" {
+		if op.Capability != "opaque" && op.Capability != "queryable" && op.Capability != "idempotent-key" {
+			return nil, Invalid
+		}
+		if op.TargetTTL < 0 || (op.Capability == "idempotent-key" && op.TargetTTL < time.Millisecond) {
 			return nil, Invalid
 		}
 		seen := map[string]bool{}
@@ -194,10 +199,9 @@ type Result struct {
 	Evidence     string            `json:"evidence"`
 }
 
-var amountRE = regexp.MustCompile(`^(0|[1-9][0-9]{0,13})(\.[0-9]{0,5}[1-9])?$`)
 var digestRE = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
-func amount(a string, positive bool) bool { return amountRE.MatchString(a) && (!positive || a != "0") }
+func amount(a string, positive bool) bool { return decimal.Valid(a) && (!positive || a != "0") }
 func dimension(d string) bool {
 	return d == "money" || d == "tokens" || d == "calls" || d == "messages"
 }

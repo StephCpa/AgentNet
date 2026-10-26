@@ -107,3 +107,8 @@ delegation/tranche/attempt billing, VERIFIED completion and protocol interop rem
 Follow-up: `services/delivery` and design 17 now implement local outbox/inbox
 delivery and actual process-kill tests. The numbers and limits above describe the
 initial kernel checkpoint; remote transport and external business recovery remain.
+
+Execution increment (design 18): apply 005 as well. T2 records send-time grant/actor
+provenance and seeds a durable execution job. Idempotent-key operations require a
+positive TargetTTL; local-tx is rejected until an atomic business handler exists.
+Parameter storage and execution/reconciliation are in services/execution.

@@ -178,6 +178,11 @@ DO $$ BEGIN IF (SELECT count(*) FROM budget_reservations WHERE reservation_id LI
             probe("migration-003", (ROOT / "schema/003_tcs_kernel.sql").read_text(encoding="utf-8"))
             probe("legacy-in-flight", "INSERT INTO outbox(task_id,event_type,payload,dedup_key,status,attempts) VALUES('t','TASK_ACCEPTED','{}','legacy-flight','IN_FLIGHT',1);")
             probe("migration-004", (ROOT / "schema/004_delivery.sql").read_text(encoding="utf-8"))
+            probe("migration-005", (ROOT / "schema/005_execution.sql").read_text(encoding="utf-8"))
+            probe("legacy-effect-never-assumed-unsent", """
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM effect_execution WHERE effect_id='e' AND escalated AND send_count=0)
+ THEN RAISE EXCEPTION 'legacy effect was not isolated for manual recovery'; END IF; END $$;
+""")
             probe("legacy-in-flight-recoverable", """
 DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM outbox WHERE dedup_key='legacy-flight'
  AND status='PENDING' AND attempts=1 AND lease_token IS NULL AND lease_until IS NULL)

@@ -41,7 +41,7 @@ transport must implement `Publisher` with authenticated, durable acceptance.
 EFFECT_ADMITTED delivery cannot establish COMMITTED, release a hold, resurrect a
 cancelled task, or authorize a repeat of an opaque/queryable business call. An
 adapter consumer must load the authoritative effect and apply the capability and
-reconciliation rules in design 04. That consumer and mockbiz are the next step.
+reconciliation rules in design 04. The consumer and mockbiz are now implemented in `services/execution`; see design 18.
 
 ## Verification
 

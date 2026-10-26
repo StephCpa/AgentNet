@@ -639,3 +639,16 @@ func TestKernelInstanceRevocationAfterAccountWait(t *testing.T) {
 		t.Fatal("revoked worker admitted after waiting")
 	}
 }
+
+func TestKernelUnsupportedExecutionCapabilities(t *testing.T) {
+	f := setup(t)
+	for _, cap := range []string{"local-tx", "idempotent-key"} {
+		t.Run(cap, func(t *testing.T) {
+			cfg := f.cfg
+			cfg.Operations = map[string]Operation{"bank": {Action: "pay", Resource: "account:test", Purpose: "tool_call", Capability: cap, Dimensions: []string{"money"}}}
+			if _, err := New(f.db, cfg); !errors.Is(err, Invalid) {
+				t.Fatalf("unsupported async capability or missing target TTL accepted: %v", err)
+			}
+		})
+	}
+}

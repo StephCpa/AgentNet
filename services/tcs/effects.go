@@ -155,6 +155,15 @@ func (s *Store) Admit(ctx context.Context, c Caller, p Proposal, signed Envelope
 	if err != nil {
 		return out, err
 	}
+	_, err = tx.Exec(ctx, `UPDATE effects SET dispatch_grant_id=$2,dispatch_actor_instance_id=$3,
+ target_ttl_us=NULLIF($4::bigint,0),dispatch_action=$5,dispatch_resource=$6 WHERE effect_id=$1`, p.EffectID, d.Grant, c.Instance, op.TargetTTL.Microseconds(), op.Action, op.Resource)
+	if err != nil {
+		return out, err
+	}
+	_, err = tx.Exec(ctx, "INSERT INTO effect_execution(effect_id) VALUES($1)", p.EffectID)
+	if err != nil {
+		return out, err
+	}
 	_, err = tx.Exec(ctx, "UPDATE tasks SET task_version=task_version+1 WHERE task_id=$1", p.TaskID)
 	if err != nil {
 		return out, err

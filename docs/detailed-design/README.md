@@ -24,6 +24,7 @@
 | 15 | [评审整改记录](15-review-remediation.md) | v0.2.2：复审发现、实测证据、剩余门槛 | 复审 2026-10-27 |
 | 16 | [单域事务内核与 JCS 验证](16-single-domain-kernel.md) | Go 事务内核、签名入口、PG16 集成测试与三语言门禁 | M1 实现 2026-10-27 |
 | 17 | [持久投递与进程恢复](17-delivery-and-process-recovery.md) | outbox/inbox、领取隔离、死信与真实进程终止验证 | M1 实现 2026-10-27 |
+| 18 | [业务执行与 FI-03 恢复](18-effect-execution-and-fi03.md) | 三类目标恢复、参数绑定、发送前权限、HTTP mock 与真实进程终止 | M1 实现 2026-10-27 |
 | 附录 | [OQ-1 agentgateway 复用度评估](appendix-oq1-agentgateway.md) | 官方事实清单、08 §7 逐项判定、B3 定档依据 | §2.1、08 §7 |
 
 配套工件：
