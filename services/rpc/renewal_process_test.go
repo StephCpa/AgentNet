@@ -2,6 +2,7 @@ package rpc_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"encoding/pem"
@@ -17,10 +18,39 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
+
+// Retry only Windows' refusal to create a process while its image has a sharing
+// lock. A successful Start is never retried, regardless of its eventual result.
+func startRenewalProcess(t *testing.T, ctx context.Context, binary string, output *bytes.Buffer, args ...string) *exec.Cmd {
+	t.Helper()
+	until := time.Now().Add(5 * time.Second)
+	attempts := 0
+	for {
+		child := exec.CommandContext(ctx, binary, args...)
+		if output != nil {
+			child.Stdout = output
+			child.Stderr = output
+		}
+		err := child.Start()
+		if err == nil {
+			if attempts > 0 {
+				t.Logf("Windows image sharing lock cleared after %d failed Start attempts; no process was created in those attempts", attempts)
+			}
+			return child
+		}
+		if child.Process != nil || runtime.GOOS != "windows" || !errors.Is(err, syscall.Errno(32)) || time.Now().After(until) {
+			t.Fatal(err)
+		}
+		attempts++
+		time.Sleep(25 * time.Millisecond)
+	}
+}
 
 func TestRPCRenewalClientProcessRecovery(t *testing.T) {
 	if os.Getenv("ANET_TEST_DSN") == "" {
@@ -30,6 +60,20 @@ func TestRPCRenewalClientProcessRecovery(t *testing.T) {
 	if out, err := exec.Command("go", "build", "-o", binary, "../../cmd/instancerenew").CombinedOutput(); err != nil {
 		t.Fatalf("build %v %s", err, out)
 	}
+	t.Cleanup(func() {
+		until := time.Now().Add(5 * time.Second)
+		for {
+			err := os.Remove(binary)
+			if err == nil || errors.Is(err, os.ErrNotExist) {
+				return
+			}
+			if runtime.GOOS != "windows" || !errors.Is(err, syscall.Errno(32)) || time.Now().After(until) {
+				t.Errorf("remove exited renewal client: %v", err)
+				return
+			}
+			time.Sleep(25 * time.Millisecond)
+		}
+	})
 	for _, phase := range []string{"kill_before_activation", "fail_publication_after_activation", "watch_due"} {
 		t.Run(phase, func(t *testing.T) {
 			f := setup(t)
@@ -61,10 +105,7 @@ func TestRPCRenewalClientProcessRecovery(t *testing.T) {
 				f.exec(`UPDATE agent_instances SET cred_hash=$2,credential_version=2 WHERE instance_id=$1`, f.caller.Instance, short.Fingerprint)
 				f.exec(`INSERT INTO instance_credentials(fingerprint,instance_id,version,public_key_hash,certificate_der,certificate_pem,expires_at) VALUES($1,$2,2,$3,$4,$5,$6)`, short.Fingerprint, f.caller.Instance, short.PublicKeyHash, short.DER, short.PEM, short.Expires)
 				write(cfg.BundleFile, append(short.PEM, key...))
-				watch := exec.CommandContext(f.ctx, binary, "-config", configPath, "-watch")
-				if err = watch.Start(); err != nil {
-					t.Fatal(err)
-				}
+				watch := startRenewalProcess(t, f.ctx, binary, nil, "-config", configPath, "-watch")
 				t.Cleanup(func() { _ = watch.Process.Kill(); _ = watch.Wait() })
 				deadline := time.Now().Add(10 * time.Second)
 				for {
@@ -102,13 +143,8 @@ func TestRPCRenewalClientProcessRecovery(t *testing.T) {
 			if _, err = tx.Exec(f.ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, name); err != nil {
 				t.Fatal(err)
 			}
-			child := exec.CommandContext(f.ctx, binary, "-config", configPath)
 			var output bytes.Buffer
-			child.Stdout = &output
-			child.Stderr = &output
-			if err = child.Start(); err != nil {
-				t.Fatal(err)
-			}
+			child := startRenewalProcess(t, f.ctx, binary, &output, "-config", configPath)
 			done := make(chan error, 1)
 			go func() { done <- child.Wait(); close(done) }()
 			t.Cleanup(func() { _ = child.Process.Kill(); <-done })
@@ -164,9 +200,10 @@ func TestRPCRenewalClientProcessRecovery(t *testing.T) {
 				code(t, err, codes.Unauthenticated)
 				f.exec(`UPDATE credential_renewals SET prepare_expires_at=clock_timestamp()-interval '1 second' WHERE instance_id=$1`, f.caller.Instance)
 			}
-			retry := exec.CommandContext(f.ctx, binary, "-config", configPath)
-			if out, err := retry.CombinedOutput(); err != nil {
-				t.Fatalf("restart recovery %v %s", err, out)
+			var recoveredOutput bytes.Buffer
+			retry := startRenewalProcess(t, f.ctx, binary, &recoveredOutput, "-config", configPath)
+			if err := retry.Wait(); err != nil {
+				t.Fatalf("restart recovery %v %s", err, recoveredOutput.String())
 			}
 			if _, err = os.Stat(journalPath); !os.IsNotExist(err) {
 				t.Fatal("completed journal not cleared")

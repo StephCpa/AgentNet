@@ -55,6 +55,7 @@ require `target_ttl` (a Go duration such as `24h`). There is no plaintext listen
 | RPC | Accepted input and behavior |
 |---|---|
 | GW SubmitCommand (optional) | Unsigned strict intent; durable server signature/expiry, ICS authorization, TCS acceptance and exact receipt recovery |
+| GW CreateSubtask (optional) | Unsigned strict child intent; shared command namespace, original signature/expiry recovery, independent TCS delegation guards |
 | InstanceCredentials (optional) | Managed-instance status, two-phase renewal/activation and confirmed abandonment; pending keys can only activate |
 | ICS IssueRootPermit | Signed GW command; exact consent subset and per-task ceilings; short-lived signed permit |
 | TCS SubmitCommand | Only signed command + signed root permit; root grant, task, accounts, receipt and notification commit in T1 |
@@ -80,8 +81,9 @@ must match that envelope. Root consent and contract explicitly permit delegation
 `recipient_policies` is trusted operator provisioning, never request-body policy.
 Reserve each positive dimension with purpose `subtask`, then bind its reservation
 and exact amount in the command; zero dimensions use an empty reservation ID.
-Only the same domain is supported. The SDK Gateway subtask signing path, policy
-management UI and remote delegation remain pending. Apply migration 014 for local
+Only the same domain is supported. The GW child signing path is now available
+through `Gateway.CreateSubtask` (design 30). Policy management UI, the complete
+Python SDK and remote delegation remain pending. Apply migration 014 for local
 closeout and tree cancellation. `CloseSubtaskBudget` accepts no reported cost or
 return amount; a pending liability returns `ANET-BUD-SUBTASK-NOT-READY`. See design 29.
 

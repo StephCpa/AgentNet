@@ -198,7 +198,7 @@ func TestRPCDaemonProcess(t *testing.T) {
 	}
 	saved := storedCommand(f)
 	stop()
-	_ = start()
+	stop = start()
 	replayLocal, e := tcsv1.NewTaskControlClient(f.connect(f.workerCert)).ExecuteLocalEffect(f.ctx, localRequest)
 	if e != nil || replayLocal.GetAdmission().GetOutcome() != tcsv1.EffectAdmission_EXISTING || replayLocal.GetResultRef() != localResult.ResultRef {
 		t.Fatal("local result after daemon restart", replayLocal, e)
@@ -210,6 +210,67 @@ func TestRPCDaemonProcess(t *testing.T) {
 	}
 	if string(saved.Payload) != string(storedCommand(f).Payload) {
 		t.Fatal("daemon restart re-signed command")
+	}
+	// Exercise the new unsigned child ingress in the shipped daemon, killing it
+	// before binding commit and after binding but before TCS acceptance. Accepted
+	// child receipts must also survive a later process restart.
+	for _, phase := range []string{"before-binding", "after-binding"} {
+		f.control = tcsv1.NewTaskControlClient(f.connect(f.workerCert))
+		f.command.ID += "-" + phase
+		f.command.ContractID += "-" + phase
+		parent := gatewayDelegableRoot(t, f, g)
+		command := subCommand(t, f, parent, f.adapter, 0, "5")
+		request := subIntent(t, command)
+		lock, e := f.db.Begin(f.ctx)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer lock.Rollback(f.ctx)
+		prefix := "INSERT INTO gateway_commands%"
+		if phase == "before-binding" {
+			_, e = lock.Exec(f.ctx, "LOCK TABLE gateway_commands IN SHARE MODE")
+		} else {
+			_, e = lock.Exec(f.ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", "anet.command:"+f.domain+":"+command.ID)
+			prefix = "SELECT pg_advisory_xact_lock(hashtextextended($1,0))"
+		}
+		if e != nil {
+			t.Fatal(e)
+		}
+		done := make(chan error, 1)
+		go func() { _, e := g.CreateSubtask(f.ctx, request); done <- e }()
+		waitForLock(t, f, prefix)
+		stop()
+		if <-done == nil {
+			t.Fatal("killed daemon returned acceptance")
+		}
+		if e = lock.Rollback(f.ctx); e != nil {
+			t.Fatal(e)
+		}
+		expected := 0
+		var bound []byte
+		if phase == "after-binding" {
+			expected = 1
+			bound = storedGatewayCommand(t, f, command.ID).Payload
+		}
+		if f.count("SELECT count(*) FROM gateway_commands WHERE command_id=$1", command.ID) != expected || f.count("SELECT count(*) FROM tasks WHERE parent_task_id=$1", parent.TaskId) != 0 {
+			t.Fatal("incorrect crash boundary")
+		}
+		stop = start()
+		g = gwv1.NewGatewayClient(f.connect(f.workerCert))
+		child, e := g.CreateSubtask(f.ctx, request)
+		if e != nil {
+			t.Fatal("child recovery", e)
+		}
+		if bound != nil && string(bound) != string(storedGatewayCommand(t, f, command.ID).Payload) {
+			t.Fatal("restart re-signed pending child")
+		}
+		stop()
+		stop = start()
+		g = gwv1.NewGatewayClient(f.connect(f.workerCert))
+		again, e := g.CreateSubtask(f.ctx, request)
+		if e != nil || again.GetOutcome() != tcsv1.AdmissionResult_EXISTING || again.GetTaskId() != child.TaskId || again.GetAcceptedReceipt().GetReceiptId() != child.AcceptedReceipt.GetReceiptId() {
+			t.Fatal("accepted child restart", again, e)
+		}
 	}
 	issuer, err := pki.New(tls.Certificate{Certificate: [][]byte{f.ca.Raw}, PrivateKey: f.caKey}, "test.agentnet", time.Hour)
 	if err != nil {

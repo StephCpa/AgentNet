@@ -1,0 +1,9 @@
+go vet ./...
+exit=0
+
+go vet -tags=microbench ./services/rpc
+exit=0
+
+python proto/generate.py --protoc .local/protoc-33.0/bin/protoc.exe --plugin-dir .local/bin --check
+exit=0
+11 generated Go binding files verified

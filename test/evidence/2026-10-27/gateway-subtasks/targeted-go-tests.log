@@ -1,0 +1,22 @@
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback/gw.command_bound
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback/tcs.subtask_created
+--- PASS: TestRPCGatewaySubtaskConcurrentAndAuditRollback (1.04s)
+    --- PASS: TestRPCGatewaySubtaskConcurrentAndAuditRollback/gw.command_bound (0.56s)
+    --- PASS: TestRPCGatewaySubtaskConcurrentAndAuditRollback/tcs.subtask_created (0.49s)
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/root-revoked
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/root-expired
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/root-certificate
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/child-revoked
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/child-expired
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/child-certificate
+--- PASS: TestRPCGatewayBindingRechecksAfterInsertWait (7.41s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/root-revoked (0.29s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/root-expired (1.49s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/root-certificate (1.63s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/child-revoked (0.39s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/child-expired (1.47s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/child-certificate (2.14s)
+PASS
+ok  	github.com/agentnet/agentnet/services/rpc	10.645s

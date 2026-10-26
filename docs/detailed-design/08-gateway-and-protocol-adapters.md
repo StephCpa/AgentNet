@@ -143,3 +143,7 @@ GW 托管 MCP 端点暴露本域工具：每客户端独立 scope（06）、句�
 | A2A/MCP 版本冻结 | **大体原生** | MCP 2026-07-28 自 v1.4 原生支持；"冻结拒绝"经路由+策略配置，devnet 验证（PRT-NEG-02） |
 
 附加事实：agentgateway 已支持 RFC 8693 token exchange（2026-07 起）——与 01 §3.2/06 §4 的委托凭证换发分工需在 M1 设计评审时明确（网关换发 vs ICS 换发）。
+
+## 单域实现进展（30）
+
+[30](30-gateway-subtask-ingress.md) 接通 `Gateway.CreateSubtask`，客户端以 mTLS 身份提交意图，服务持久保存首次签名和期限，交由 TCS 完整父链/预算守卫接纳。它与根命令共享去重命名空间；签名不是权限决定。当前实现为内部 gRPC 入口，Python SDK、HTTPS/JSON 边缘绑定与本章的跨域协议/网关底座仍待完成。

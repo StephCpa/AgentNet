@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Gateway_SubmitCommand_FullMethodName = "/anet.gw.v1.Gateway/SubmitCommand"
+	Gateway_CreateSubtask_FullMethodName = "/anet.gw.v1.Gateway/CreateSubtask"
 )
 
 // GatewayClient is the client API for Gateway service.
@@ -30,6 +31,7 @@ const (
 // Internal authenticated SDK ingress, not an A2A/MCP wire binding.
 type GatewayClient interface {
 	SubmitCommand(ctx context.Context, in *SubmitCommandRequest, opts ...grpc.CallOption) (*v1.AdmissionResult, error)
+	CreateSubtask(ctx context.Context, in *CreateSubtaskRequest, opts ...grpc.CallOption) (*v1.AdmissionResult, error)
 }
 
 type gatewayClient struct {
@@ -50,6 +52,16 @@ func (c *gatewayClient) SubmitCommand(ctx context.Context, in *SubmitCommandRequ
 	return out, nil
 }
 
+func (c *gatewayClient) CreateSubtask(ctx context.Context, in *CreateSubtaskRequest, opts ...grpc.CallOption) (*v1.AdmissionResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AdmissionResult)
+	err := c.cc.Invoke(ctx, Gateway_CreateSubtask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayServer is the server API for Gateway service.
 // All implementations must embed UnimplementedGatewayServer
 // for forward compatibility.
@@ -57,6 +69,7 @@ func (c *gatewayClient) SubmitCommand(ctx context.Context, in *SubmitCommandRequ
 // Internal authenticated SDK ingress, not an A2A/MCP wire binding.
 type GatewayServer interface {
 	SubmitCommand(context.Context, *SubmitCommandRequest) (*v1.AdmissionResult, error)
+	CreateSubtask(context.Context, *CreateSubtaskRequest) (*v1.AdmissionResult, error)
 	mustEmbedUnimplementedGatewayServer()
 }
 
@@ -69,6 +82,9 @@ type UnimplementedGatewayServer struct{}
 
 func (UnimplementedGatewayServer) SubmitCommand(context.Context, *SubmitCommandRequest) (*v1.AdmissionResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitCommand not implemented")
+}
+func (UnimplementedGatewayServer) CreateSubtask(context.Context, *CreateSubtaskRequest) (*v1.AdmissionResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSubtask not implemented")
 }
 func (UnimplementedGatewayServer) mustEmbedUnimplementedGatewayServer() {}
 func (UnimplementedGatewayServer) testEmbeddedByValue()                 {}
@@ -109,6 +125,24 @@ func _Gateway_SubmitCommand_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Gateway_CreateSubtask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSubtaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServer).CreateSubtask(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Gateway_CreateSubtask_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServer).CreateSubtask(ctx, req.(*CreateSubtaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Gateway_ServiceDesc is the grpc.ServiceDesc for Gateway service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -119,6 +153,10 @@ var Gateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitCommand",
 			Handler:    _Gateway_SubmitCommand_Handler,
+		},
+		{
+			MethodName: "CreateSubtask",
+			Handler:    _Gateway_CreateSubtask_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

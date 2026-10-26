@@ -321,3 +321,5 @@ RETURN {t.cancel_version};
 `CancelTask` 保持 T3 单任务提交；`outboxd` 将已取消事实转换为持久后代工作项，每个工作项锁定实际目标并验证祖先关系。取消与 CreateSubtask 通过同一目标任务行锁串行化：先创建的子任务被入队，先取消则创建被拒绝。终态中间节点保留原事实但继续传播。UNKNOWN 仍须独立对账，不随取消释放。
 
 详见 [29](29-subtask-closeout-and-cancellation.md)。`UpdateTaskStatus`、完整契约与 VERIFIED 验收尚待实现，不能以此增量推断完整状态机已交付。
+
+后续 [30](30-gateway-subtask-ingress.md) 增加 `Gateway.CreateSubtask`，由网关将客户端意图签为现有 `anet.subtask/1`，复用 TCS 的原子委托路径和回执读取。TCS 已有签名接口保持兼容，未因 GW 前置而减少任何创建守卫。

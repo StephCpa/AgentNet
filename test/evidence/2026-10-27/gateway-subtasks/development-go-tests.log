@@ -1,0 +1,82 @@
+=== RUN   TestRPCGatewaySubtaskLifecycle
+--- PASS: TestRPCGatewaySubtaskLifecycle (0.58s)
+=== RUN   TestRPCGatewaySubtaskForgeryAndNamespace
+--- PASS: TestRPCGatewaySubtaskForgeryAndNamespace (0.25s)
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards/caller
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards/scope
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards/policy
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards/version
+=== RUN   TestRPCGatewaySubtaskAuthorityGuards/reservation
+--- PASS: TestRPCGatewaySubtaskAuthorityGuards (1.06s)
+    --- PASS: TestRPCGatewaySubtaskAuthorityGuards/caller (0.20s)
+    --- PASS: TestRPCGatewaySubtaskAuthorityGuards/scope (0.21s)
+    --- PASS: TestRPCGatewaySubtaskAuthorityGuards/policy (0.21s)
+    --- PASS: TestRPCGatewaySubtaskAuthorityGuards/version (0.21s)
+    --- PASS: TestRPCGatewaySubtaskAuthorityGuards/reservation (0.22s)
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback/gw.command_bound
+    gateway_subtasks_test.go:185: ERROR: check constraint "fail_domain863d181b474f412690819b8d5c033976" of relation "audit_log_2026_10" is violated by some row (SQLSTATE 23514)
+=== RUN   TestRPCGatewaySubtaskConcurrentAndAuditRollback/tcs.subtask_created
+--- FAIL: TestRPCGatewaySubtaskConcurrentAndAuditRollback (0.70s)
+    --- FAIL: TestRPCGatewaySubtaskConcurrentAndAuditRollback/gw.command_bound (0.21s)
+    --- PASS: TestRPCGatewaySubtaskConcurrentAndAuditRollback/tcs.subtask_created (0.49s)
+=== RUN   TestRPCGatewaySubtaskExpiryAndPendingRecovery
+=== RUN   TestRPCGatewaySubtaskExpiryAndPendingRecovery/pending
+=== RUN   TestRPCGatewaySubtaskExpiryAndPendingRecovery/accepted
+--- PASS: TestRPCGatewaySubtaskExpiryAndPendingRecovery (2.53s)
+    --- PASS: TestRPCGatewaySubtaskExpiryAndPendingRecovery/pending (1.29s)
+    --- PASS: TestRPCGatewaySubtaskExpiryAndPendingRecovery/accepted (1.23s)
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/root-revoked
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/root-expired
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/child-revoked
+=== RUN   TestRPCGatewayBindingRechecksAfterInsertWait/child-expired
+--- PASS: TestRPCGatewayBindingRechecksAfterInsertWait (3.42s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/root-revoked (0.28s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/root-expired (1.37s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/child-revoked (0.39s)
+    --- PASS: TestRPCGatewayBindingRechecksAfterInsertWait/child-expired (1.38s)
+=== RUN   TestRPCGatewayDurableSigningAndReceiptRecovery
+--- PASS: TestRPCGatewayDurableSigningAndReceiptRecovery (0.17s)
+=== RUN   TestRPCGatewayRejectsForgeryConflictAndBudget
+--- PASS: TestRPCGatewayRejectsForgeryConflictAndBudget (0.12s)
+=== RUN   TestRPCGatewayConcurrentFirstSubmission
+--- PASS: TestRPCGatewayConcurrentFirstSubmission (0.31s)
+=== RUN   TestRPCGatewayExpirySurvivesInboxCleanup
+--- PASS: TestRPCGatewayExpirySurvivesInboxCleanup (1.27s)
+=== RUN   TestRPCGatewayAcceptanceAuditRollback
+--- PASS: TestRPCGatewayAcceptanceAuditRollback (0.21s)
+=== RUN   TestRPCGatewayAuditRollback
+--- PASS: TestRPCGatewayAuditRollback (0.13s)
+=== RUN   TestRPCGatewayCommittedButResponseUnavailable
+--- PASS: TestRPCGatewayCommittedButResponseUnavailable (0.20s)
+=== RUN   TestRPCGatewayPendingPermitAndCancelledRequest
+--- PASS: TestRPCGatewayPendingPermitAndCancelledRequest (1.41s)
+=== RUN   TestRPCCertificateExpiryDuringLockWait
+=== RUN   TestRPCCertificateExpiryDuringLockWait/gateway
+=== RUN   TestRPCCertificateExpiryDuringLockWait/permit
+=== RUN   TestRPCCertificateExpiryDuringLockWait/admission
+--- PASS: TestRPCCertificateExpiryDuringLockWait (5.48s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/gateway (1.49s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/permit (2.00s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/admission (1.99s)
+=== RUN   TestRPCDaemonProcess
+=== RUN   TestRPCDaemonProcess/missing-key
+=== RUN   TestRPCDaemonProcess/untrusted-key
+=== RUN   TestRPCDaemonProcess/same-ics-key
+=== RUN   TestRPCDaemonProcess/zero-ttl
+=== RUN   TestRPCDaemonProcess/long-ttl
+=== RUN   TestRPCDaemonProcess/unknown-local
+=== RUN   TestRPCDaemonProcess/external-local
+--- PASS: TestRPCDaemonProcess (8.57s)
+    --- PASS: TestRPCDaemonProcess/missing-key (0.08s)
+    --- PASS: TestRPCDaemonProcess/untrusted-key (0.07s)
+    --- PASS: TestRPCDaemonProcess/same-ics-key (0.05s)
+    --- PASS: TestRPCDaemonProcess/zero-ttl (0.06s)
+    --- PASS: TestRPCDaemonProcess/long-ttl (0.06s)
+    --- PASS: TestRPCDaemonProcess/unknown-local (0.01s)
+    --- PASS: TestRPCDaemonProcess/external-local (0.01s)
+FAIL
+FAIL	github.com/agentnet/agentnet/services/rpc	27.547s
+FAIL

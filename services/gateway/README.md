@@ -1,6 +1,6 @@
 # Authenticated command ingress
 
-`anet.gw.v1.Gateway/SubmitCommand` accepts an unsigned **intent**, through the same
+`anet.gw.v1.Gateway/SubmitCommand` and `CreateSubtask` accept unsigned **intents**, through the same
 registered-instance mTLS authentication as ICS/TCS. The worker never receives the
 GW signing key. This is the internal SDK binding; A2A/MCP and agentgateway
 ExtProc/ExtAuth integration are separate adapters still to be implemented.
@@ -8,7 +8,7 @@ GW/ICS/TCS transaction identity checks recheck both the authenticated certificat
 fingerprint and its expiry against database time after lock waits. These transport
 attributes are excluded from signed JSON and cannot be supplied in request bodies.
 
-The protobuf `intent_json` is strict JCS-compatible JSON:
+For root submission, protobuf `intent_json` is strict JCS-compatible JSON:
 
 ```json
 {
@@ -39,6 +39,43 @@ consent; the sample is not a runnable authorization fixture. Request JSON cannot
 set caller identity, audience, expiry, a signature or a root permit. Duplicate
 JSON keys, malformed Unicode, unknown fields and bodies over 1 MiB are rejected.
 
+## Delegated task ingress
+
+`Gateway.CreateSubtask(CreateSubtaskRequest)` accepts strict
+`gateway.SubtaskIntent` JSON with kind `anet.subtask-intent/1`. The generated Go
+client is in `proto/gen/anet/gw/v1`; the complete Python SDK and HTTPS/JSON edge
+binding remain pending.
+
+| Intent fields | Meaning |
+|---|---|
+| `kind`, `command_id` | Versioned intent and durable client-generated command ID |
+| `parent_task_id`, `parent_grant_id` | Current parent task and its execution grant |
+| `lease_id`, `epoch`, `expected_task_version` | Caller-held lease and authoritative parent version |
+| `recipient_agent_id`, `recipient_instance_id`, `recipient_policy_id` | Provisioned local recipient and immutable policy |
+| `contract`, `rights` | Proposed child contract and attenuated rights |
+| `not_before`, `expires_at` | Proposed child grant interval, within parent/policy/contract bounds |
+| `allocations` | Exactly money/tokens/calls/messages, each with decimal `amount` and `reservation_id` |
+
+Reserve each positive allocation through TCS with purpose `subtask`; zero amounts
+use an empty reservation ID. Encode the intent and call the generated client's
+`CreateSubtask` with `CreateSubtaskRequest{IntentJson: body}`. Do not add caller,
+audience, command `not_after`, a signature or a root permit. GW binds those trusted
+attributes; child grant time bounds are separate from the command's trusted expiry.
+
+TCS independently checks parent-chain authority, consent, actor, lease, epoch,
+version, contract, recipient policy and budget before accepting. A signed proposal
+alone is not permission or acceptance. This path creates no fresh root permit and
+keeps the original user as subject, with the recipient as actor.
+
+Root and child requests share `(domain, command_id)`; cross-method reuse conflicts.
+Signing and its audit commit before child acceptance. Retries use the saved exact
+signature and expiry, even after service restart or inbox cleanup. If an unaccepted
+proposal's lease/version is stale, first recover/confirm its original result and
+use a new command ID for a revised proposal; the old binding cannot be rewritten.
+An already accepted exact proposal returns its original child and receipt, including
+after cancellation/closeout/consent revocation while identity and command expiry
+remain valid. No failed gateway request automatically releases a reservation.
+
 ## Persistence and recovery
 
 Migration 009 binds `(domain, command_id)` to the authenticated principal/Agent/
@@ -48,7 +85,7 @@ persisted with `gw.command_bound` audit in one transaction. The default lifetime
 is five minutes, configurable from one second through five minutes. Retries never
 extend that lifetime, including after service restart or TCS inbox cleanup.
 
-The stored signature then goes through ICS consent/subset/ceiling checks and TCS
+For a root command, the stored signature then goes through ICS consent/subset/ceiling checks and TCS
 atomic acceptance. GW persists a signed root permit before invoking T1. A binding
 or permit alone is **not acceptance**. TCS alone creates the task, grant, accounts,
 receipt, inbox and outbox. Concurrent submissions return the one accepted task.
@@ -66,11 +103,13 @@ returned to the client; a client must retry the same command ID/intent to recove
 Conflicting payloads or identities cannot replace the binding. The table currently
 retains records indefinitely. Do not delete these records to reclaim space: a
 future archival scheme must preserve the permanent binding/expiry tombstone.
+After binding INSERT/FK/audit waits, both root and child paths recheck live identity,
+certificate expiry and the first command deadline before committing the signature.
 Retain old command/ICS verification keys for the supported recovery horizon.
 
 ## Runtime
 
-Apply migrations 001–009. Add to the existing `anetd` config:
+Apply implementation migrations 001–014. Add to the existing `anetd` config:
 
 ```json
 {

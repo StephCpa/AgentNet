@@ -7,6 +7,14 @@ import "anet/tcs/v1/tcs.proto";
 // Internal authenticated SDK ingress, not an A2A/MCP wire binding.
 service Gateway {
   rpc SubmitCommand(SubmitCommandRequest) returns (anet.tcs.v1.AdmissionResult);
+  rpc CreateSubtask(CreateSubtaskRequest) returns (anet.tcs.v1.AdmissionResult);
+}
+
+message CreateSubtaskRequest {
+  // Strict services/gateway.SubtaskIntent JSON (anet.subtask-intent/1).
+  // Parent/lease/version, recipient, rights, grant window and allocations are
+  // proposals. Caller, audience, command expiry and signature are server-bound.
+  bytes intent_json = 1;
 }
 message SubmitCommandRequest {
   // Strict JCS-compatible JSON of services/gateway.Intent (anet.intent/1).

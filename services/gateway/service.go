@@ -90,7 +90,7 @@ func commandID(e tcs.Envelope) string {
 }
 func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envelope, tcs.Envelope, error) {
 	var zero tcs.Envelope
-	if len(raw) == 0 || len(raw) > 1<<20 || c.CredentialHash == "" || c.CredentialExpiresAt == nil {
+	if len(raw) == 0 || len(raw) > 1<<20 {
 		return zero, zero, tcs.Invalid
 	}
 	canonicalRaw, err := canonical.Bytes(raw)
@@ -103,6 +103,19 @@ func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envel
 	if decoder.Decode(&request) != nil || request.Kind != "anet.intent/1" || request.ID == "" || len(request.ID) > 256 || request.ContractID == "" || len(request.ContractID) > 256 || request.ContractVersion < 1 || request.Root == nil {
 		return zero, zero, tcs.Invalid
 	}
+	return s.bindCommand(ctx, c, canonicalRaw, request.ID, func(expires time.Time) (tcs.Envelope, error) {
+		cmd := tcs.Command{ID: request.ID, Audience: s.cfg.Domain, NotAfter: expires, ContractID: request.ContractID, ContractVersion: request.ContractVersion, Contract: request.Contract, Limits: request.Limits, Root: request.Root}
+		return signed.Encode(s.cfg.KeyID, s.cfg.Key, tcs.Submission{Kind: "anet.command/1", Caller: c, Command: cmd})
+	})
+}
+
+// bindCommand shares one identity/ID namespace and recovery protocol across root
+// and delegated commands. The canonical intent includes its versioned kind.
+func (s *Service) bindCommand(ctx context.Context, c tcs.Caller, canonicalRaw []byte, id string, makeCommand func(time.Time) (tcs.Envelope, error)) (tcs.Envelope, tcs.Envelope, error) {
+	var zero tcs.Envelope
+	if c.CredentialHash == "" || c.CredentialExpiresAt == nil {
+		return zero, zero, tcs.Invalid
+	}
 	digest, err := canonical.Digest(canonicalRaw)
 	if err != nil {
 		return zero, zero, tcs.Invalid
@@ -112,16 +125,11 @@ func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envel
 		return zero, zero, err
 	}
 	defer tx.Rollback(ctx)
-	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "anet.gateway:"+s.cfg.Domain+":"+request.ID); err != nil {
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "anet.gateway:"+s.cfg.Domain+":"+id); err != nil {
 		return zero, zero, err
 	}
-	var live bool
-	err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM principals p JOIN agents a ON a.owner_principal_id=p.principal_id JOIN agent_instances i ON i.agent_id=a.agent_id WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active' AND i.cred_hash=$5 AND clock_timestamp()<$6)`, c.Principal, c.Agent, c.Instance, s.cfg.Domain, c.CredentialHash, c.CredentialExpiresAt).Scan(&live)
-	if err != nil {
+	if err = s.liveCaller(ctx, tx, c); err != nil {
 		return zero, zero, err
-	}
-	if !live {
-		return zero, zero, tcs.Denied
 	}
 	var now time.Time
 	if err = tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&now); err != nil {
@@ -130,7 +138,7 @@ func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envel
 	var oldDigest, principal, agent, instance string
 	var encoded, root []byte
 	var expires time.Time
-	err = tx.QueryRow(ctx, `SELECT intent_digest,principal_id,agent_id,instance_id,signed_command,root_permit,not_after FROM gateway_commands WHERE domain_id=$1 AND command_id=$2`, s.cfg.Domain, request.ID).Scan(&oldDigest, &principal, &agent, &instance, &encoded, &root, &expires)
+	err = tx.QueryRow(ctx, `SELECT intent_digest,principal_id,agent_id,instance_id,signed_command,root_permit,not_after FROM gateway_commands WHERE domain_id=$1 AND command_id=$2`, s.cfg.Domain, id).Scan(&oldDigest, &principal, &agent, &instance, &encoded, &root, &expires)
 	if err == nil {
 		if principal != c.Principal || agent != c.Agent || instance != c.Instance || oldDigest != digest {
 			return zero, zero, tcs.Conflict
@@ -152,8 +160,8 @@ func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envel
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return zero, zero, err
 	}
-	cmd := tcs.Command{ID: request.ID, Audience: s.cfg.Domain, NotAfter: now.UTC().Add(s.cfg.CommandTTL), ContractID: request.ContractID, ContractVersion: request.ContractVersion, Contract: request.Contract, Limits: request.Limits, Root: request.Root}
-	command, err := signed.Encode(s.cfg.KeyID, s.cfg.Key, tcs.Submission{Kind: "anet.command/1", Caller: c, Command: cmd})
+	expires = now.UTC().Add(s.cfg.CommandTTL)
+	command, err := makeCommand(expires)
 	if err != nil {
 		return zero, zero, err
 	}
@@ -161,13 +169,36 @@ func (s *Service) bind(ctx context.Context, c tcs.Caller, raw []byte) (tcs.Envel
 	if err != nil {
 		return zero, zero, err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO gateway_commands(domain_id,command_id,principal_id,agent_id,instance_id,intent_digest,signed_command,not_after,created_at) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)`, s.cfg.Domain, request.ID, c.Principal, c.Agent, c.Instance, digest, string(encoded), cmd.NotAfter, now)
+	_, err = tx.Exec(ctx, `INSERT INTO gateway_commands(domain_id,command_id,principal_id,agent_id,instance_id,intent_digest,signed_command,not_after,created_at) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9)`, s.cfg.Domain, id, c.Principal, c.Agent, c.Instance, digest, string(encoded), expires, now)
 	if err != nil {
 		return zero, zero, err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO audit_log(domain_id,principal_id,agent_instance_id,command_id,action,decision,detail_digest) VALUES($1,$2,$3,$4,'gw.command_bound','allow',$5)`, s.cfg.Domain, c.Principal, c.Instance, request.ID, digest)
+	_, err = tx.Exec(ctx, `INSERT INTO audit_log(domain_id,principal_id,agent_instance_id,command_id,action,decision,detail_digest) VALUES($1,$2,$3,$4,'gw.command_bound','allow',$5)`, s.cfg.Domain, c.Principal, c.Instance, id, digest)
 	if err != nil {
 		return zero, zero, err
+	}
+	// INSERT/FK/audit waits can outlive the certificate or first-command window.
+	if err = s.liveCaller(ctx, tx, c); err != nil {
+		return zero, zero, err
+	}
+	var unexpired bool
+	if err = tx.QueryRow(ctx, "SELECT clock_timestamp() < $1", expires).Scan(&unexpired); err != nil {
+		return zero, zero, err
+	}
+	if !unexpired {
+		return zero, zero, tcs.Expired
 	}
 	return command, zero, tx.Commit(ctx)
+}
+
+func (s *Service) liveCaller(ctx context.Context, tx pgx.Tx, c tcs.Caller) error {
+	var live bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM principals p JOIN agents a ON a.owner_principal_id=p.principal_id JOIN agent_instances i ON i.agent_id=a.agent_id WHERE p.principal_id=$1 AND a.agent_id=$2 AND i.instance_id=$3 AND p.domain_id=$4 AND a.domain_id=$4 AND p.revoked_at IS NULL AND i.revoked_at IS NULL AND a.status='active' AND i.cred_hash=$5 AND clock_timestamp()<$6)`, c.Principal, c.Agent, c.Instance, s.cfg.Domain, c.CredentialHash, c.CredentialExpiresAt).Scan(&live)
+	if err != nil {
+		return err
+	}
+	if !live {
+		return tcs.Denied
+	}
+	return nil
 }

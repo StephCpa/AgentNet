@@ -28,3 +28,18 @@ func (g *ingress) SubmitCommand(ctx context.Context, r *gwv1.SubmitCommandReques
 	}
 	return g.control.admissionResult(ctx, who, out)
 }
+
+func (g *ingress) CreateSubtask(ctx context.Context, r *gwv1.CreateSubtaskRequest) (*tcsv1.AdmissionResult, error) {
+	who, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !strict(r) {
+		return nil, rpcError(tcs.Invalid)
+	}
+	out, err := g.service.CreateSubtask(ctx, who, r.IntentJson)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	return g.control.admissionResult(ctx, who, out)
+}

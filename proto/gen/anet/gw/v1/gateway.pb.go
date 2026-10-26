@@ -22,6 +22,53 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CreateSubtaskRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Strict services/gateway.SubtaskIntent JSON (anet.subtask-intent/1).
+	// Parent/lease/version, recipient, rights, grant window and allocations are
+	// proposals. Caller, audience, command expiry and signature are server-bound.
+	IntentJson    []byte `protobuf:"bytes,1,opt,name=intent_json,json=intentJson,proto3" json:"intent_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSubtaskRequest) Reset() {
+	*x = CreateSubtaskRequest{}
+	mi := &file_anet_gw_v1_gateway_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSubtaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSubtaskRequest) ProtoMessage() {}
+
+func (x *CreateSubtaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_anet_gw_v1_gateway_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSubtaskRequest.ProtoReflect.Descriptor instead.
+func (*CreateSubtaskRequest) Descriptor() ([]byte, []int) {
+	return file_anet_gw_v1_gateway_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CreateSubtaskRequest) GetIntentJson() []byte {
+	if x != nil {
+		return x.IntentJson
+	}
+	return nil
+}
+
 type SubmitCommandRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Strict JCS-compatible JSON of services/gateway.Intent (anet.intent/1).
@@ -34,7 +81,7 @@ type SubmitCommandRequest struct {
 
 func (x *SubmitCommandRequest) Reset() {
 	*x = SubmitCommandRequest{}
-	mi := &file_anet_gw_v1_gateway_proto_msgTypes[0]
+	mi := &file_anet_gw_v1_gateway_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -46,7 +93,7 @@ func (x *SubmitCommandRequest) String() string {
 func (*SubmitCommandRequest) ProtoMessage() {}
 
 func (x *SubmitCommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_anet_gw_v1_gateway_proto_msgTypes[0]
+	mi := &file_anet_gw_v1_gateway_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -59,7 +106,7 @@ func (x *SubmitCommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitCommandRequest.ProtoReflect.Descriptor instead.
 func (*SubmitCommandRequest) Descriptor() ([]byte, []int) {
-	return file_anet_gw_v1_gateway_proto_rawDescGZIP(), []int{0}
+	return file_anet_gw_v1_gateway_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *SubmitCommandRequest) GetIntentJson() []byte {
@@ -75,11 +122,15 @@ const file_anet_gw_v1_gateway_proto_rawDesc = "" +
 	"\n" +
 	"\x18anet/gw/v1/gateway.proto\x12\n" +
 	"anet.gw.v1\x1a\x15anet/tcs/v1/tcs.proto\"7\n" +
+	"\x14CreateSubtaskRequest\x12\x1f\n" +
+	"\vintent_json\x18\x01 \x01(\fR\n" +
+	"intentJson\"7\n" +
 	"\x14SubmitCommandRequest\x12\x1f\n" +
 	"\vintent_json\x18\x01 \x01(\fR\n" +
-	"intentJson2Z\n" +
+	"intentJson2\xab\x01\n" +
 	"\aGateway\x12O\n" +
-	"\rSubmitCommand\x12 .anet.gw.v1.SubmitCommandRequest\x1a\x1c.anet.tcs.v1.AdmissionResultB8Z6github.com/agentnet/agentnet/proto/gen/anet/gw/v1;gwv1b\x06proto3"
+	"\rSubmitCommand\x12 .anet.gw.v1.SubmitCommandRequest\x1a\x1c.anet.tcs.v1.AdmissionResult\x12O\n" +
+	"\rCreateSubtask\x12 .anet.gw.v1.CreateSubtaskRequest\x1a\x1c.anet.tcs.v1.AdmissionResultB8Z6github.com/agentnet/agentnet/proto/gen/anet/gw/v1;gwv1b\x06proto3"
 
 var (
 	file_anet_gw_v1_gateway_proto_rawDescOnce sync.Once
@@ -93,16 +144,19 @@ func file_anet_gw_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_anet_gw_v1_gateway_proto_rawDescData
 }
 
-var file_anet_gw_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_anet_gw_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_anet_gw_v1_gateway_proto_goTypes = []any{
-	(*SubmitCommandRequest)(nil), // 0: anet.gw.v1.SubmitCommandRequest
-	(*v1.AdmissionResult)(nil),   // 1: anet.tcs.v1.AdmissionResult
+	(*CreateSubtaskRequest)(nil), // 0: anet.gw.v1.CreateSubtaskRequest
+	(*SubmitCommandRequest)(nil), // 1: anet.gw.v1.SubmitCommandRequest
+	(*v1.AdmissionResult)(nil),   // 2: anet.tcs.v1.AdmissionResult
 }
 var file_anet_gw_v1_gateway_proto_depIdxs = []int32{
-	0, // 0: anet.gw.v1.Gateway.SubmitCommand:input_type -> anet.gw.v1.SubmitCommandRequest
-	1, // 1: anet.gw.v1.Gateway.SubmitCommand:output_type -> anet.tcs.v1.AdmissionResult
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	1, // 0: anet.gw.v1.Gateway.SubmitCommand:input_type -> anet.gw.v1.SubmitCommandRequest
+	0, // 1: anet.gw.v1.Gateway.CreateSubtask:input_type -> anet.gw.v1.CreateSubtaskRequest
+	2, // 2: anet.gw.v1.Gateway.SubmitCommand:output_type -> anet.tcs.v1.AdmissionResult
+	2, // 3: anet.gw.v1.Gateway.CreateSubtask:output_type -> anet.tcs.v1.AdmissionResult
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -119,7 +173,7 @@ func file_anet_gw_v1_gateway_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_anet_gw_v1_gateway_proto_rawDesc), len(file_anet_gw_v1_gateway_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

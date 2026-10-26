@@ -180,3 +180,23 @@ including MinIO and the unchanged root control-path microbenchmark (4,800 operat
 13,200 RPCs, zero failures). All isolated clusters were stopped. This does not
 establish remote tree execution, complete contract/VERIFIED validation or a TLA+
 proof of process recovery.
+
+## Gateway subtask ingress (design 30)
+
+With migrations through 014, the frozen suite passed 40 gates, 152 database tests
+(33 TCS, 8 delivery, 17 execution, 67 RPC, 16 identity, 10 archive and one separate
+MinIO test) and 13 unit tests; five subprocess helpers are excluded. Six new
+RPC tests cover unsigned child intent binding, nested lifecycle and receipt
+recovery, namespace/identity/content conflicts, authorization guards, concurrent
+replay, audit rollback, expiry/inbox cleanup and post-INSERT identity/time checks.
+The shipped anetd test additionally terminates signing before commit and after
+commit before TCS acceptance, then recovers one child across restarts.
+
+Evidence: `test/evidence/2026-10-27/gateway-subtasks/`. A development audit-fault
+fixture error and the first full-run Windows instancerenew startup/cleanup sharing
+violation are retained. The process test now retries only error 32 when Start
+created no process, within five seconds, plus the same error during post-Wait
+cleanup. It never retries a started command or business assertion. The final
+fresh-cluster run passed MinIO and 4,800 microbenchmark operations (13,200 RPCs,
+zero failures); the cluster stopped. The benchmark still measures root paths,
+not delegated latency or production capacity.
