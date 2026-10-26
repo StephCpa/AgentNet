@@ -334,6 +334,7 @@ service TaskControl {
   rpc ReserveBudget(ReserveBudgetRequest) returns (Reservation);
   rpc SettleReservation(SettleReservationRequest) returns (Reservation);
   rpc ReleaseReservation(ReleaseReservationRequest) returns (Reservation);
+  rpc CloseSubtaskBudget(CloseSubtaskBudgetRequest) returns (SubtaskBudgetCloseout);
 
   // 租约
   rpc AcquireLease(AcquireLeaseRequest) returns (Lease);
@@ -341,3 +342,18 @@ service TaskControl {
 }
 
 message GetTaskRequest { string task_id = 1; }
+
+message CloseSubtaskBudgetRequest { string child_task_id = 1; }
+message SubtaskBudgetCloseout {
+  string child_task_id = 1;
+  string parent_task_id = 2;
+  bool existing = 3;
+  google.protobuf.Timestamp closed_at = 4;
+  message Dimension {
+    string dimension = 1;
+    string allocated = 2;
+    string settled = 3;
+    string returned = 4;
+  }
+  repeated Dimension dimensions = 5;
+}

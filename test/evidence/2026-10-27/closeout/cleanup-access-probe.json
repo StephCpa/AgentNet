@@ -1,0 +1,12 @@
+{
+  "path": "C:\\Users\\76790\\AppData\\Local\\Temp\\TestIdentityDaemonProcess2358886302\\001\\instancekey.exe",
+  "delete_access_available": false,
+  "winerror": 32,
+  "probe_does_not_delete": true,
+  "instancekey_processes": "",
+  "later_probe": {
+    "delete_access_available": true,
+    "winerror": 0,
+    "probe_does_not_delete": true
+  }
+}

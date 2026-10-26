@@ -104,4 +104,4 @@ checkShrink(parent P, child C, recipientPolicy R): Boolean
 
 [27](27-authority-chain-validation.md) 实现共享的权威父链校验及权限收缩/接收方交集原语，接入 ICS 决定、T2/local-tx 和执行器发送前守卫。完整路径在锁后重读，逐层验证权限、时间、深度、任务边与同意版本；子决定绑定祖先摘要，祖先撤销阻止新执行。公共根授权仍为 depth=0，三层测试链通过可信 fixture 导入。实际 CreateSubtask、接收方策略持久绑定、跨 owner 的 subject/actor 分离、预算转移、撤销推送与 token exchange 尚未完成；本节进展不替代前文完整设计。
 
-[28](28-atomic-subtask-creation.md) 随后实现单域 CreateSubtask、接收方策略持久绑定、subject/actor 分离及预算 H→D/子账户转移。原主体或子 grant 的执行 Agent 可撤销子授权；用户同意页明确展示允许委托的深度和类型。完整子树结算、取消传播与跨域协议仍待完成。
+[28](28-atomic-subtask-creation.md) 随后实现单域 CreateSubtask、接收方策略持久绑定、subject/actor 分离及预算 H→D/子账户转移。原主体或子 grant 的执行 Agent 可撤销子授权；用户同意页明确展示允许委托的深度和类型。本域子树结清与持久取消传播随后由 [29](29-subtask-closeout-and-cancellation.md) 实现；跨域协议、完整契约/验收和策略管理仍待完成。

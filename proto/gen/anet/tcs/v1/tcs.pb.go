@@ -2622,6 +2622,126 @@ func (x *GetTaskRequest) GetTaskId() string {
 	return ""
 }
 
+type CloseSubtaskBudgetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChildTaskId   string                 `protobuf:"bytes,1,opt,name=child_task_id,json=childTaskId,proto3" json:"child_task_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseSubtaskBudgetRequest) Reset() {
+	*x = CloseSubtaskBudgetRequest{}
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseSubtaskBudgetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseSubtaskBudgetRequest) ProtoMessage() {}
+
+func (x *CloseSubtaskBudgetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseSubtaskBudgetRequest.ProtoReflect.Descriptor instead.
+func (*CloseSubtaskBudgetRequest) Descriptor() ([]byte, []int) {
+	return file_anet_tcs_v1_tcs_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *CloseSubtaskBudgetRequest) GetChildTaskId() string {
+	if x != nil {
+		return x.ChildTaskId
+	}
+	return ""
+}
+
+type SubtaskBudgetCloseout struct {
+	state         protoimpl.MessageState             `protogen:"open.v1"`
+	ChildTaskId   string                             `protobuf:"bytes,1,opt,name=child_task_id,json=childTaskId,proto3" json:"child_task_id,omitempty"`
+	ParentTaskId  string                             `protobuf:"bytes,2,opt,name=parent_task_id,json=parentTaskId,proto3" json:"parent_task_id,omitempty"`
+	Existing      bool                               `protobuf:"varint,3,opt,name=existing,proto3" json:"existing,omitempty"`
+	ClosedAt      *timestamppb.Timestamp             `protobuf:"bytes,4,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	Dimensions    []*SubtaskBudgetCloseout_Dimension `protobuf:"bytes,5,rep,name=dimensions,proto3" json:"dimensions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubtaskBudgetCloseout) Reset() {
+	*x = SubtaskBudgetCloseout{}
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubtaskBudgetCloseout) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubtaskBudgetCloseout) ProtoMessage() {}
+
+func (x *SubtaskBudgetCloseout) ProtoReflect() protoreflect.Message {
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubtaskBudgetCloseout.ProtoReflect.Descriptor instead.
+func (*SubtaskBudgetCloseout) Descriptor() ([]byte, []int) {
+	return file_anet_tcs_v1_tcs_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *SubtaskBudgetCloseout) GetChildTaskId() string {
+	if x != nil {
+		return x.ChildTaskId
+	}
+	return ""
+}
+
+func (x *SubtaskBudgetCloseout) GetParentTaskId() string {
+	if x != nil {
+		return x.ParentTaskId
+	}
+	return ""
+}
+
+func (x *SubtaskBudgetCloseout) GetExisting() bool {
+	if x != nil {
+		return x.Existing
+	}
+	return false
+}
+
+func (x *SubtaskBudgetCloseout) GetClosedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return nil
+}
+
+func (x *SubtaskBudgetCloseout) GetDimensions() []*SubtaskBudgetCloseout_Dimension {
+	if x != nil {
+		return x.Dimensions
+	}
+	return nil
+}
+
 type CreateSubtaskRequest_BudgetAllocation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Dimension     string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
@@ -2632,7 +2752,7 @@ type CreateSubtaskRequest_BudgetAllocation struct {
 
 func (x *CreateSubtaskRequest_BudgetAllocation) Reset() {
 	*x = CreateSubtaskRequest_BudgetAllocation{}
-	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[31]
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2644,7 +2764,7 @@ func (x *CreateSubtaskRequest_BudgetAllocation) String() string {
 func (*CreateSubtaskRequest_BudgetAllocation) ProtoMessage() {}
 
 func (x *CreateSubtaskRequest_BudgetAllocation) ProtoReflect() protoreflect.Message {
-	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[31]
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2670,6 +2790,74 @@ func (x *CreateSubtaskRequest_BudgetAllocation) GetDimension() string {
 func (x *CreateSubtaskRequest_BudgetAllocation) GetAmount() string {
 	if x != nil {
 		return x.Amount
+	}
+	return ""
+}
+
+type SubtaskBudgetCloseout_Dimension struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Dimension     string                 `protobuf:"bytes,1,opt,name=dimension,proto3" json:"dimension,omitempty"`
+	Allocated     string                 `protobuf:"bytes,2,opt,name=allocated,proto3" json:"allocated,omitempty"`
+	Settled       string                 `protobuf:"bytes,3,opt,name=settled,proto3" json:"settled,omitempty"`
+	Returned      string                 `protobuf:"bytes,4,opt,name=returned,proto3" json:"returned,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) Reset() {
+	*x = SubtaskBudgetCloseout_Dimension{}
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubtaskBudgetCloseout_Dimension) ProtoMessage() {}
+
+func (x *SubtaskBudgetCloseout_Dimension) ProtoReflect() protoreflect.Message {
+	mi := &file_anet_tcs_v1_tcs_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubtaskBudgetCloseout_Dimension.ProtoReflect.Descriptor instead.
+func (*SubtaskBudgetCloseout_Dimension) Descriptor() ([]byte, []int) {
+	return file_anet_tcs_v1_tcs_proto_rawDescGZIP(), []int{32, 0}
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) GetDimension() string {
+	if x != nil {
+		return x.Dimension
+	}
+	return ""
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) GetAllocated() string {
+	if x != nil {
+		return x.Allocated
+	}
+	return ""
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) GetSettled() string {
+	if x != nil {
+		return x.Settled
+	}
+	return ""
+}
+
+func (x *SubtaskBudgetCloseout_Dimension) GetReturned() string {
+	if x != nil {
+		return x.Returned
 	}
 	return ""
 }
@@ -2941,7 +3129,22 @@ const file_anet_tcs_v1_tcs_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\")\n" +
 	"\x0eGetTaskRequest\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId2\xf4\b\n" +
+	"\atask_id\x18\x01 \x01(\tR\x06taskId\"?\n" +
+	"\x19CloseSubtaskBudgetRequest\x12\"\n" +
+	"\rchild_task_id\x18\x01 \x01(\tR\vchildTaskId\"\x83\x03\n" +
+	"\x15SubtaskBudgetCloseout\x12\"\n" +
+	"\rchild_task_id\x18\x01 \x01(\tR\vchildTaskId\x12$\n" +
+	"\x0eparent_task_id\x18\x02 \x01(\tR\fparentTaskId\x12\x1a\n" +
+	"\bexisting\x18\x03 \x01(\bR\bexisting\x127\n" +
+	"\tclosed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bclosedAt\x12L\n" +
+	"\n" +
+	"dimensions\x18\x05 \x03(\v2,.anet.tcs.v1.SubtaskBudgetCloseout.DimensionR\n" +
+	"dimensions\x1a}\n" +
+	"\tDimension\x12\x1c\n" +
+	"\tdimension\x18\x01 \x01(\tR\tdimension\x12\x1c\n" +
+	"\tallocated\x18\x02 \x01(\tR\tallocated\x12\x18\n" +
+	"\asettled\x18\x03 \x01(\tR\asettled\x12\x1a\n" +
+	"\breturned\x18\x04 \x01(\tR\breturned2\xd6\t\n" +
 	"\vTaskControl\x12P\n" +
 	"\rSubmitCommand\x12!.anet.tcs.v1.SubmitCommandRequest\x1a\x1c.anet.tcs.v1.AdmissionResult\x12A\n" +
 	"\aGetTask\x12\x1b.anet.tcs.v1.GetTaskRequest\x1a\x19.anet.tcs.v1.TaskSnapshot\x12S\n" +
@@ -2955,7 +3158,8 @@ const file_anet_tcs_v1_tcs_proto_rawDesc = "" +
 	"CancelTask\x12\x1e.anet.tcs.v1.CancelTaskRequest\x1a\x19.anet.tcs.v1.CancelResult\x12L\n" +
 	"\rReserveBudget\x12!.anet.tcs.v1.ReserveBudgetRequest\x1a\x18.anet.tcs.v1.Reservation\x12T\n" +
 	"\x11SettleReservation\x12%.anet.tcs.v1.SettleReservationRequest\x1a\x18.anet.tcs.v1.Reservation\x12V\n" +
-	"\x12ReleaseReservation\x12&.anet.tcs.v1.ReleaseReservationRequest\x1a\x18.anet.tcs.v1.Reservation\x12D\n" +
+	"\x12ReleaseReservation\x12&.anet.tcs.v1.ReleaseReservationRequest\x1a\x18.anet.tcs.v1.Reservation\x12`\n" +
+	"\x12CloseSubtaskBudget\x12&.anet.tcs.v1.CloseSubtaskBudgetRequest\x1a\".anet.tcs.v1.SubtaskBudgetCloseout\x12D\n" +
 	"\fAcquireLease\x12 .anet.tcs.v1.AcquireLeaseRequest\x1a\x12.anet.tcs.v1.Lease\x12@\n" +
 	"\n" +
 	"RenewLease\x12\x1e.anet.tcs.v1.RenewLeaseRequest\x1a\x12.anet.tcs.v1.LeaseB:Z8github.com/agentnet/agentnet/proto/gen/anet/tcs/v1;tcsv1b\x06proto3"
@@ -2973,7 +3177,7 @@ func file_anet_tcs_v1_tcs_proto_rawDescGZIP() []byte {
 }
 
 var file_anet_tcs_v1_tcs_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_anet_tcs_v1_tcs_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_anet_tcs_v1_tcs_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_anet_tcs_v1_tcs_proto_goTypes = []any{
 	(AdmissionResult_Outcome)(0),                  // 0: anet.tcs.v1.AdmissionResult.Outcome
 	(EffectAdmission_Outcome)(0),                  // 1: anet.tcs.v1.EffectAdmission.Outcome
@@ -3008,72 +3212,79 @@ var file_anet_tcs_v1_tcs_proto_goTypes = []any{
 	(*ExecuteLocalEffectRequest)(nil),             // 30: anet.tcs.v1.ExecuteLocalEffectRequest
 	(*LocalEffectResult)(nil),                     // 31: anet.tcs.v1.LocalEffectResult
 	(*GetTaskRequest)(nil),                        // 32: anet.tcs.v1.GetTaskRequest
-	(*CreateSubtaskRequest_BudgetAllocation)(nil), // 33: anet.tcs.v1.CreateSubtaskRequest.BudgetAllocation
-	nil,                           // 34: anet.tcs.v1.LocalEffectResult.UsageEntry
-	(*timestamppb.Timestamp)(nil), // 35: google.protobuf.Timestamp
-	(*v1.SignedEnvelope)(nil),     // 36: anet.common.v1.SignedEnvelope
+	(*CloseSubtaskBudgetRequest)(nil),             // 33: anet.tcs.v1.CloseSubtaskBudgetRequest
+	(*SubtaskBudgetCloseout)(nil),                 // 34: anet.tcs.v1.SubtaskBudgetCloseout
+	(*CreateSubtaskRequest_BudgetAllocation)(nil), // 35: anet.tcs.v1.CreateSubtaskRequest.BudgetAllocation
+	nil,                                     // 36: anet.tcs.v1.LocalEffectResult.UsageEntry
+	(*SubtaskBudgetCloseout_Dimension)(nil), // 37: anet.tcs.v1.SubtaskBudgetCloseout.Dimension
+	(*timestamppb.Timestamp)(nil),           // 38: google.protobuf.Timestamp
+	(*v1.SignedEnvelope)(nil),               // 39: anet.common.v1.SignedEnvelope
 }
 var file_anet_tcs_v1_tcs_proto_depIdxs = []int32{
-	35, // 0: anet.tcs.v1.Receipt.issued_at:type_name -> google.protobuf.Timestamp
+	38, // 0: anet.tcs.v1.Receipt.issued_at:type_name -> google.protobuf.Timestamp
 	6,  // 1: anet.tcs.v1.TaskSnapshot.effects:type_name -> anet.tcs.v1.EffectState
 	5,  // 2: anet.tcs.v1.TaskSnapshot.receipts:type_name -> anet.tcs.v1.Receipt
 	7,  // 3: anet.tcs.v1.TaskSnapshot.budget:type_name -> anet.tcs.v1.BudgetAccountView
-	35, // 4: anet.tcs.v1.TaskSnapshot.deadline:type_name -> google.protobuf.Timestamp
-	35, // 5: anet.tcs.v1.AuthorizationDecision.at:type_name -> google.protobuf.Timestamp
-	35, // 6: anet.tcs.v1.SubmitCommandRequest.not_after:type_name -> google.protobuf.Timestamp
+	38, // 4: anet.tcs.v1.TaskSnapshot.deadline:type_name -> google.protobuf.Timestamp
+	38, // 5: anet.tcs.v1.AuthorizationDecision.at:type_name -> google.protobuf.Timestamp
+	38, // 6: anet.tcs.v1.SubmitCommandRequest.not_after:type_name -> google.protobuf.Timestamp
 	4,  // 7: anet.tcs.v1.SubmitCommandRequest.contract:type_name -> anet.tcs.v1.ContractRef
 	10, // 8: anet.tcs.v1.SubmitCommandRequest.limits:type_name -> anet.tcs.v1.TaskLimits
 	2,  // 9: anet.tcs.v1.SubmitCommandRequest.caller:type_name -> anet.tcs.v1.PrincipalRef
 	3,  // 10: anet.tcs.v1.SubmitCommandRequest.actor:type_name -> anet.tcs.v1.ActorRef
-	36, // 11: anet.tcs.v1.SubmitCommandRequest.signed_command:type_name -> anet.common.v1.SignedEnvelope
-	36, // 12: anet.tcs.v1.SubmitCommandRequest.root_permit:type_name -> anet.common.v1.SignedEnvelope
+	39, // 11: anet.tcs.v1.SubmitCommandRequest.signed_command:type_name -> anet.common.v1.SignedEnvelope
+	39, // 12: anet.tcs.v1.SubmitCommandRequest.root_permit:type_name -> anet.common.v1.SignedEnvelope
 	0,  // 13: anet.tcs.v1.AdmissionResult.outcome:type_name -> anet.tcs.v1.AdmissionResult.Outcome
 	5,  // 14: anet.tcs.v1.AdmissionResult.accepted_receipt:type_name -> anet.tcs.v1.Receipt
-	33, // 15: anet.tcs.v1.CreateSubtaskRequest.allocations:type_name -> anet.tcs.v1.CreateSubtaskRequest.BudgetAllocation
-	36, // 16: anet.tcs.v1.CreateSubtaskRequest.signed_command:type_name -> anet.common.v1.SignedEnvelope
+	35, // 15: anet.tcs.v1.CreateSubtaskRequest.allocations:type_name -> anet.tcs.v1.CreateSubtaskRequest.BudgetAllocation
+	39, // 16: anet.tcs.v1.CreateSubtaskRequest.signed_command:type_name -> anet.common.v1.SignedEnvelope
 	14, // 17: anet.tcs.v1.EffectProposal.reservations:type_name -> anet.tcs.v1.DimensionalReservation
 	15, // 18: anet.tcs.v1.AdmitEffectRequest.effect:type_name -> anet.tcs.v1.EffectProposal
 	9,  // 19: anet.tcs.v1.AdmitEffectRequest.authz:type_name -> anet.tcs.v1.AuthorizationDecision
-	36, // 20: anet.tcs.v1.AdmitEffectRequest.signed_decision:type_name -> anet.common.v1.SignedEnvelope
+	39, // 20: anet.tcs.v1.AdmitEffectRequest.signed_decision:type_name -> anet.common.v1.SignedEnvelope
 	1,  // 21: anet.tcs.v1.EffectAdmission.outcome:type_name -> anet.tcs.v1.EffectAdmission.Outcome
-	36, // 22: anet.tcs.v1.ReportEffectResultRequest.signed_result:type_name -> anet.common.v1.SignedEnvelope
-	35, // 23: anet.tcs.v1.Lease.expires_at:type_name -> google.protobuf.Timestamp
+	39, // 22: anet.tcs.v1.ReportEffectResultRequest.signed_result:type_name -> anet.common.v1.SignedEnvelope
+	38, // 23: anet.tcs.v1.Lease.expires_at:type_name -> google.protobuf.Timestamp
 	16, // 24: anet.tcs.v1.ExecuteLocalEffectRequest.admission:type_name -> anet.tcs.v1.AdmitEffectRequest
 	17, // 25: anet.tcs.v1.LocalEffectResult.admission:type_name -> anet.tcs.v1.EffectAdmission
-	34, // 26: anet.tcs.v1.LocalEffectResult.usage:type_name -> anet.tcs.v1.LocalEffectResult.UsageEntry
-	11, // 27: anet.tcs.v1.TaskControl.SubmitCommand:input_type -> anet.tcs.v1.SubmitCommandRequest
-	32, // 28: anet.tcs.v1.TaskControl.GetTask:input_type -> anet.tcs.v1.GetTaskRequest
-	19, // 29: anet.tcs.v1.TaskControl.UpdateTaskStatus:input_type -> anet.tcs.v1.UpdateTaskStatusRequest
-	13, // 30: anet.tcs.v1.TaskControl.CreateSubtask:input_type -> anet.tcs.v1.CreateSubtaskRequest
-	16, // 31: anet.tcs.v1.TaskControl.AdmitEffect:input_type -> anet.tcs.v1.AdmitEffectRequest
-	30, // 32: anet.tcs.v1.TaskControl.ExecuteLocalEffect:input_type -> anet.tcs.v1.ExecuteLocalEffectRequest
-	18, // 33: anet.tcs.v1.TaskControl.ReportEffectResult:input_type -> anet.tcs.v1.ReportEffectResultRequest
-	29, // 34: anet.tcs.v1.TaskControl.ListUnknownEffects:input_type -> anet.tcs.v1.ListUnknownEffectsRequest
-	20, // 35: anet.tcs.v1.TaskControl.CancelTask:input_type -> anet.tcs.v1.CancelTaskRequest
-	22, // 36: anet.tcs.v1.TaskControl.ReserveBudget:input_type -> anet.tcs.v1.ReserveBudgetRequest
-	24, // 37: anet.tcs.v1.TaskControl.SettleReservation:input_type -> anet.tcs.v1.SettleReservationRequest
-	25, // 38: anet.tcs.v1.TaskControl.ReleaseReservation:input_type -> anet.tcs.v1.ReleaseReservationRequest
-	26, // 39: anet.tcs.v1.TaskControl.AcquireLease:input_type -> anet.tcs.v1.AcquireLeaseRequest
-	28, // 40: anet.tcs.v1.TaskControl.RenewLease:input_type -> anet.tcs.v1.RenewLeaseRequest
-	12, // 41: anet.tcs.v1.TaskControl.SubmitCommand:output_type -> anet.tcs.v1.AdmissionResult
-	8,  // 42: anet.tcs.v1.TaskControl.GetTask:output_type -> anet.tcs.v1.TaskSnapshot
-	8,  // 43: anet.tcs.v1.TaskControl.UpdateTaskStatus:output_type -> anet.tcs.v1.TaskSnapshot
-	12, // 44: anet.tcs.v1.TaskControl.CreateSubtask:output_type -> anet.tcs.v1.AdmissionResult
-	17, // 45: anet.tcs.v1.TaskControl.AdmitEffect:output_type -> anet.tcs.v1.EffectAdmission
-	31, // 46: anet.tcs.v1.TaskControl.ExecuteLocalEffect:output_type -> anet.tcs.v1.LocalEffectResult
-	6,  // 47: anet.tcs.v1.TaskControl.ReportEffectResult:output_type -> anet.tcs.v1.EffectState
-	6,  // 48: anet.tcs.v1.TaskControl.ListUnknownEffects:output_type -> anet.tcs.v1.EffectState
-	21, // 49: anet.tcs.v1.TaskControl.CancelTask:output_type -> anet.tcs.v1.CancelResult
-	23, // 50: anet.tcs.v1.TaskControl.ReserveBudget:output_type -> anet.tcs.v1.Reservation
-	23, // 51: anet.tcs.v1.TaskControl.SettleReservation:output_type -> anet.tcs.v1.Reservation
-	23, // 52: anet.tcs.v1.TaskControl.ReleaseReservation:output_type -> anet.tcs.v1.Reservation
-	27, // 53: anet.tcs.v1.TaskControl.AcquireLease:output_type -> anet.tcs.v1.Lease
-	27, // 54: anet.tcs.v1.TaskControl.RenewLease:output_type -> anet.tcs.v1.Lease
-	41, // [41:55] is the sub-list for method output_type
-	27, // [27:41] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	36, // 26: anet.tcs.v1.LocalEffectResult.usage:type_name -> anet.tcs.v1.LocalEffectResult.UsageEntry
+	38, // 27: anet.tcs.v1.SubtaskBudgetCloseout.closed_at:type_name -> google.protobuf.Timestamp
+	37, // 28: anet.tcs.v1.SubtaskBudgetCloseout.dimensions:type_name -> anet.tcs.v1.SubtaskBudgetCloseout.Dimension
+	11, // 29: anet.tcs.v1.TaskControl.SubmitCommand:input_type -> anet.tcs.v1.SubmitCommandRequest
+	32, // 30: anet.tcs.v1.TaskControl.GetTask:input_type -> anet.tcs.v1.GetTaskRequest
+	19, // 31: anet.tcs.v1.TaskControl.UpdateTaskStatus:input_type -> anet.tcs.v1.UpdateTaskStatusRequest
+	13, // 32: anet.tcs.v1.TaskControl.CreateSubtask:input_type -> anet.tcs.v1.CreateSubtaskRequest
+	16, // 33: anet.tcs.v1.TaskControl.AdmitEffect:input_type -> anet.tcs.v1.AdmitEffectRequest
+	30, // 34: anet.tcs.v1.TaskControl.ExecuteLocalEffect:input_type -> anet.tcs.v1.ExecuteLocalEffectRequest
+	18, // 35: anet.tcs.v1.TaskControl.ReportEffectResult:input_type -> anet.tcs.v1.ReportEffectResultRequest
+	29, // 36: anet.tcs.v1.TaskControl.ListUnknownEffects:input_type -> anet.tcs.v1.ListUnknownEffectsRequest
+	20, // 37: anet.tcs.v1.TaskControl.CancelTask:input_type -> anet.tcs.v1.CancelTaskRequest
+	22, // 38: anet.tcs.v1.TaskControl.ReserveBudget:input_type -> anet.tcs.v1.ReserveBudgetRequest
+	24, // 39: anet.tcs.v1.TaskControl.SettleReservation:input_type -> anet.tcs.v1.SettleReservationRequest
+	25, // 40: anet.tcs.v1.TaskControl.ReleaseReservation:input_type -> anet.tcs.v1.ReleaseReservationRequest
+	33, // 41: anet.tcs.v1.TaskControl.CloseSubtaskBudget:input_type -> anet.tcs.v1.CloseSubtaskBudgetRequest
+	26, // 42: anet.tcs.v1.TaskControl.AcquireLease:input_type -> anet.tcs.v1.AcquireLeaseRequest
+	28, // 43: anet.tcs.v1.TaskControl.RenewLease:input_type -> anet.tcs.v1.RenewLeaseRequest
+	12, // 44: anet.tcs.v1.TaskControl.SubmitCommand:output_type -> anet.tcs.v1.AdmissionResult
+	8,  // 45: anet.tcs.v1.TaskControl.GetTask:output_type -> anet.tcs.v1.TaskSnapshot
+	8,  // 46: anet.tcs.v1.TaskControl.UpdateTaskStatus:output_type -> anet.tcs.v1.TaskSnapshot
+	12, // 47: anet.tcs.v1.TaskControl.CreateSubtask:output_type -> anet.tcs.v1.AdmissionResult
+	17, // 48: anet.tcs.v1.TaskControl.AdmitEffect:output_type -> anet.tcs.v1.EffectAdmission
+	31, // 49: anet.tcs.v1.TaskControl.ExecuteLocalEffect:output_type -> anet.tcs.v1.LocalEffectResult
+	6,  // 50: anet.tcs.v1.TaskControl.ReportEffectResult:output_type -> anet.tcs.v1.EffectState
+	6,  // 51: anet.tcs.v1.TaskControl.ListUnknownEffects:output_type -> anet.tcs.v1.EffectState
+	21, // 52: anet.tcs.v1.TaskControl.CancelTask:output_type -> anet.tcs.v1.CancelResult
+	23, // 53: anet.tcs.v1.TaskControl.ReserveBudget:output_type -> anet.tcs.v1.Reservation
+	23, // 54: anet.tcs.v1.TaskControl.SettleReservation:output_type -> anet.tcs.v1.Reservation
+	23, // 55: anet.tcs.v1.TaskControl.ReleaseReservation:output_type -> anet.tcs.v1.Reservation
+	34, // 56: anet.tcs.v1.TaskControl.CloseSubtaskBudget:output_type -> anet.tcs.v1.SubtaskBudgetCloseout
+	27, // 57: anet.tcs.v1.TaskControl.AcquireLease:output_type -> anet.tcs.v1.Lease
+	27, // 58: anet.tcs.v1.TaskControl.RenewLease:output_type -> anet.tcs.v1.Lease
+	44, // [44:59] is the sub-list for method output_type
+	29, // [29:44] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_anet_tcs_v1_tcs_proto_init() }
@@ -3087,7 +3298,7 @@ func file_anet_tcs_v1_tcs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_anet_tcs_v1_tcs_proto_rawDesc), len(file_anet_tcs_v1_tcs_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   33,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

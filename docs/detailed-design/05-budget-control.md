@@ -115,6 +115,8 @@ COMMIT;
 | tranche：子域确认归还余额 | 父账户 `D -= 归还额`（释放；归还消息带幂等键防重复返还虚增额度） |
 | 断网子域未确认归还 | D 不减、不重复分配（评审 §7.3 的双域模型对应） |
 
+同域子账户结清（29）采用一次性汇总：终态子任务无 HELD、无在途 effect、无冻结、无未结清后代时，父 `D -= 子 B; S += 子 S`，子 `B = S` 并永久封账，归还额为 `旧子 B - 子 S`。返回值只从权威账本计算；重复调用读取首次结果。已封账子账户的历史 S 不与父账户已汇总的 S 再相加。取消通知本身不释放预算。
+
 ## 6. 根任务限额
 
 | 限额 | 执行点 |
@@ -126,7 +128,7 @@ COMMIT;
 
 ## 7. 事务锁序表（v0.2 新增；评审 §十二）
 
-所有预算相关事务按**tasks → grants（T2 全父链共享锁）→ root_consents → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）。27 的实现先发现有界路径，按 grant_id 排序锁住全部祖先，重读后锁根同意；账户等待期间保留这些锁并复核时间窗。28 实现单域 CreateSubtask；跨域 tranche 与子账本结清仍待实现。
+所有预算相关事务按**tasks → grants（T2 全父链共享锁）→ root_consents → budget_accounts → budget_reservations → effects** 加锁，各类内按 ID 字典序；已锁定下游行后禁止新增上游锁，防死锁（`db.lock_timeout=2s` 兜底）。27 的实现先发现有界路径，按 grant_id 排序锁住全部祖先，重读后锁根同意；账户等待期间保留这些锁并复核时间窗。28 实现单域 CreateSubtask；29 实现本域子账本结清。跨域 tranche 与远端结算仍待实现。
 
 | 事务 | 锁序 |
 |---|---|
@@ -136,6 +138,8 @@ COMMIT;
 | Reserve | `tasks`（FOR UPDATE，deadline/取消检查）→ `budget_accounts` → 新预留 |
 | Settle / Release | 非锁定读取预留定位账户 → `tasks` → `budget_accounts` → `budget_reservations`；锁后复核归属，改变则回滚重试 |
 | CreateSubtask（单域，28） | 父 `tasks` → 全父链 `grants` → 根 `root_consents` → `recipient_policies` → 父账户按 ID → 父预留按 ID；新子对象按 FK 顺序插入，所有写入后再次复核期限/身份/租约 |
+| CloseSubtaskBudget（单域，29） | 父子 `tasks` 按 ID → `task_delegations` → 父子账户按 ID；读取权威分配/预留，账本、结果、事件、outbox 同事务 |
+| 取消传播（单域，29） | 队列工作项 `FOR UPDATE SKIP LOCKED` → 单个目标 `tasks`；入队后代不取后代 task 行锁，队列不是授权依据 |
 | Delegate tranche（跨域设计） | 父子 `tasks`（已存在者按 ID）→ 父子 `budget_accounts`（按 ID）→ 父预留；新子对象按 FK 顺序插入 |
 | 子域结算/归还上报 | `tasks` → 父 `budget_accounts` → `budget_reservations`；消息幂等键与账本更新同事务 |
 

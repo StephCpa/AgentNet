@@ -61,5 +61,20 @@ func (i *Inbox) Publish(ctx context.Context, m Message) error {
 	if prior != digest {
 		return ErrConflict
 	}
+	if m.Type == "CANCELLED" {
+		// Notifications are not authority: derive cancellation from the live local
+		// task, then durably enqueue its actual children in the inbox transaction.
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM tasks WHERE task_id=$1 AND domain_id=$2 AND status='CANCELLED' AND cancel_version IS NOT NULL)`, m.TaskID, i.domain).Scan(&exists); err != nil {
+			return err
+		}
+		if !exists {
+			return ErrInvalid
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO task_cancellations(task_id,parent_task_id,origin_task_id,domain_id)
+ SELECT task_id,parent_task_id,$1,$2 FROM tasks WHERE parent_task_id=$1 AND domain_id=$2 AND peer_task_ref IS NULL AND (assignee_domain_id IS NULL OR assignee_domain_id=$2) ON CONFLICT(task_id) DO UPDATE SET domain_id=EXCLUDED.domain_id,parent_task_id=EXCLUDED.parent_task_id,origin_task_id=EXCLUDED.origin_task_id,state='PENDING',completed_at=NULL WHERE task_cancellations.state='INVALID' `, m.TaskID, i.domain)
+		if err != nil {
+			return err
+		}
+	}
 	return tx.Commit(ctx)
 }

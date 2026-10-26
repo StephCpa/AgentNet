@@ -83,6 +83,7 @@ MVP 服务方法（SDK 边缘由 GW 暴露 HTTPS/JSON 等价物）：
 | `AdmitEffect(effect 提议) → EffectAdmission` | 业务操作接纳（T2） | 04 §4 |
 | `ReportEffectResult(effect_id, attempt_id, outcome, usage) → EffectState` | 结果上报 | COMMITTED/REJECTED/UNKNOWN；结算联动（05 §5） |
 | `CancelTask(task_id, cause) → CancelResult` | 取消（T3） | §6.3 |
+| `CloseSubtaskBudget(child_task_id) → SubtaskBudgetCloseout` | 本域子账本结清（29） | 仅从权威账本汇总成本/归还余额，重复返回首次结果 |
 | `ReserveBudget / SettleReservation / ReleaseReservation` | 预算（05 §3–§5） | — |
 | `AcquireLease / RenewLease(task_id, worker, epoch)` | 租约（04 §5） | 续期失败 ⇒ 接管流程 |
 | `ListUnknownEffects(filter) → [...]` | 对账工作队列 | 04 §6 |
@@ -94,7 +95,7 @@ v0.2 接口变更（详见 proto）：
 | 方法 | 变更 |
 |---|---|
 | `SubmitCommand` | 增 `not_after`；返回幂等语义不变 |
-| `CreateSubtask` | 父任务版本 | 签名期限、expected_version、租约/epoch、契约/权限/接收方/预留 | 父版本+1，子版本=1 | 期限内返回原子任务/grant/ACCEPTED 回执 |
+| `CreateSubtask` | 签名封装绑定父租约/版本、接收方策略、权限与四维预留；版本与重放语义见 §8 |
 | `AdmitEffect` | 增 `lease_id`、`expected_task_version`、`reservations[]`（按维度）、`authz`（绑定式授权决定，§6.2） |
 | 其余方法 | 不变 |
 
@@ -276,6 +277,7 @@ RETURN {t.cancel_version};
 | `AdmitEffect` | `tasks.task_version` | `expected_task_version` 相等 | `task_version+1` | EXISTING + 原 effect 状态 |
 | `UpdateTaskStatus` | `tasks.task_version` | `expected_version` 相等 | `task_version+1` | 幂等（同目标状态）或冲突 |
 | `CancelTask` | — | 终态守卫 | `task_version+1; cancel_version+1` | EXISTING + 原 cancel_version |
+| `CloseSubtaskBudget` | 首次结清记录与父子账本 | 管理身份、终态、无未结责任、原分配绑定 | 无任务版本变化 | 原四维结清结果 + existing |
 | `Reserve/Settle/Release` | 预留行状态 | 状态机守卫 | 无任务版本变化 | 幂等（状态已变更则返回现值） |
 
 ## 9. Outbox 与投递器
@@ -311,3 +313,11 @@ RETURN {t.cancel_version};
 ## local-tx 入口补充（实现 24）
 
 `ExecuteLocalEffect` 接受原 `AdmitEffectRequest` 与 `parameters_json`，共用首次接纳的身份、决定、版本、租约和预留守卫。T2 在本地处理器内合并业务变更与结果结算，只递增一次 task_version；返回终态及持久结果。精确重放返回 EXISTING，不再次递增版本或消费预算。新 local-tx 操作不能走异步 `AdmitEffect`；业务版本拒绝也形成可重放的 REJECTED effect。参数规范化、处理器限制与恢复边界见 [24](24-local-transactions.md)。
+
+## 12. 单域子树结清与取消传播实现（29）
+
+`CloseSubtaskBudget(child_task_id)` 复用 owner/接收 Agent/直接创建 Agent 的管理访问规则，事务中复核当前凭证身份。只有终态、未冻结且无未结责任的子任务可结清；首次结果与父子账本、事件及 outbox 同事务持久化，重试返回原结果。该账本操作不改变 task_version/status，不接收自报金额。
+
+`CancelTask` 保持 T3 单任务提交；`outboxd` 将已取消事实转换为持久后代工作项，每个工作项锁定实际目标并验证祖先关系。取消与 CreateSubtask 通过同一目标任务行锁串行化：先创建的子任务被入队，先取消则创建被拒绝。终态中间节点保留原事实但继续传播。UNKNOWN 仍须独立对账，不随取消释放。
+
+详见 [29](29-subtask-closeout-and-cancellation.md)。`UpdateTaskStatus`、完整契约与 VERIFIED 验收尚待实现，不能以此增量推断完整状态机已交付。

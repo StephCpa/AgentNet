@@ -2,7 +2,8 @@
 
 `Queue` claims committed outbox rows, delivers outside the transaction, and records
 an acknowledgement under a fenced lease. `Inbox` is the local PostgreSQL receiver.
-`cmd/outboxd` runs the worker as a process. Apply migrations 001–004 first.
+`cmd/outboxd` runs delivery and local task-tree cancellation workers. Apply all
+implementation migrations through 014 first.
 Stop legacy dispatchers before applying 004; their acknowledgements do not carry
 the new lease token. Restart only the token-aware worker after migration commits.
 
@@ -42,6 +43,20 @@ EFFECT_ADMITTED delivery cannot establish COMMITTED, release a hold, resurrect a
 cancelled task, or authorize a repeat of an opaque/queryable business call. An
 adapter consumer must load the authoritative effect and apply the capability and
 reconciliation rules in design 04. The consumer and mockbiz are now implemented in `services/execution`; see design 18.
+
+## Local tree cancellation (design 29)
+
+A CANCELLED notification must match the authoritative local task. Inbox acceptance
+and enqueueing its actual local children share a transaction. `services/tasktree`
+claims each intent, validates the parent edge and cancelled ancestor, then cancels
+the target and enqueues descendants atomically. It preserves terminal facts and
+continues through terminal intermediaries. Invalid intents are quarantined; a
+later valid cancellation may replace them. Neither notifications nor queue rows
+prove authority. UNKNOWN effects and all reservations remain unchanged.
+
+The worker performs no external calls inside a transaction. Process termination
+rolls back incomplete work; committed work remains DONE on restart. A worker error
+stops both outboxd loops for supervision. Remote cancellation is not implemented.
 
 ## Verification
 

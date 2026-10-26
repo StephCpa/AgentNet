@@ -1,0 +1,40 @@
+=== RUN   TestRPCSubtaskCloseoutUnknownAndLateSettlement
+--- PASS: TestRPCSubtaskCloseoutUnknownAndLateSettlement (0.50s)
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/unbound
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/frozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/active
+--- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen (0.72s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/unbound (0.28s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/frozen (0.23s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/active (0.22s)
+=== RUN   TestRPCSubtaskCloseoutNested
+=== RUN   TestRPCSubtaskCloseoutNested/0
+=== RUN   TestRPCSubtaskCloseoutNested/4
+--- PASS: TestRPCSubtaskCloseoutNested (0.81s)
+    --- PASS: TestRPCSubtaskCloseoutNested/0 (0.36s)
+    --- PASS: TestRPCSubtaskCloseoutNested/4 (0.45s)
+=== RUN   TestRPCSubtaskCloseoutRollbackAndConcurrency
+--- PASS: TestRPCSubtaskCloseoutRollbackAndConcurrency (0.34s)
+=== RUN   TestRPCSubtaskCloseoutIdentityAfterWait
+--- PASS: TestRPCSubtaskCloseoutIdentityAfterWait (0.37s)
+=== RUN   TestRPCTreeCancellationAuthorityAndReplay
+--- PASS: TestRPCTreeCancellationAuthorityAndReplay (0.34s)
+=== RUN   TestRPCTreeProcessHelper
+--- PASS: TestRPCTreeProcessHelper (0.00s)
+=== RUN   TestRPCTreeProcessRecovery
+=== RUN   TestRPCTreeProcessRecovery/close-before
+=== RUN   TestRPCTreeProcessRecovery/close-after
+=== RUN   TestRPCTreeProcessRecovery/cancel-before
+=== RUN   TestRPCTreeProcessRecovery/cancel-after
+--- PASS: TestRPCTreeProcessRecovery (2.39s)
+    --- PASS: TestRPCTreeProcessRecovery/close-before (1.25s)
+    --- PASS: TestRPCTreeProcessRecovery/close-after (0.42s)
+    --- PASS: TestRPCTreeProcessRecovery/cancel-before (0.37s)
+    --- PASS: TestRPCTreeProcessRecovery/cancel-after (0.35s)
+=== RUN   TestRPCTreeDaemonPropagation
+--- PASS: TestRPCTreeDaemonPropagation (4.84s)
+=== RUN   TestRPCTreeCreateCancelRace
+--- PASS: TestRPCTreeCreateCancelRace (0.41s)
+PASS
+ok  	github.com/agentnet/agentnet/services/rpc	12.899s

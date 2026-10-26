@@ -477,3 +477,22 @@ func (c *control) CreateSubtask(ctx context.Context, r *tcsv1.CreateSubtaskReque
 	}
 	return c.admissionResult(ctx, who, a)
 }
+
+func (c *control) CloseSubtaskBudget(ctx context.Context, r *tcsv1.CloseSubtaskBudgetRequest) (*tcsv1.SubtaskBudgetCloseout, error) {
+	who, err := caller(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !strict(r) {
+		return nil, rpcError(tcs.Invalid)
+	}
+	a, err := c.store.CloseSubtaskBudget(ctx, who, r.ChildTaskId)
+	if err != nil {
+		return nil, rpcError(err)
+	}
+	out := &tcsv1.SubtaskBudgetCloseout{ChildTaskId: a.Child, ParentTaskId: a.Parent, Existing: a.Existing, ClosedAt: timestamppb.New(a.At)}
+	for _, d := range a.Dimensions {
+		out.Dimensions = append(out.Dimensions, &tcsv1.SubtaskBudgetCloseout_Dimension{Dimension: d.Dimension, Allocated: d.Allocated, Settled: d.Settled, Returned: d.Returned})
+	}
+	return out, nil
+}

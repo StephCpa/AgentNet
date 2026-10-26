@@ -6,11 +6,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -100,6 +103,23 @@ func TestIdentityDaemonProcess(t *testing.T) {
 	if output, err := exec.CommandContext(f.ctx, "go", "build", "-o", keyBinary, "../../cmd/instancekey").CombinedOutput(); err != nil {
 		t.Fatalf("key generator build: %v %s", err, output)
 	}
+	// CombinedOutput waits for each key process, but Windows can retain a
+	// transient image-file sharing lock after exit. Retry only that cleanup
+	// error, never a command/assertion, before TempDir removes the directory.
+	t.Cleanup(func() {
+		until := time.Now().Add(5 * time.Second)
+		for {
+			err := os.Remove(keyBinary)
+			if err == nil || errors.Is(err, os.ErrNotExist) {
+				return
+			}
+			if runtime.GOOS != "windows" || !errors.Is(err, syscall.Errno(32)) || time.Now().After(until) {
+				t.Errorf("remove exited key generator: %v", err)
+				return
+			}
+			time.Sleep(25 * time.Millisecond)
+		}
+	})
 	keyDir := filepath.Join(dir, "workload-key")
 	if output, err := exec.CommandContext(f.ctx, keyBinary, "-out", keyDir).CombinedOutput(); err != nil {
 		t.Fatalf("key generation: %v %s", err, output)

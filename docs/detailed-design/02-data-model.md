@@ -133,4 +133,6 @@ erDiagram
 
 ## 单域委托实现增量（28）
 
-迁移 `013_subtasks.sql` 增加 `recipient_policies`（不可改写正文的接收方策略）、`task_delegations`（创建者/接收策略/子 grant 绑定）和 `delegation_allocations`（原预留到父子账户的分配事实）。每任务/维度额外唯一索引覆盖根和子账户；根用户仍为 task owner，子 actor 可以属于其他 principal。创建原子退出父 H、增加父 D 并建立等额子 B；子域结算/归还仍待实现，D 不自动释放。
+迁移 `013_subtasks.sql` 增加 `recipient_policies`（不可改写正文的接收方策略）、`task_delegations`（创建者/接收策略/子 grant 绑定）和 `delegation_allocations`（原预留到父子账户的分配事实）。每任务/维度额外唯一索引覆盖根和子账户；根用户仍为 task owner，子 actor 可以属于其他 principal。创建原子退出父 H、增加父 D 并建立等额子 B；同域子账本的一次性结清见 29，跨域结算/归还仍待实现，D 不自动释放。
+
+迁移 `014_subtask_closeout.sql` 增加账户 `closed_at`、委托 `closed_at/close_result` 及持久 `task_cancellations` 队列。已结清账户保持 B=S、D=0 且不可改写；原委托绑定与首次结清结果不可改写。取消队列不以 task 外键获取后代行锁，工作器在实际应用前验证同域父边与已取消祖先；队列行本身不构成授权。

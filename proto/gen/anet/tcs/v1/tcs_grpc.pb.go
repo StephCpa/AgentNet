@@ -37,6 +37,7 @@ const (
 	TaskControl_ReserveBudget_FullMethodName      = "/anet.tcs.v1.TaskControl/ReserveBudget"
 	TaskControl_SettleReservation_FullMethodName  = "/anet.tcs.v1.TaskControl/SettleReservation"
 	TaskControl_ReleaseReservation_FullMethodName = "/anet.tcs.v1.TaskControl/ReleaseReservation"
+	TaskControl_CloseSubtaskBudget_FullMethodName = "/anet.tcs.v1.TaskControl/CloseSubtaskBudget"
 	TaskControl_AcquireLease_FullMethodName       = "/anet.tcs.v1.TaskControl/AcquireLease"
 	TaskControl_RenewLease_FullMethodName         = "/anet.tcs.v1.TaskControl/RenewLease"
 )
@@ -61,6 +62,7 @@ type TaskControlClient interface {
 	ReserveBudget(ctx context.Context, in *ReserveBudgetRequest, opts ...grpc.CallOption) (*Reservation, error)
 	SettleReservation(ctx context.Context, in *SettleReservationRequest, opts ...grpc.CallOption) (*Reservation, error)
 	ReleaseReservation(ctx context.Context, in *ReleaseReservationRequest, opts ...grpc.CallOption) (*Reservation, error)
+	CloseSubtaskBudget(ctx context.Context, in *CloseSubtaskBudgetRequest, opts ...grpc.CallOption) (*SubtaskBudgetCloseout, error)
 	// 租约
 	AcquireLease(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*Lease, error)
 	RenewLease(ctx context.Context, in *RenewLeaseRequest, opts ...grpc.CallOption) (*Lease, error)
@@ -203,6 +205,16 @@ func (c *taskControlClient) ReleaseReservation(ctx context.Context, in *ReleaseR
 	return out, nil
 }
 
+func (c *taskControlClient) CloseSubtaskBudget(ctx context.Context, in *CloseSubtaskBudgetRequest, opts ...grpc.CallOption) (*SubtaskBudgetCloseout, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubtaskBudgetCloseout)
+	err := c.cc.Invoke(ctx, TaskControl_CloseSubtaskBudget_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *taskControlClient) AcquireLease(ctx context.Context, in *AcquireLeaseRequest, opts ...grpc.CallOption) (*Lease, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Lease)
@@ -243,6 +255,7 @@ type TaskControlServer interface {
 	ReserveBudget(context.Context, *ReserveBudgetRequest) (*Reservation, error)
 	SettleReservation(context.Context, *SettleReservationRequest) (*Reservation, error)
 	ReleaseReservation(context.Context, *ReleaseReservationRequest) (*Reservation, error)
+	CloseSubtaskBudget(context.Context, *CloseSubtaskBudgetRequest) (*SubtaskBudgetCloseout, error)
 	// 租约
 	AcquireLease(context.Context, *AcquireLeaseRequest) (*Lease, error)
 	RenewLease(context.Context, *RenewLeaseRequest) (*Lease, error)
@@ -291,6 +304,9 @@ func (UnimplementedTaskControlServer) SettleReservation(context.Context, *Settle
 }
 func (UnimplementedTaskControlServer) ReleaseReservation(context.Context, *ReleaseReservationRequest) (*Reservation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReleaseReservation not implemented")
+}
+func (UnimplementedTaskControlServer) CloseSubtaskBudget(context.Context, *CloseSubtaskBudgetRequest) (*SubtaskBudgetCloseout, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CloseSubtaskBudget not implemented")
 }
 func (UnimplementedTaskControlServer) AcquireLease(context.Context, *AcquireLeaseRequest) (*Lease, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcquireLease not implemented")
@@ -528,6 +544,24 @@ func _TaskControl_ReleaseReservation_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TaskControl_CloseSubtaskBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseSubtaskBudgetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskControlServer).CloseSubtaskBudget(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TaskControl_CloseSubtaskBudget_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskControlServer).CloseSubtaskBudget(ctx, req.(*CloseSubtaskBudgetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TaskControl_AcquireLease_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AcquireLeaseRequest)
 	if err := dec(in); err != nil {
@@ -614,6 +648,10 @@ var TaskControl_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReleaseReservation",
 			Handler:    _TaskControl_ReleaseReservation_Handler,
+		},
+		{
+			MethodName: "CloseSubtaskBudget",
+			Handler:    _TaskControl_CloseSubtaskBudget_Handler,
 		},
 		{
 			MethodName: "AcquireLease",

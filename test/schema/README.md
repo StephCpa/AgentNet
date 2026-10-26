@@ -37,7 +37,7 @@ python test/schema/run.py --pg-bin <pgsql/bin> --work-dir .local/kernel-new --ke
 ```
 
 Requires Go and resolved `go.mod` dependencies. After the 20 schema probes, this
-applies migrations 003–012 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings, renewals, local transactions and archive catalog) and runs `go test ./... -count=1 -v` against the isolated
+applies migrations 003–014 (including legacy IN_FLIGHT, effect provenance, identity policy, user sessions, credentials, gateway bindings, renewals, local transactions, archive catalog, subtask allocation and closeout/cancellation) and runs `go test ./... -count=1 -v` against the isolated
 database, then builds and runs the actual local outboxd executable. A skipped test
 or nonzero exit fails the gate. Runner check counts include aggregate Go and CLI
 gates; they are not the Go test count.
@@ -161,3 +161,22 @@ DELETE-access recovery probe are retained. Unchanged sources passed a fresh
 cluster run including MinIO and 4,800 benchmark operations. The benchmark
 measures root control paths, not delegation cost. Child closeout, cancellation
 propagation and cross-domain execution remain pending.
+
+## Local subtask closeout and cancellation (design 29)
+
+Migration 014 and the final frozen suite passed 40 runner gates, 146 database
+tests (33 TCS, 8 delivery, 17 execution, 61 RPC, 16 identity, 10 archive and one
+separate MinIO test), plus 13 unit tests. Five subprocess helpers are excluded.
+Nine new top-level tests cover authoritative closeout/return, UNKNOWN preservation,
+nested and zero allocations, rollback/replay, identity revocation during waits,
+ancestry and sibling access checks, actual outboxd propagation, create/cancel races
+and four OS termination windows.
+
+Evidence: `test/evidence/2026-10-27/closeout/`. Development failures and a full-run
+Windows image-file cleanup sharing violation are retained. The existing identity
+process test now bounds cleanup-only retries of Windows error 32 after process
+exit; commands/assertions are never retried. The final fresh-cluster run passed,
+including MinIO and the unchanged root control-path microbenchmark (4,800 operations,
+13,200 RPCs, zero failures). All isolated clusters were stopped. This does not
+establish remote tree execution, complete contract/VERIFIED validation or a TLA+
+proof of process recovery.

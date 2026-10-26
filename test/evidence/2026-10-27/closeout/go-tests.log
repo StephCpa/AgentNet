@@ -1,0 +1,722 @@
+?   	github.com/agentnet/agentnet/adapters/local	[no test files]
+?   	github.com/agentnet/agentnet/adapters/mockbiz	[no test files]
+?   	github.com/agentnet/agentnet/cmd/anetd	[no test files]
+?   	github.com/agentnet/agentnet/cmd/archived	[no test files]
+?   	github.com/agentnet/agentnet/cmd/identityd	[no test files]
+?   	github.com/agentnet/agentnet/cmd/instancekey	[no test files]
+?   	github.com/agentnet/agentnet/cmd/instancerenew	[no test files]
+?   	github.com/agentnet/agentnet/cmd/jcscheck	[no test files]
+?   	github.com/agentnet/agentnet/cmd/outboxd	[no test files]
+?   	github.com/agentnet/agentnet/internal/amount	[no test files]
+=== RUN   TestDelegationIntersection
+--- PASS: TestDelegationIntersection (0.00s)
+=== RUN   TestDelegationRejectsEveryExpansion
+=== RUN   TestDelegationRejectsEveryExpansion/resources
+=== RUN   TestDelegationRejectsEveryExpansion/domains
+=== RUN   TestDelegationRejectsEveryExpansion/egress
+=== RUN   TestDelegationRejectsEveryExpansion/scope
+=== RUN   TestDelegationRejectsEveryExpansion/early
+=== RUN   TestDelegationRejectsEveryExpansion/late
+=== RUN   TestDelegationRejectsEveryExpansion/negative
+=== RUN   TestDelegationRejectsEveryExpansion/classes
+=== RUN   TestDelegationRejectsEveryExpansion/depth
+=== RUN   TestDelegationRejectsEveryExpansion/empty
+=== RUN   TestDelegationRejectsEveryExpansion/duplicate
+=== RUN   TestDelegationRejectsEveryExpansion/actions
+--- PASS: TestDelegationRejectsEveryExpansion (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/resources (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/domains (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/egress (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/scope (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/early (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/late (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/negative (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/classes (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/depth (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/empty (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/duplicate (0.00s)
+    --- PASS: TestDelegationRejectsEveryExpansion/actions (0.00s)
+=== RUN   TestDelegationRecipientCannotRestoreRights
+--- PASS: TestDelegationRecipientCannotRestoreRights (0.00s)
+=== RUN   TestChainDigestBindsAncestorsAndPreservesRoot
+--- PASS: TestChainDigestBindsAncestorsAndPreservesRoot (0.00s)
+=== RUN   TestChainRejectsUnknownRightsFields
+--- PASS: TestChainRejectsUnknownRightsFields (0.00s)
+PASS
+ok  	github.com/agentnet/agentnet/internal/authority	0.741s
+=== RUN   TestRejectMalformedUTF8AndDuplicateKeys
+--- PASS: TestRejectMalformedUTF8AndDuplicateKeys (0.00s)
+=== RUN   TestUTF16OrderAndNumbers
+--- PASS: TestUTF16OrderAndNumbers (0.00s)
+PASS
+ok  	github.com/agentnet/agentnet/internal/canonical	0.636s
+=== RUN   TestCredentialFilePublicationAndLock
+--- PASS: TestCredentialFilePublicationAndLock (0.02s)
+PASS
+ok  	github.com/agentnet/agentnet/internal/credentialclient	1.565s
+?   	github.com/agentnet/agentnet/internal/localtx	[no test files]
+=== RUN   TestPKIIgnoresRequestedIdentityAndCA
+--- PASS: TestPKIIgnoresRequestedIdentityAndCA (0.00s)
+=== RUN   TestPKIRejectsWeakAndTamperedRequests
+=== RUN   TestPKIRejectsWeakAndTamperedRequests/weak-rsa
+=== RUN   TestPKIRejectsWeakAndTamperedRequests/sha1
+=== RUN   TestPKIRejectsWeakAndTamperedRequests/tampered
+=== RUN   TestPKIRejectsWeakAndTamperedRequests/private-key
+--- PASS: TestPKIRejectsWeakAndTamperedRequests (0.14s)
+    --- PASS: TestPKIRejectsWeakAndTamperedRequests/weak-rsa (0.01s)
+    --- PASS: TestPKIRejectsWeakAndTamperedRequests/sha1 (0.13s)
+    --- PASS: TestPKIRejectsWeakAndTamperedRequests/tampered (0.00s)
+    --- PASS: TestPKIRejectsWeakAndTamperedRequests/private-key (0.00s)
+=== RUN   TestPKIIssuerBounds
+--- PASS: TestPKIIssuerBounds (0.00s)
+PASS
+ok  	github.com/agentnet/agentnet/internal/pki	0.918s
+?   	github.com/agentnet/agentnet/internal/signed	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/common/v1	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/credentials/v1	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/dir/v1	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/gw/v1	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/ics/v1	[no test files]
+?   	github.com/agentnet/agentnet/proto/gen/anet/tcs/v1	[no test files]
+=== RUN   TestArchiveRoundTripHotDetachedCold
+--- PASS: TestArchiveRoundTripHotDetachedCold (0.41s)
+=== RUN   TestArchiveFailuresRetainSourceAndResume
+=== RUN   TestArchiveFailuresRetainSourceAndResume/upload
+=== RUN   TestArchiveFailuresRetainSourceAndResume/corrupt_download
+=== RUN   TestArchiveFailuresRetainSourceAndResume/missing_object
+=== RUN   TestArchiveFailuresRetainSourceAndResume/catalog_failure
+=== RUN   TestArchiveFailuresRetainSourceAndResume/store_change
+--- PASS: TestArchiveFailuresRetainSourceAndResume (1.11s)
+    --- PASS: TestArchiveFailuresRetainSourceAndResume/upload (0.21s)
+    --- PASS: TestArchiveFailuresRetainSourceAndResume/corrupt_download (0.21s)
+    --- PASS: TestArchiveFailuresRetainSourceAndResume/missing_object (0.23s)
+    --- PASS: TestArchiveFailuresRetainSourceAndResume/catalog_failure (0.24s)
+    --- PASS: TestArchiveFailuresRetainSourceAndResume/store_change (0.22s)
+=== RUN   TestArchiveLockExclusionAndEmptyPartition
+--- PASS: TestArchiveLockExclusionAndEmptyPartition (0.22s)
+=== RUN   TestArchiveOversizeRetainsSource
+--- PASS: TestArchiveOversizeRetainsSource (0.21s)
+=== RUN   TestArchiveByteBoundedChunksCommitCursor
+--- PASS: TestArchiveByteBoundedChunksCommitCursor (0.28s)
+=== RUN   TestArchiveCleanupGuards
+--- PASS: TestArchiveCleanupGuards (0.08s)
+=== RUN   TestS3RejectsUnsafeConfiguration
+--- PASS: TestS3RejectsUnsafeConfiguration (0.00s)
+=== RUN   TestArchiveCleanupDrainsBacklogBeforeStorageFailure
+--- PASS: TestArchiveCleanupDrainsBacklogBeforeStorageFailure (0.32s)
+=== RUN   TestArchiveLookupDuringFinalDrop
+--- PASS: TestArchiveLookupDuringFinalDrop (0.29s)
+=== RUN   TestArchiveRetentionUsesPartitionUpperBound
+--- PASS: TestArchiveRetentionUsesPartitionUpperBound (0.17s)
+=== RUN   TestArchiveProcessHelper
+--- PASS: TestArchiveProcessHelper (0.00s)
+=== RUN   TestArchiveProcessKillAndCLIRecovery
+=== RUN   TestArchiveProcessKillAndCLIRecovery/DETACHED
+=== RUN   TestArchiveProcessKillAndCLIRecovery/UPLOADED
+=== RUN   TestArchiveProcessKillAndCLIRecovery/EXPORTED
+=== RUN   TestArchiveProcessKillAndCLIRecovery/COMPLETE
+=== RUN   TestArchiveProcessKillAndCLIRecovery/shipped_cli
+--- PASS: TestArchiveProcessKillAndCLIRecovery (9.63s)
+    --- PASS: TestArchiveProcessKillAndCLIRecovery/DETACHED (1.24s)
+    --- PASS: TestArchiveProcessKillAndCLIRecovery/UPLOADED (0.32s)
+    --- PASS: TestArchiveProcessKillAndCLIRecovery/EXPORTED (0.32s)
+    --- PASS: TestArchiveProcessKillAndCLIRecovery/COMPLETE (0.33s)
+    --- PASS: TestArchiveProcessKillAndCLIRecovery/shipped_cli (7.42s)
+PASS
+ok  	github.com/agentnet/agentnet/services/archive	15.215s
+?   	github.com/agentnet/agentnet/services/credentials	[no test files]
+=== RUN   TestDeliveryConcurrentClaims
+--- PASS: TestDeliveryConcurrentClaims (0.25s)
+=== RUN   TestDeliveryStaleAcknowledgement
+--- PASS: TestDeliveryStaleAcknowledgement (0.08s)
+=== RUN   TestDeliveryInboxDuplicateAndConflict
+--- PASS: TestDeliveryInboxDuplicateAndConflict (0.17s)
+=== RUN   TestDeliveryBackoffAndDeadLetter
+--- PASS: TestDeliveryBackoffAndDeadLetter (0.08s)
+=== RUN   TestDeliveryExpiredFinalAttempt
+--- PASS: TestDeliveryExpiredFinalAttempt (0.06s)
+=== RUN   TestDeliveryDomainAndDestinationIsolation
+--- PASS: TestDeliveryDomainAndDestinationIsolation (0.06s)
+=== RUN   TestDeliveryRunAndCancellation
+--- PASS: TestDeliveryRunAndCancellation (0.11s)
+=== RUN   TestDeliveryProcessHelper
+--- PASS: TestDeliveryProcessHelper (0.00s)
+=== RUN   TestDeliveryProcessCrashRecovery
+=== RUN   TestDeliveryProcessCrashRecovery/claimed
+=== RUN   TestDeliveryProcessCrashRecovery/accepted
+--- PASS: TestDeliveryProcessCrashRecovery (2.68s)
+    --- PASS: TestDeliveryProcessCrashRecovery/claimed (1.52s)
+    --- PASS: TestDeliveryProcessCrashRecovery/accepted (1.17s)
+PASS
+ok  	github.com/agentnet/agentnet/services/delivery	4.787s
+=== RUN   TestExecutionThreeCapabilities
+=== RUN   TestExecutionThreeCapabilities/queryable
+=== RUN   TestExecutionThreeCapabilities/opaque
+=== RUN   TestExecutionThreeCapabilities/idempotent-key
+--- PASS: TestExecutionThreeCapabilities (0.77s)
+    --- PASS: TestExecutionThreeCapabilities/queryable (0.34s)
+    --- PASS: TestExecutionThreeCapabilities/opaque (0.22s)
+    --- PASS: TestExecutionThreeCapabilities/idempotent-key (0.21s)
+=== RUN   TestExecutionIdempotentLostAck
+--- PASS: TestExecutionIdempotentLostAck (0.23s)
+=== RUN   TestExecutionKeyTTLStopsRetry
+--- PASS: TestExecutionKeyTTLStopsRetry (0.21s)
+=== RUN   TestExecutionOpaqueLostAckEscalates
+--- PASS: TestExecutionOpaqueLostAckEscalates (0.22s)
+=== RUN   TestExecutionQueryableAbsentPendingAndLateCommit
+--- PASS: TestExecutionQueryableAbsentPendingAndLateCommit (1.23s)
+=== RUN   TestExecutionFinalProofTombstonesOldAttempt
+--- PASS: TestExecutionFinalProofTombstonesOldAttempt (0.23s)
+=== RUN   TestExecutionDispatchFences
+=== RUN   TestExecutionDispatchFences/instance
+=== RUN   TestExecutionDispatchFences/epoch
+=== RUN   TestExecutionDispatchFences/cancel
+=== RUN   TestExecutionDispatchFences/grant
+=== RUN   TestExecutionDispatchFences/rights
+--- PASS: TestExecutionDispatchFences (1.00s)
+    --- PASS: TestExecutionDispatchFences/instance (0.20s)
+    --- PASS: TestExecutionDispatchFences/epoch (0.20s)
+    --- PASS: TestExecutionDispatchFences/cancel (0.20s)
+    --- PASS: TestExecutionDispatchFences/grant (0.20s)
+    --- PASS: TestExecutionDispatchFences/rights (0.20s)
+=== RUN   TestExecutionPayloadDigestAndTargetBinding
+=== RUN   TestExecutionPayloadDigestAndTargetBinding/payload
+=== RUN   TestExecutionPayloadDigestAndTargetBinding/capability
+--- PASS: TestExecutionPayloadDigestAndTargetBinding (0.39s)
+    --- PASS: TestExecutionPayloadDigestAndTargetBinding/payload (0.20s)
+    --- PASS: TestExecutionPayloadDigestAndTargetBinding/capability (0.19s)
+=== RUN   TestExecutionLateRecoveryAfterCancel
+--- PASS: TestExecutionLateRecoveryAfterCancel (0.25s)
+=== RUN   TestExecutionPreSendLookupFailureRecovers
+--- PASS: TestExecutionPreSendLookupFailureRecovers (0.26s)
+=== RUN   TestExecutionIdempotentWithoutQueryAPI
+--- PASS: TestExecutionIdempotentWithoutQueryAPI (0.26s)
+=== RUN   TestExecutionSavedReceiptSurvivesReporterFailure
+--- PASS: TestExecutionSavedReceiptSurvivesReporterFailure (0.23s)
+=== RUN   TestExecutionRecoveryWindowAndBadUsage
+=== RUN   TestExecutionRecoveryWindowAndBadUsage/window
+=== RUN   TestExecutionRecoveryWindowAndBadUsage/usage
+--- PASS: TestExecutionRecoveryWindowAndBadUsage (0.45s)
+    --- PASS: TestExecutionRecoveryWindowAndBadUsage/window (0.23s)
+    --- PASS: TestExecutionRecoveryWindowAndBadUsage/usage (0.21s)
+=== RUN   TestExecutionSchedulerAndClaimExclusion
+--- PASS: TestExecutionSchedulerAndClaimExclusion (0.23s)
+=== RUN   TestExecutionUnknownWithoutSendProvenance
+--- PASS: TestExecutionUnknownWithoutSendProvenance (0.20s)
+=== RUN   TestExecutionParameterStoreConcurrentPublish
+--- PASS: TestExecutionParameterStoreConcurrentPublish (0.06s)
+=== RUN   TestExecutionFinalProofScopeAcrossAttempts
+=== RUN   TestExecutionFinalProofScopeAcrossAttempts/attempt
+=== RUN   TestExecutionFinalProofScopeAcrossAttempts/effect
+--- PASS: TestExecutionFinalProofScopeAcrossAttempts (0.51s)
+    --- PASS: TestExecutionFinalProofScopeAcrossAttempts/attempt (0.25s)
+    --- PASS: TestExecutionFinalProofScopeAcrossAttempts/effect (0.26s)
+=== RUN   TestExecutionProcessHelper
+--- PASS: TestExecutionProcessHelper (0.00s)
+=== RUN   TestExecutionExternalCommitProcessKill
+=== RUN   TestExecutionExternalCommitProcessKill/queryable
+=== RUN   TestExecutionExternalCommitProcessKill/idempotent-key
+=== RUN   TestExecutionExternalCommitProcessKill/opaque
+--- PASS: TestExecutionExternalCommitProcessKill (4.46s)
+    --- PASS: TestExecutionExternalCommitProcessKill/queryable (1.89s)
+    --- PASS: TestExecutionExternalCommitProcessKill/idempotent-key (1.30s)
+    --- PASS: TestExecutionExternalCommitProcessKill/opaque (1.27s)
+PASS
+ok  	github.com/agentnet/agentnet/services/execution	12.948s
+?   	github.com/agentnet/agentnet/services/gateway	[no test files]
+?   	github.com/agentnet/agentnet/services/ics	[no test files]
+=== RUN   TestIdentityConsentDrivesRootAcceptance
+=== RUN   TestIdentityConsentDrivesRootAcceptance/approved
+=== RUN   TestIdentityConsentDrivesRootAcceptance/withdrawn-after-permit
+--- PASS: TestIdentityConsentDrivesRootAcceptance (0.42s)
+    --- PASS: TestIdentityConsentDrivesRootAcceptance/approved (0.20s)
+    --- PASS: TestIdentityConsentDrivesRootAcceptance/withdrawn-after-permit (0.21s)
+=== RUN   TestIdentityCodeInjectionAndStateExpiry
+=== RUN   TestIdentityCodeInjectionAndStateExpiry/code-injection
+=== RUN   TestIdentityCodeInjectionAndStateExpiry/state-expiry
+=== RUN   TestIdentityCodeInjectionAndStateExpiry/state-mismatch
+--- PASS: TestIdentityCodeInjectionAndStateExpiry (0.45s)
+    --- PASS: TestIdentityCodeInjectionAndStateExpiry/code-injection (0.15s)
+    --- PASS: TestIdentityCodeInjectionAndStateExpiry/state-expiry (0.14s)
+    --- PASS: TestIdentityCodeInjectionAndStateExpiry/state-mismatch (0.16s)
+=== RUN   TestIdentitySessionExpiryAfterAgentLock
+--- PASS: TestIdentitySessionExpiryAfterAgentLock (1.27s)
+=== RUN   TestIdentityCrossOwnerAndConsentVersion
+--- PASS: TestIdentityCrossOwnerAndConsentVersion (0.13s)
+=== RUN   TestIdentityConcurrentCredentialRotation
+--- PASS: TestIdentityConcurrentCredentialRotation (0.24s)
+=== RUN   TestIdentityCredentialExpiryAfterLock
+--- PASS: TestIdentityCredentialExpiryAfterLock (1.19s)
+=== RUN   TestIdentityCredentialLifecycleAndMTLS
+--- PASS: TestIdentityCredentialLifecycleAndMTLS (0.28s)
+=== RUN   TestIdentityCredentialReplayAndKeyIsolation
+--- PASS: TestIdentityCredentialReplayAndKeyIsolation (0.22s)
+=== RUN   TestIdentityCredentialAuditRollback
+--- PASS: TestIdentityCredentialAuditRollback (0.18s)
+=== RUN   TestIdentityDelegationConsentVisible
+--- PASS: TestIdentityDelegationConsentVisible (0.29s)
+=== RUN   TestIdentityLoginConsentAndLogout
+--- PASS: TestIdentityLoginConsentAndLogout (0.26s)
+=== RUN   TestIdentityIDTokenClaimsAndSignatures
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/nonce
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/issuer
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/audience
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/expired
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/future-issued
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/long-lived
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/azp
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/at-hash
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/signature
+=== RUN   TestIdentityIDTokenClaimsAndSignatures/unmapped
+--- PASS: TestIdentityIDTokenClaimsAndSignatures (1.57s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/nonce (0.15s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/issuer (0.15s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/audience (0.18s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/expired (0.16s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/future-issued (0.24s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/long-lived (0.14s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/azp (0.15s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/at-hash (0.15s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/signature (0.12s)
+    --- PASS: TestIdentityIDTokenClaimsAndSignatures/unmapped (0.13s)
+=== RUN   TestIdentityCallbackReplayAndBrowserBinding
+--- PASS: TestIdentityCallbackReplayAndBrowserBinding (0.14s)
+=== RUN   TestIdentityConsentCSRFAndOwnership
+=== RUN   TestIdentityConsentCSRFAndOwnership/origin
+=== RUN   TestIdentityConsentCSRFAndOwnership/csrf
+=== RUN   TestIdentityConsentCSRFAndOwnership/agent
+=== RUN   TestIdentityConsentCSRFAndOwnership/instance
+=== RUN   TestIdentityConsentCSRFAndOwnership/budget
+=== RUN   TestIdentityConsentCSRFAndOwnership/hours
+=== RUN   TestIdentityConsentCSRFAndOwnership/profile
+=== RUN   TestIdentityConsentCSRFAndOwnership/unknown
+=== RUN   TestIdentityConsentCSRFAndOwnership/duplicate
+--- PASS: TestIdentityConsentCSRFAndOwnership (0.19s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/origin (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/csrf (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/agent (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/instance (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/budget (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/hours (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/profile (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/unknown (0.00s)
+    --- PASS: TestIdentityConsentCSRFAndOwnership/duplicate (0.00s)
+=== RUN   TestIdentitySessionRevocationAndRemapping
+=== RUN   TestIdentitySessionRevocationAndRemapping/principal
+=== RUN   TestIdentitySessionRevocationAndRemapping/session
+=== RUN   TestIdentitySessionRevocationAndRemapping/expiry
+=== RUN   TestIdentitySessionRevocationAndRemapping/mapping
+--- PASS: TestIdentitySessionRevocationAndRemapping (1.02s)
+    --- PASS: TestIdentitySessionRevocationAndRemapping/principal (0.24s)
+    --- PASS: TestIdentitySessionRevocationAndRemapping/session (0.30s)
+    --- PASS: TestIdentitySessionRevocationAndRemapping/expiry (0.22s)
+    --- PASS: TestIdentitySessionRevocationAndRemapping/mapping (0.26s)
+=== RUN   TestIdentityDaemonProcess
+--- PASS: TestIdentityDaemonProcess (8.80s)
+PASS
+ok  	github.com/agentnet/agentnet/services/identity	19.246s
+=== RUN   TestRPCGrantChainAdmissionAndAncestorRevocation
+--- PASS: TestRPCGrantChainAdmissionAndAncestorRevocation (0.31s)
+=== RUN   TestRPCGrantChainRejectsMalformedPaths
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/cycle
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/wrong_root
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/task_edge
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/depth
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/consent
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/parent_revoked
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/parent_expired
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/scope
+=== RUN   TestRPCGrantChainRejectsMalformedPaths/unknown
+--- PASS: TestRPCGrantChainRejectsMalformedPaths (2.02s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/cycle (0.20s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/wrong_root (0.23s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/task_edge (0.33s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/depth (0.24s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/consent (0.29s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/parent_revoked (0.18s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/parent_expired (0.19s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/scope (0.18s)
+    --- PASS: TestRPCGrantChainRejectsMalformedPaths/unknown (0.18s)
+=== RUN   TestRPCGrantChainDigestIncludesParent
+--- PASS: TestRPCGrantChainDigestIncludesParent (0.22s)
+=== RUN   TestRPCGrantChainReloadAfterLockWait
+=== RUN   TestRPCGrantChainReloadAfterLockWait/revoke
+=== RUN   TestRPCGrantChainReloadAfterLockWait/reparent
+--- PASS: TestRPCGrantChainReloadAfterLockWait (0.52s)
+    --- PASS: TestRPCGrantChainReloadAfterLockWait/revoke (0.26s)
+    --- PASS: TestRPCGrantChainReloadAfterLockWait/reparent (0.27s)
+=== RUN   TestRPCGrantChainExpiryDuringAccountWait
+--- PASS: TestRPCGrantChainExpiryDuringAccountWait (2.22s)
+=== RUN   TestRPCSubtaskCloseoutUnknownAndLateSettlement
+--- PASS: TestRPCSubtaskCloseoutUnknownAndLateSettlement (0.37s)
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/unbound
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/frozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/active
+--- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen (0.69s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/unbound (0.26s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/frozen (0.22s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/active (0.22s)
+=== RUN   TestRPCSubtaskCloseoutNested
+=== RUN   TestRPCSubtaskCloseoutNested/0
+=== RUN   TestRPCSubtaskCloseoutNested/4
+--- PASS: TestRPCSubtaskCloseoutNested (0.75s)
+    --- PASS: TestRPCSubtaskCloseoutNested/0 (0.33s)
+    --- PASS: TestRPCSubtaskCloseoutNested/4 (0.42s)
+=== RUN   TestRPCSubtaskCloseoutRollbackAndConcurrency
+--- PASS: TestRPCSubtaskCloseoutRollbackAndConcurrency (0.30s)
+=== RUN   TestRPCSubtaskCloseoutIdentityAfterWait
+--- PASS: TestRPCSubtaskCloseoutIdentityAfterWait (0.35s)
+=== RUN   TestRPCTreeCancellationAuthorityAndReplay
+--- PASS: TestRPCTreeCancellationAuthorityAndReplay (0.31s)
+=== RUN   TestRPCExecutionConsentAtSend
+=== RUN   TestRPCExecutionConsentAtSend/live
+=== RUN   TestRPCExecutionConsentAtSend/revoked
+=== RUN   TestRPCExecutionConsentAtSend/version
+=== RUN   TestRPCExecutionConsentAtSend/data-class
+=== RUN   TestRPCExecutionConsentAtSend/domain
+=== RUN   TestRPCExecutionConsentAtSend/chain-live
+=== RUN   TestRPCExecutionConsentAtSend/chain-revoked
+=== RUN   TestRPCExecutionConsentAtSend/delegated-live
+=== RUN   TestRPCExecutionConsentAtSend/delegated-subject-revoked
+--- PASS: TestRPCExecutionConsentAtSend (2.64s)
+    --- PASS: TestRPCExecutionConsentAtSend/live (0.28s)
+    --- PASS: TestRPCExecutionConsentAtSend/revoked (0.25s)
+    --- PASS: TestRPCExecutionConsentAtSend/version (0.25s)
+    --- PASS: TestRPCExecutionConsentAtSend/data-class (0.25s)
+    --- PASS: TestRPCExecutionConsentAtSend/domain (0.25s)
+    --- PASS: TestRPCExecutionConsentAtSend/chain-live (0.36s)
+    --- PASS: TestRPCExecutionConsentAtSend/chain-revoked (0.32s)
+    --- PASS: TestRPCExecutionConsentAtSend/delegated-live (0.36s)
+    --- PASS: TestRPCExecutionConsentAtSend/delegated-subject-revoked (0.32s)
+=== RUN   TestRPCGatewayDurableSigningAndReceiptRecovery
+--- PASS: TestRPCGatewayDurableSigningAndReceiptRecovery (0.18s)
+=== RUN   TestRPCGatewayRejectsForgeryConflictAndBudget
+--- PASS: TestRPCGatewayRejectsForgeryConflictAndBudget (0.12s)
+=== RUN   TestRPCGatewayConcurrentFirstSubmission
+--- PASS: TestRPCGatewayConcurrentFirstSubmission (0.30s)
+=== RUN   TestRPCGatewayExpirySurvivesInboxCleanup
+--- PASS: TestRPCGatewayExpirySurvivesInboxCleanup (1.26s)
+=== RUN   TestRPCGatewayAcceptanceAuditRollback
+--- PASS: TestRPCGatewayAcceptanceAuditRollback (0.19s)
+=== RUN   TestRPCGatewayAuditRollback
+--- PASS: TestRPCGatewayAuditRollback (0.10s)
+=== RUN   TestRPCDenialAuditFailure
+--- PASS: TestRPCDenialAuditFailure (0.09s)
+=== RUN   TestRPCDenialAuditIdentityScope
+--- PASS: TestRPCDenialAuditIdentityScope (0.09s)
+=== RUN   TestRPCGatewayCommittedButResponseUnavailable
+--- PASS: TestRPCGatewayCommittedButResponseUnavailable (0.17s)
+=== RUN   TestRPCGatewayPendingPermitAndCancelledRequest
+--- PASS: TestRPCGatewayPendingPermitAndCancelledRequest (1.35s)
+=== RUN   TestRPCCertificateExpiryDuringLockWait
+=== RUN   TestRPCCertificateExpiryDuringLockWait/gateway
+=== RUN   TestRPCCertificateExpiryDuringLockWait/permit
+=== RUN   TestRPCCertificateExpiryDuringLockWait/admission
+--- PASS: TestRPCCertificateExpiryDuringLockWait (5.42s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/gateway (1.43s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/permit (2.00s)
+    --- PASS: TestRPCCertificateExpiryDuringLockWait/admission (1.99s)
+=== RUN   TestRPCLocalTransactionBoundary
+--- PASS: TestRPCLocalTransactionBoundary (0.23s)
+=== RUN   TestRPCDaemonProcess
+=== RUN   TestRPCDaemonProcess/missing-key
+=== RUN   TestRPCDaemonProcess/untrusted-key
+=== RUN   TestRPCDaemonProcess/same-ics-key
+=== RUN   TestRPCDaemonProcess/zero-ttl
+=== RUN   TestRPCDaemonProcess/long-ttl
+=== RUN   TestRPCDaemonProcess/unknown-local
+=== RUN   TestRPCDaemonProcess/external-local
+--- PASS: TestRPCDaemonProcess (7.19s)
+    --- PASS: TestRPCDaemonProcess/missing-key (0.10s)
+    --- PASS: TestRPCDaemonProcess/untrusted-key (0.07s)
+    --- PASS: TestRPCDaemonProcess/same-ics-key (0.06s)
+    --- PASS: TestRPCDaemonProcess/zero-ttl (0.05s)
+    --- PASS: TestRPCDaemonProcess/long-ttl (0.06s)
+    --- PASS: TestRPCDaemonProcess/unknown-local (0.01s)
+    --- PASS: TestRPCDaemonProcess/external-local (0.01s)
+=== RUN   TestRPCRenewalClientProcessRecovery
+=== RUN   TestRPCRenewalClientProcessRecovery/kill_before_activation
+=== RUN   TestRPCRenewalClientProcessRecovery/fail_publication_after_activation
+=== RUN   TestRPCRenewalClientProcessRecovery/watch_due
+--- PASS: TestRPCRenewalClientProcessRecovery (6.38s)
+    --- PASS: TestRPCRenewalClientProcessRecovery/kill_before_activation (1.65s)
+    --- PASS: TestRPCRenewalClientProcessRecovery/fail_publication_after_activation (0.53s)
+    --- PASS: TestRPCRenewalClientProcessRecovery/watch_due (0.22s)
+=== RUN   TestRPCRenewalClientExpiredPreparationRecovery
+--- PASS: TestRPCRenewalClientExpiredPreparationRecovery (0.20s)
+=== RUN   TestRPCRenewalTwoPhaseAndReplay
+--- PASS: TestRPCRenewalTwoPhaseAndReplay (0.14s)
+=== RUN   TestRPCRenewalFreshKeyAndConflicts
+--- PASS: TestRPCRenewalFreshKeyAndConflicts (0.11s)
+=== RUN   TestRPCRenewalConcurrentPrepareAndActivate
+--- PASS: TestRPCRenewalConcurrentPrepareAndActivate (0.17s)
+=== RUN   TestRPCRenewalInvalidatedByOwnerOrExpiry
+=== RUN   TestRPCRenewalInvalidatedByOwnerOrExpiry/revoke
+=== RUN   TestRPCRenewalInvalidatedByOwnerOrExpiry/rotate
+=== RUN   TestRPCRenewalInvalidatedByOwnerOrExpiry/expire
+--- PASS: TestRPCRenewalInvalidatedByOwnerOrExpiry (0.38s)
+    --- PASS: TestRPCRenewalInvalidatedByOwnerOrExpiry/revoke (0.12s)
+    --- PASS: TestRPCRenewalInvalidatedByOwnerOrExpiry/rotate (0.13s)
+    --- PASS: TestRPCRenewalInvalidatedByOwnerOrExpiry/expire (0.14s)
+=== RUN   TestRPCRenewalAuditRollback
+=== RUN   TestRPCRenewalAuditRollback/credential.renewal_prepared
+=== RUN   TestRPCRenewalAuditRollback/credential.renewal_activated
+--- PASS: TestRPCRenewalAuditRollback (0.26s)
+    --- PASS: TestRPCRenewalAuditRollback/credential.renewal_prepared (0.12s)
+    --- PASS: TestRPCRenewalAuditRollback/credential.renewal_activated (0.14s)
+=== RUN   TestRPCRenewalExpiryAfterKeyLock
+--- PASS: TestRPCRenewalExpiryAfterKeyLock (2.30s)
+=== RUN   TestRPCRenewalRevocationWhileActivationWaits
+--- PASS: TestRPCRenewalRevocationWhileActivationWaits (0.19s)
+=== RUN   TestRPCRenewalAbandonAndCrossIssuerKeyClaims
+--- PASS: TestRPCRenewalAbandonAndCrossIssuerKeyClaims (0.14s)
+=== RUN   TestRPCRenewalActivationAfterOldCertificateExpires
+--- PASS: TestRPCRenewalActivationAfterOldCertificateExpires (1.31s)
+=== RUN   TestRPCCredentialRotationDuringAdmissionWait
+--- PASS: TestRPCCredentialRotationDuringAdmissionWait (0.30s)
+=== RUN   TestRPCCredentialRotationDuringPermitWait
+--- PASS: TestRPCCredentialRotationDuringPermitWait (0.16s)
+=== RUN   TestRPCAuthenticatedLifecycle
+--- PASS: TestRPCAuthenticatedLifecycle (0.29s)
+=== RUN   TestRPCCertificateAndBodyIdentity
+=== RUN   TestRPCCertificateAndBodyIdentity/no-client-certificate
+=== RUN   TestRPCCertificateAndBodyIdentity/unregistered-client
+=== RUN   TestRPCCertificateAndBodyIdentity/legacy-body
+=== RUN   TestRPCCertificateAndBodyIdentity/metadata-spoof
+=== RUN   TestRPCCertificateAndBodyIdentity/signed-other-caller
+--- PASS: TestRPCCertificateAndBodyIdentity (0.10s)
+    --- PASS: TestRPCCertificateAndBodyIdentity/no-client-certificate (0.00s)
+    --- PASS: TestRPCCertificateAndBodyIdentity/unregistered-client (0.01s)
+    --- PASS: TestRPCCertificateAndBodyIdentity/legacy-body (0.01s)
+    --- PASS: TestRPCCertificateAndBodyIdentity/metadata-spoof (0.00s)
+    --- PASS: TestRPCCertificateAndBodyIdentity/signed-other-caller (0.00s)
+=== RUN   TestRPCRevocationOnExistingTLSChannel
+--- PASS: TestRPCRevocationOnExistingTLSChannel (0.18s)
+=== RUN   TestRPCRegisteredWrongSPIFFEAndLongCertificate
+=== RUN   TestRPCRegisteredWrongSPIFFEAndLongCertificate/uri
+=== RUN   TestRPCRegisteredWrongSPIFFEAndLongCertificate/lifetime
+--- PASS: TestRPCRegisteredWrongSPIFFEAndLongCertificate (0.17s)
+    --- PASS: TestRPCRegisteredWrongSPIFFEAndLongCertificate/uri (0.09s)
+    --- PASS: TestRPCRegisteredWrongSPIFFEAndLongCertificate/lifetime (0.08s)
+=== RUN   TestRPCConsentSubsetAndRevokedPermit
+--- PASS: TestRPCConsentSubsetAndRevokedPermit (0.12s)
+=== RUN   TestRPCGrantRevocationAndUnsignedDecision
+--- PASS: TestRPCGrantRevocationAndUnsignedDecision (0.20s)
+=== RUN   TestRPCPolicyClassAndVersionBinding
+--- PASS: TestRPCPolicyClassAndVersionBinding (0.20s)
+=== RUN   TestRPCConsentVersionInvalidatesDecision
+--- PASS: TestRPCConsentVersionInvalidatesDecision (0.20s)
+=== RUN   TestRPCAdapterRoleRevocationOnExistingChannel
+--- PASS: TestRPCAdapterRoleRevocationOnExistingChannel (0.09s)
+=== RUN   TestRPCLeaseIdentityAndCrossOwner
+--- PASS: TestRPCLeaseIdentityAndCrossOwner (0.16s)
+=== RUN   TestRPCT1RootRollbackAndErrorDetails
+--- PASS: TestRPCT1RootRollbackAndErrorDetails (0.13s)
+=== RUN   TestRPCRootPermitSignatureAndIndependentCeiling
+--- PASS: TestRPCRootPermitSignatureAndIndependentCeiling (0.12s)
+=== RUN   TestRPCSubtaskCrossSubjectAndBudget
+--- PASS: TestRPCSubtaskCrossSubjectAndBudget (0.29s)
+=== RUN   TestRPCSubtaskRejectsGuardViolations
+=== RUN   TestRPCSubtaskRejectsGuardViolations/epoch
+=== RUN   TestRPCSubtaskRejectsGuardViolations/lease
+=== RUN   TestRPCSubtaskRejectsGuardViolations/lease-holder
+=== RUN   TestRPCSubtaskRejectsGuardViolations/version
+=== RUN   TestRPCSubtaskRejectsGuardViolations/scope
+=== RUN   TestRPCSubtaskRejectsGuardViolations/rights
+=== RUN   TestRPCSubtaskRejectsGuardViolations/depth
+=== RUN   TestRPCSubtaskRejectsGuardViolations/budget
+=== RUN   TestRPCSubtaskRejectsGuardViolations/purpose
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient-ceiling
+=== RUN   TestRPCSubtaskRejectsGuardViolations/policy-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/recipient-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/parent-revoked
+=== RUN   TestRPCSubtaskRejectsGuardViolations/expired
+=== RUN   TestRPCSubtaskRejectsGuardViolations/deadline
+=== RUN   TestRPCSubtaskRejectsGuardViolations/no-contract-permission
+=== RUN   TestRPCSubtaskRejectsGuardViolations/malformed-concurrency-limit
+--- PASS: TestRPCSubtaskRejectsGuardViolations (3.74s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/epoch (0.18s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/lease (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/lease-holder (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/version (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/scope (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/rights (0.22s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/depth (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/budget (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/purpose (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient-ceiling (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/policy-revoked (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/recipient-revoked (0.21s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/parent-revoked (0.19s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/expired (0.20s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/deadline (0.19s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/no-contract-permission (0.29s)
+    --- PASS: TestRPCSubtaskRejectsGuardViolations/malformed-concurrency-limit (0.20s)
+=== RUN   TestRPCSubtaskRollbackAndConcurrentReplay
+--- PASS: TestRPCSubtaskRollbackAndConcurrentReplay (0.43s)
+=== RUN   TestRPCSubtaskPolicyAndExpiryAfterLockWait
+=== RUN   TestRPCSubtaskPolicyAndExpiryAfterLockWait/policy
+=== RUN   TestRPCSubtaskPolicyAndExpiryAfterLockWait/expiry
+--- PASS: TestRPCSubtaskPolicyAndExpiryAfterLockWait (2.01s)
+    --- PASS: TestRPCSubtaskPolicyAndExpiryAfterLockWait/policy (0.30s)
+    --- PASS: TestRPCSubtaskPolicyAndExpiryAfterLockWait/expiry (1.71s)
+=== RUN   TestRPCSubtaskNestedAndZeroBudget
+--- PASS: TestRPCSubtaskNestedAndZeroBudget (0.24s)
+=== RUN   TestRPCSubtaskGrantRevocation
+=== RUN   TestRPCSubtaskGrantRevocation/owner
+=== RUN   TestRPCSubtaskGrantRevocation/recipient
+--- PASS: TestRPCSubtaskGrantRevocation (0.46s)
+    --- PASS: TestRPCSubtaskGrantRevocation/owner (0.23s)
+    --- PASS: TestRPCSubtaskGrantRevocation/recipient (0.24s)
+=== RUN   TestRPCSubtaskCapacityAndExpiredReplay
+--- PASS: TestRPCSubtaskCapacityAndExpiredReplay (2.19s)
+=== RUN   TestRPCSubtaskExpiryAfterInsertWait
+--- PASS: TestRPCSubtaskExpiryAfterInsertWait (1.53s)
+=== RUN   TestRPCTreeProcessHelper
+--- PASS: TestRPCTreeProcessHelper (0.00s)
+=== RUN   TestRPCTreeProcessRecovery
+=== RUN   TestRPCTreeProcessRecovery/close-before
+=== RUN   TestRPCTreeProcessRecovery/close-after
+=== RUN   TestRPCTreeProcessRecovery/cancel-before
+=== RUN   TestRPCTreeProcessRecovery/cancel-after
+--- PASS: TestRPCTreeProcessRecovery (2.38s)
+    --- PASS: TestRPCTreeProcessRecovery/close-before (1.19s)
+    --- PASS: TestRPCTreeProcessRecovery/close-after (0.46s)
+    --- PASS: TestRPCTreeProcessRecovery/cancel-before (0.36s)
+    --- PASS: TestRPCTreeProcessRecovery/cancel-after (0.37s)
+=== RUN   TestRPCTreeDaemonPropagation
+--- PASS: TestRPCTreeDaemonPropagation (5.06s)
+=== RUN   TestRPCTreeCreateCancelRace
+--- PASS: TestRPCTreeCreateCancelRace (0.40s)
+PASS
+ok  	github.com/agentnet/agentnet/services/rpc	62.799s
+?   	github.com/agentnet/agentnet/services/tasktree	[no test files]
+=== RUN   TestKernelDurableNotificationFlow
+--- PASS: TestKernelDurableNotificationFlow (0.25s)
+=== RUN   TestKernelExpiredInboxCleanupCannotRecreateTask
+--- PASS: TestKernelExpiredInboxCleanupCannotRecreateTask (2.11s)
+=== RUN   TestKernelSubmitConcurrentAndRecovery
+--- PASS: TestKernelSubmitConcurrentAndRecovery (0.36s)
+=== RUN   TestKernelSubmitAtomicRollback
+--- PASS: TestKernelSubmitAtomicRollback (0.10s)
+=== RUN   TestKernelExpiryAfterLockWait
+--- PASS: TestKernelExpiryAfterLockWait (1.10s)
+=== RUN   TestKernelExpiryAfterInboxCleanup
+--- PASS: TestKernelExpiryAfterInboxCleanup (2.09s)
+=== RUN   TestKernelBudgetConcurrentReserve
+--- PASS: TestKernelBudgetConcurrentReserve (0.18s)
+=== RUN   TestKernelAdmitIdempotenceAndConflict
+--- PASS: TestKernelAdmitIdempotenceAndConflict (0.17s)
+=== RUN   TestKernelReservationAtomicityAndExclusiveBinding
+--- PASS: TestKernelReservationAtomicityAndExclusiveBinding (0.17s)
+=== RUN   TestKernelRequiresAllServerDimensions
+--- PASS: TestKernelRequiresAllServerDimensions (0.14s)
+=== RUN   TestKernelLeaseTakeoverAndStaleProposal
+--- PASS: TestKernelLeaseTakeoverAndStaleProposal (0.16s)
+=== RUN   TestKernelSignedDecisionBinding
+=== RUN   TestKernelSignedDecisionBinding/expired
+=== RUN   TestKernelSignedDecisionBinding/actor
+=== RUN   TestKernelSignedDecisionBinding/task
+=== RUN   TestKernelSignedDecisionBinding/params
+=== RUN   TestKernelSignedDecisionBinding/resource
+=== RUN   TestKernelSignedDecisionBinding/sensitivity
+=== RUN   TestKernelSignedDecisionBinding/subject
+=== RUN   TestKernelSignedDecisionBinding/action
+=== RUN   TestKernelSignedDecisionBinding/future
+=== RUN   TestKernelSignedDecisionBinding/stale
+--- PASS: TestKernelSignedDecisionBinding (0.17s)
+    --- PASS: TestKernelSignedDecisionBinding/expired (0.01s)
+    --- PASS: TestKernelSignedDecisionBinding/actor (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/task (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/params (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/resource (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/sensitivity (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/subject (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/action (0.00s)
+    --- PASS: TestKernelSignedDecisionBinding/future (0.01s)
+    --- PASS: TestKernelSignedDecisionBinding/stale (0.01s)
+=== RUN   TestKernelRevokedInstanceAndTaskOwnership
+--- PASS: TestKernelRevokedInstanceAndTaskOwnership (0.14s)
+=== RUN   TestKernelCancelAdmissionRace
+--- PASS: TestKernelCancelAdmissionRace (0.19s)
+=== RUN   TestKernelUnknownConflictAndLateSettlement
+--- PASS: TestKernelUnknownConflictAndLateSettlement (0.17s)
+=== RUN   TestKernelConservativeSelfReport
+--- PASS: TestKernelConservativeSelfReport (0.16s)
+=== RUN   TestKernelOverrunPreservesEvidenceAndFreezes
+--- PASS: TestKernelOverrunPreservesEvidenceAndFreezes (0.16s)
+=== RUN   TestKernelForgedResultCannotReleaseUnknown
+--- PASS: TestKernelForgedResultCannotReleaseUnknown (0.16s)
+=== RUN   TestKernelLeaseRenewalAndGrace
+--- PASS: TestKernelLeaseRenewalAndGrace (0.14s)
+=== RUN   TestKernelReleaseUnboundOnly
+--- PASS: TestKernelReleaseUnboundOnly (0.17s)
+=== RUN   TestKernelGrantScopeAndResultBinding
+--- PASS: TestKernelGrantScopeAndResultBinding (0.18s)
+=== RUN   TestKernelCommandSignatureProtectsExpiry
+--- PASS: TestKernelCommandSignatureProtectsExpiry (0.06s)
+=== RUN   TestKernelLeaseExpiryAfterAccountLockWait
+--- PASS: TestKernelLeaseExpiryAfterAccountLockWait (1.18s)
+=== RUN   TestKernelInstanceRevocationAfterAccountWait
+--- PASS: TestKernelInstanceRevocationAfterAccountWait (0.30s)
+=== RUN   TestKernelUnsupportedExecutionCapabilities
+=== RUN   TestKernelUnsupportedExecutionCapabilities/local-tx
+=== RUN   TestKernelUnsupportedExecutionCapabilities/idempotent-key
+--- PASS: TestKernelUnsupportedExecutionCapabilities (0.06s)
+    --- PASS: TestKernelUnsupportedExecutionCapabilities/local-tx (0.00s)
+    --- PASS: TestKernelUnsupportedExecutionCapabilities/idempotent-key (0.00s)
+=== RUN   TestLocalProcessKillBeforeAndAfterCommit
+=== RUN   TestLocalProcessKillBeforeAndAfterCommit/before_commit
+=== RUN   TestLocalProcessKillBeforeAndAfterCommit/after_commit
+--- PASS: TestLocalProcessKillBeforeAndAfterCommit (1.21s)
+    --- PASS: TestLocalProcessKillBeforeAndAfterCommit/before_commit (0.92s)
+    --- PASS: TestLocalProcessKillBeforeAndAfterCommit/after_commit (0.29s)
+=== RUN   TestLocalAtomicReplayAndBoundParameters
+--- PASS: TestLocalAtomicReplayAndBoundParameters (0.18s)
+=== RUN   TestLocalRollbackOnInvalidExecution
+=== RUN   TestLocalRollbackOnInvalidExecution/async
+=== RUN   TestLocalRollbackOnInvalidExecution/over_bound
+=== RUN   TestLocalRollbackOnInvalidExecution/over_hold
+=== RUN   TestLocalRollbackOnInvalidExecution/bad_meter
+=== RUN   TestLocalRollbackOnInvalidExecution/bad_body
+=== RUN   TestLocalRollbackOnInvalidExecution/audit_failure
+--- PASS: TestLocalRollbackOnInvalidExecution (0.98s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/async (0.14s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/over_bound (0.16s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/over_hold (0.17s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/bad_meter (0.16s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/bad_body (0.16s)
+    --- PASS: TestLocalRollbackOnInvalidExecution/audit_failure (0.18s)
+=== RUN   TestLocalConcurrentRecordCAS
+--- PASS: TestLocalConcurrentRecordCAS (0.27s)
+=== RUN   TestLocalReplaySurvivesBusinessUpdate
+--- PASS: TestLocalReplaySurvivesBusinessUpdate (0.22s)
+=== RUN   TestLocalRechecksAfterBusinessLock
+=== RUN   TestLocalRechecksAfterBusinessLock/lease
+=== RUN   TestLocalRechecksAfterBusinessLock/decision
+=== RUN   TestLocalRechecksAfterBusinessLock/grant
+=== RUN   TestLocalRechecksAfterBusinessLock/credential
+=== RUN   TestLocalRechecksAfterBusinessLock/deadline
+=== RUN   TestLocalRechecksAfterBusinessLock/revocation
+--- PASS: TestLocalRechecksAfterBusinessLock (5.92s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/lease (0.99s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/decision (0.98s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/grant (0.98s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/credential (0.98s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/deadline (0.98s)
+    --- PASS: TestLocalRechecksAfterBusinessLock/revocation (1.00s)
+=== RUN   TestLocalCancelSerializesWithBusinessCommit
+--- PASS: TestLocalCancelSerializesWithBusinessCommit (0.33s)
+=== RUN   TestKernelProcessHelper
+--- PASS: TestKernelProcessHelper (0.00s)
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit/before_commit
+=== RUN   TestKernelProcessKillBeforeAndAfterCommit/after_commit
+--- PASS: TestKernelProcessKillBeforeAndAfterCommit (0.44s)
+    --- PASS: TestKernelProcessKillBeforeAndAfterCommit/before_commit (0.22s)
+    --- PASS: TestKernelProcessKillBeforeAndAfterCommit/after_commit (0.21s)
+PASS
+ok  	github.com/agentnet/agentnet/services/tcs	21.357s

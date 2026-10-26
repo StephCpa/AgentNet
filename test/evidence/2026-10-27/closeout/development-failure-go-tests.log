@@ -1,0 +1,49 @@
+=== RUN   TestRPCSubtaskCloseoutUnknownAndLateSettlement
+    closeout_test.go:86: ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification (SQLSTATE 42P10)
+--- FAIL: TestRPCSubtaskCloseoutUnknownAndLateSettlement (0.42s)
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/unbound
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/frozen
+=== RUN   TestRPCSubtaskCloseoutUnboundAndFrozen/active
+--- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen (0.78s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/unbound (0.31s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/frozen (0.24s)
+    --- PASS: TestRPCSubtaskCloseoutUnboundAndFrozen/active (0.23s)
+=== RUN   TestRPCSubtaskCloseoutNested
+=== RUN   TestRPCSubtaskCloseoutNested/0
+    closeout_test.go:185: rpc error: code = PermissionDenied desc = ANET-AUT-DENIED
+=== RUN   TestRPCSubtaskCloseoutNested/4
+    closeout_test.go:185: rpc error: code = PermissionDenied desc = ANET-AUT-DENIED
+--- FAIL: TestRPCSubtaskCloseoutNested (0.50s)
+    --- FAIL: TestRPCSubtaskCloseoutNested/0 (0.25s)
+    --- FAIL: TestRPCSubtaskCloseoutNested/4 (0.25s)
+=== RUN   TestRPCSubtaskCloseoutRollbackAndConcurrency
+--- PASS: TestRPCSubtaskCloseoutRollbackAndConcurrency (0.36s)
+=== RUN   TestRPCSubtaskCloseoutIdentityAfterWait
+--- PASS: TestRPCSubtaskCloseoutIdentityAfterWait (0.37s)
+=== RUN   TestRPCTreeCancellationAuthorityAndReplay
+    closeout_test.go:338: ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification (SQLSTATE 42P10)
+--- FAIL: TestRPCTreeCancellationAuthorityAndReplay (0.27s)
+=== RUN   TestRPCTreeProcessHelper
+--- PASS: TestRPCTreeProcessHelper (0.00s)
+=== RUN   TestRPCTreeProcessRecovery
+=== RUN   TestRPCTreeProcessRecovery/close-before
+=== RUN   TestRPCTreeProcessRecovery/close-after
+=== RUN   TestRPCTreeProcessRecovery/cancel-before
+    tree_process_test.go:174: ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification (SQLSTATE 42P10)
+=== RUN   TestRPCTreeProcessRecovery/cancel-after
+    tree_process_test.go:149: process exited before commit
+--- FAIL: TestRPCTreeProcessRecovery (2.37s)
+    --- PASS: TestRPCTreeProcessRecovery/close-before (1.28s)
+    --- PASS: TestRPCTreeProcessRecovery/close-after (0.40s)
+    --- FAIL: TestRPCTreeProcessRecovery/cancel-before (0.35s)
+    --- FAIL: TestRPCTreeProcessRecovery/cancel-after (0.34s)
+=== RUN   TestRPCTreeDaemonPropagation
+    tree_process_test.go:204: outboxd did not propagate cancellation
+--- FAIL: TestRPCTreeDaemonPropagation (14.65s)
+=== RUN   TestRPCTreeCreateCancelRace
+    tree_process_test.go:257: ERROR: there is no unique or exclusion constraint matching the ON CONFLICT specification (SQLSTATE 42P10)
+--- FAIL: TestRPCTreeCreateCancelRace (0.40s)
+FAIL
+FAIL	github.com/agentnet/agentnet/services/rpc	22.018s
+FAIL

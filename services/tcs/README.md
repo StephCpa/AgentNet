@@ -1,7 +1,7 @@
 # Single-domain TCS transaction kernel
 
-Implementation: `commands.go`, `effects.go`, `lifecycle.go`, `subtasks.go`; apply
-the implementation migrations through `013_subtasks.sql`.
+Implementation: `commands.go`, `effects.go`, `lifecycle.go`, `subtasks.go`, `closeout.go`; apply
+the implementation migrations through `014_subtask_closeout.sql`.
 This package runs real PostgreSQL transactions using pgx. It is a library, not an
 unauthenticated HTTP server. The gRPC transport in `services/rpc` authenticates
 Caller and maps signed envelopes without overriding fields from unsigned JSON.
@@ -69,7 +69,7 @@ the mTLS transport always supplies it. See design 21 for credential lifecycle sc
 
 ## Transactions and setup
 
-Apply migrations 001–012 in order to a new database; 002 also upgrades a d6b219c schema.
+Apply migrations 001–014 in order to a new database; 002 also upgrades a d6b219c schema.
 003 leaves legacy task ownership NULL, so the new kernel denies access until an
 operator performs an evidence-based ownership backfill. Do not guess owners.
 
@@ -142,5 +142,8 @@ digest for child grants. It rechecks validity after budget/business lock waits.
 Exact effect replay still returns the original fact after ancestor revocation.
 Design 28 adds public signed child creation, immutable recipient policies,
 cross-owner actor access and parent H→D/child B transfer. Apply migration 013.
-Budget closeout/return and cancellation propagation remain pending; D is retained
-until explicit closeout, including after cancellation or terminal business results.
+Design 29 adds `CloseSubtaskBudget` and durable local tree cancellation. Closeout
+requires a terminal, unfrozen child with no HELD reservations, outstanding effects,
+delegated balance or unclosed children. It moves the original child B out of parent
+D, adds child S to parent S, and seals child B=S. The immutable result is replayed
+on retries. Cancellation alone never returns budget; remote settlement remains pending.

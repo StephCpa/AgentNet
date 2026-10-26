@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/agentnet/agentnet/services/delivery"
+	"github.com/agentnet/agentnet/services/tasktree"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,7 +35,20 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Print("local notification worker started")
-	if err = q.Run(ctx, inbox); err != nil && !errors.Is(err, context.Canceled) {
+	tree, err := tasktree.New(db, domain)
+	if err != nil {
+		log.Fatal(err)
+	}
+	results := make(chan error, 2)
+	go func() { results <- q.Run(ctx, inbox) }()
+	go func() { results <- tree.Run(ctx) }()
+	err = <-results
+	cancel()
+	other := <-results
+	if err == nil || errors.Is(err, context.Canceled) {
+		err = other
+	}
+	if err != nil && !errors.Is(err, context.Canceled) {
 		log.Fatal(err)
 	}
 }
