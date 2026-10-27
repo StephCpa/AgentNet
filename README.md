@@ -3,7 +3,8 @@
 跨组织 Agent 网络系统：联邦信任域架构、任务契约、可靠执行、预算与授权控制、可核查证据链。
 
 - **交互架构图集**：[打开离线 HTML](.archify/atlas-agentnet-20261027-074625/index.html)（Archify；架构、数据流、时序、层次与状态迁移，7 个视角）；[编辑与验证说明](.archify/atlas-agentnet-20261027-074625/README.md)。
-- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–31，含复审与实现证据导航）
+- **阶段小结**：[当前进展、设计与验证记录](docs/detailed-design/32-progress-summary.md)（2026-10-27，含后续顺序与证据边界）。
+- **详细设计**：[docs/detailed-design/README.md](docs/detailed-design/README.md)（00–32，含复审与实现证据导航）
 - **数据库 Schema**：[schema/001_core.sql](schema/001_core.sql)（PostgreSQL 16+，权威 DDL）
 - **接口定义**：[proto/anet/](proto/anet/)（`anet.tcs.v1` / `anet.ics.v1` / `anet.dir.v1`）
 - **形式模型**：[test/tla/](test/tla/)（TaskMachine / CmdExpiry / BudgetLedger / AuthzShrink，四基线 + 12 变异通过）
